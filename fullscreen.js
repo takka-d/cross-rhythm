@@ -5,7 +5,9 @@
   function refresh() {
     if (!button) return;
     const active = !!document.fullscreenElement;
-    button.textContent = active ? (english ? 'Restore' : '元に戻す') : (english ? 'Full Screen' : '最大化');
+    const label = active ? 'Restore' : 'Fullscreen';
+    button.setAttribute('aria-label', label);button.title = label;
+    button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" width="58%" height="58%" fill="none" stroke="currentColor" stroke-width="1.5"><path d="' + (active ? 'M3 9H9V3 M15 3V9H21 M3 15H9V21 M15 21V15H21' : 'M9 3H3V9 M15 3H21V9 M3 15V21H9 M21 15V21H15') + '"/></svg>';
     button.setAttribute('aria-pressed', String(active));
     const rect = canvas().getBoundingClientRect();
     Object.assign(button.style, {
@@ -13,7 +15,7 @@
       top: (rect.top + frame[1] * rect.height) + 'px',
       width: (frame[2] * rect.width) + 'px',
       height: (frame[3] * rect.height) + 'px',
-      fontSize: (frame[3] * rect.height * 15 / 38) + 'px'
+      fontSize: (frame[3] * rect.height * 15 / 42) + 'px'
     });
   }
   function error(reason) {
@@ -33,7 +35,7 @@
       frame = [x, y, w, h]; english = en;
       if (!button) {
         button = document.createElement('button'); button.id = 'cross-rhythm-fullscreen'; button.type = 'button';
-        button.style.cssText = 'position:fixed;z-index:20;box-sizing:border-box;margin:0;padding:0;background:#0e161e;color:white;border:1px solid #263640;font-family:system-ui,sans-serif;cursor:pointer;line-height:1;white-space:nowrap;user-select:none';
+        button.style.cssText = 'position:fixed;z-index:20;box-sizing:border-box;margin:0;padding:0;display:grid;place-items:center;background:#0e161e;color:white;border:1px solid #263640;font-family:system-ui,sans-serif;cursor:pointer;line-height:1;white-space:nowrap;user-select:none';
         button.addEventListener('click', () => {
           try {
             // Invoke synchronously; awaiting anything first loses browser activation.
