@@ -36,7 +36,10 @@
       if (!button) {
         button = document.createElement('button'); button.id = 'cross-rhythm-fullscreen'; button.type = 'button';
         button.style.cssText = 'position:fixed;z-index:20;box-sizing:border-box;margin:0;padding:0;display:grid;place-items:center;background:#0e161e;color:white;border:1px solid #263640;font-family:system-ui,sans-serif;cursor:pointer;line-height:1;white-space:nowrap;user-select:none';
+        button.addEventListener('pointerenter',()=>{if(!button.disabled){button.style.boxShadow='0 0 0 1px #8fe5c2,0 0 12px #8fe5c233';window.crossRhythm?.SendMessage('CrossRhythm','OnUiFeedback','hover');}});
+        button.addEventListener('pointerleave',()=>{button.style.boxShadow='none';});
         button.addEventListener('click', () => {
+          window.crossRhythm?.SendMessage('CrossRhythm','OnUiFeedback','confirm');
           try {
             // Invoke synchronously; awaiting anything first loses browser activation.
             const action = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
