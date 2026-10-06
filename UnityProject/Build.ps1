@@ -1,5 +1,8 @@
 param([ValidateSet('Windows','Web','Both')][string]$Target='Both',[string]$UnityEditor='')
 $ErrorActionPreference='Stop'
+if ($env:GITHUB_ACTIONS -eq 'true' -and $env:CROSSRHYTHM_DEV_BUILD -ne '1') {
+  throw 'Refusing GitHub Actions build without CROSSRHYTHM_DEV_BUILD=1. This prevents accidental production publishing.'
+}
 if (!$UnityEditor) {
   $documents=[Environment]::GetFolderPath('MyDocuments')
   $candidates=@((Join-Path $env:ProgramFiles 'Unity\Hub\Editor\6000.3.25f1\Editor\Unity.exe'),(Join-Path $documents 'Codex\Unity\6000.3.25f1\Editor\Unity.exe'))
