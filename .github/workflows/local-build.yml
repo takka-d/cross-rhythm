@@ -1,0 +1,85 @@
+name: Cross Rhythm local Unity build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'UnityProject/**'
+      - '.github/workflows/local-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cross-rhythm-local-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: [self-hosted, Windows, X64]
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Build WebGL and Windows with established local Unity
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference='Stop'
+          .\UnityProject\Build.ps1 -Target Both
+          if (!(Test-Path .\UnityProject\Builds\Web\index.html)) { throw 'WebGL build output missing' }
+          if (!(Test-Path .\UnityProject\Builds\Windows\CrossRhythm.exe)) { throw 'Windows build output missing' }
+
+      - name: Publish WebGL and Windows 0.3.13
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference='Stop'
+
+          git config user.name "TakKa Build"
+          git config user.email "80165829+takka-d@users.noreply.github.com"
+
+          Remove-Item Build,StreamingAssets -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item index.html,download.html,project-picker.js,editor-input.js,fullscreen.js -Force -ErrorAction SilentlyContinue
+
+          Copy-Item .\UnityProject\Builds\Web\* . -Recurse -Force
+
+          Remove-Item Downloads -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item Downloads -ItemType Directory | Out-Null
+
+          $zip = Join-Path $env:RUNNER_TEMP 'CrossRhythm_Windows_0.3.13.zip'
+          Compress-Archive -Path '.\UnityProject\Builds\Windows\*' -DestinationPath $zip -Force
+          $bytes=[IO.File]::ReadAllBytes($zip)
+          $chunk=45MB
+          $part=1
+          for($offset=0;$offset -lt $bytes.Length;$offset+=$chunk){
+            $count=[Math]::Min($chunk,$bytes.Length-$offset)
+            $piece=New-Object byte[] $count
+            [Array]::Copy($bytes,$offset,$piece,0,$count)
+            [IO.File]::WriteAllBytes((Join-Path 'Downloads' ("CrossRhythm_Windows_0.3.13.zip.part{0}" -f $part)),$piece)
+            $part++
+          }
+
+          $sha=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $total=(Get-Item $zip).Length
+          $parts=Get-ChildItem Downloads\CrossRhythm_Windows_0.3.13.zip.part* | Sort-Object Name | ForEach-Object { "'Downloads/$($_.Name)'" }
+          $partsJs=($parts -join ',')
+
+          @"
+          <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cross Rhythm | Windows Download</title>
+          <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#070c10;color:#e8f0f4;font:17px system-ui,sans-serif}main{width:min(640px,calc(100% - 48px));padding:40px 0;line-height:1.8}h1{color:#8fe5c2;letter-spacing:.08em}button,a{font:inherit}button{padding:14px 24px;border:0;border-radius:6px;background:#8fe5c2;color:#071e16;cursor:pointer}button:disabled{opacity:.6;cursor:wait}a{color:#8fe5c2}progress{width:100%;height:18px;accent-color:#8fe5c2}#status{min-height:3.6em}</style></head>
+          <body><main><h1>CROSS RHYTHM</h1><h2>Windows Download</h2><p>Windows 64bit版 (0.3.13 Preview)</p><button id="download" type="button">Download</button><p id="status" role="status" aria-live="polite">ZIPを展開し、CrossRhythm.exeを起動してください。</p><progress id="progress" value="0" max="$total" hidden></progress><p><a href="https://takka-note.com/">TakKa noteへ戻る</a> · <a href="./">Unity WebGL版でPlay</a></p></main>
+          <script>
+          const button=document.getElementById('download'),statusText=document.getElementById('status'),progress=document.getElementById('progress');
+          const total=$total,expected='$sha',parts=[$partsJs];
+          button.addEventListener('click',async()=>{button.disabled=true;progress.hidden=false;progress.value=0;statusText.textContent='ダウンロードを準備しています…';try{let received=0;const chunks=[];for(const name of parts){const response=await fetch(name);if(!response.ok)throw Error('HTTP '+response.status);const reader=response.body.getReader();for(;;){const {value,done}=await reader.read();if(done)break;chunks.push(value);received+=value.length;progress.value=received;statusText.textContent='ダウンロード中… '+Math.floor(received/total*100)+'%';}}if(received!==total)throw Error('サイズを確認できませんでした');const blob=new Blob(chunks,{type:'application/zip'});const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).map(n=>n.toString(16).padStart(2,'0')).join('');if(digest!==expected)throw Error('ファイルを確認できませんでした');const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='CrossRhythm_Windows_0.3.13.zip';document.body.appendChild(link);link.click();statusText.textContent='準備ができました。';button.hidden=true;}catch(error){statusText.textContent='ダウンロードできませんでした。 ('+error.message+')';button.disabled=false;progress.hidden=true;}});
+          </script></body></html>
+          "@ | Set-Content -Encoding UTF8 download.html
+
+          git add -A
+          git commit -m "Publish Cross Rhythm 0.3.13 WebGL and Windows builds"
+          git push origin main
