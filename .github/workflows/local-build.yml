@@ -1,10 +1,11 @@
-name: Cross Rhythm local Unity build
+name: Cross Rhythm 0.3.13 development build
 
 on:
   push:
     branches: [main]
     paths:
       - 'UnityProject/**'
+      - 'LegacyWeb/**'
       - '.github/workflows/local-build.yml'
   workflow_dispatch:
 
@@ -12,11 +13,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: cross-rhythm-local-build
+  group: cross-rhythm-dev-0.3.13
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy-dev:
     runs-on: [self-hosted, Windows, X64]
     defaults:
       run:
@@ -27,7 +28,9 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      - name: Build WebGL and Windows with established local Unity
+      - name: Build WebGL and Windows
+        env:
+          CROSSRHYTHM_DEV_BUILD: '1'
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference='Stop'
@@ -35,23 +38,32 @@ jobs:
           if (!(Test-Path .\UnityProject\Builds\Web\index.html)) { throw 'WebGL build output missing' }
           if (!(Test-Path .\UnityProject\Builds\Windows\CrossRhythm.exe)) { throw 'Windows build output missing' }
 
-      - name: Publish WebGL and Windows 0.3.13
+      - name: Prepare noindex development deployment
         run: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference='Stop'
 
-          git config user.name "TakKa Build"
-          git config user.email "80165829+takka-d@users.noreply.github.com"
+          $dev='.\dev\0.3.13'
+          Remove-Item $dev -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item "$dev\unity" -ItemType Directory -Force | Out-Null
+          New-Item "$dev\web" -ItemType Directory -Force | Out-Null
+          New-Item "$dev\windows" -ItemType Directory -Force | Out-Null
 
-          Remove-Item Build,StreamingAssets -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item index.html,download.html,project-picker.js,editor-input.js,fullscreen.js -Force -ErrorAction SilentlyContinue
+          Copy-Item .\UnityProject\Builds\Web\* "$dev\unity\" -Recurse -Force
+          Copy-Item .\LegacyWeb\CrossRhythm_Web_v171_ADTOF.html "$dev\web\index.html" -Force
 
-          Copy-Item .\UnityProject\Builds\Web\* . -Recurse -Force
+          # Force noindex on both generated and legacy HTML.
+          foreach($htmlPath in @("$dev\unity\index.html","$dev\web\index.html")){
+            $html=Get-Content $htmlPath -Raw
+            if($html -notmatch 'name=["'']robots["'']'){
+              $html=$html -replace '<head([^>]*)>', '<head$1><meta name="robots" content="noindex,nofollow,noarchive">'
+            } else {
+              $html=$html -replace '<meta[^>]+name=["'']robots["''][^>]*>', '<meta name="robots" content="noindex,nofollow,noarchive">'
+            }
+            Set-Content -Path $htmlPath -Value $html -Encoding UTF8
+          }
 
-          Remove-Item Downloads -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item Downloads -ItemType Directory | Out-Null
-
-          $zip = Join-Path $env:RUNNER_TEMP 'CrossRhythm_Windows_0.3.13.zip'
+          $zip=Join-Path $env:RUNNER_TEMP 'CrossRhythm_Windows_0.3.13.zip'
           Compress-Archive -Path '.\UnityProject\Builds\Windows\*' -DestinationPath $zip -Force
           $bytes=[IO.File]::ReadAllBytes($zip)
           $chunk=45MB
@@ -60,26 +72,46 @@ jobs:
             $count=[Math]::Min($chunk,$bytes.Length-$offset)
             $piece=New-Object byte[] $count
             [Array]::Copy($bytes,$offset,$piece,0,$count)
-            [IO.File]::WriteAllBytes((Join-Path 'Downloads' ("CrossRhythm_Windows_0.3.13.zip.part{0}" -f $part)),$piece)
+            [IO.File]::WriteAllBytes((Join-Path "$dev\windows" ("CrossRhythm_Windows_0.3.13.zip.part{0}" -f $part)),$piece)
             $part++
           }
 
           $sha=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           $total=(Get-Item $zip).Length
-          $parts=Get-ChildItem Downloads\CrossRhythm_Windows_0.3.13.zip.part* | Sort-Object Name | ForEach-Object { "'Downloads/$($_.Name)'" }
+          $parts=Get-ChildItem "$dev\windows\CrossRhythm_Windows_0.3.13.zip.part*" | Sort-Object Name | ForEach-Object { "'windows/$($_.Name)'" }
           $partsJs=($parts -join ',')
 
           @"
-          <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cross Rhythm | Windows Download</title>
-          <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#070c10;color:#e8f0f4;font:17px system-ui,sans-serif}main{width:min(640px,calc(100% - 48px));padding:40px 0;line-height:1.8}h1{color:#8fe5c2;letter-spacing:.08em}button,a{font:inherit}button{padding:14px 24px;border:0;border-radius:6px;background:#8fe5c2;color:#071e16;cursor:pointer}button:disabled{opacity:.6;cursor:wait}a{color:#8fe5c2}progress{width:100%;height:18px;accent-color:#8fe5c2}#status{min-height:3.6em}</style></head>
-          <body><main><h1>CROSS RHYTHM</h1><h2>Windows Download</h2><p>Windows 64bit版 (0.3.13 Preview)</p><button id="download" type="button">Download</button><p id="status" role="status" aria-live="polite">ZIPを展開し、CrossRhythm.exeを起動してください。</p><progress id="progress" value="0" max="$total" hidden></progress><p><a href="https://takka-note.com/">TakKa noteへ戻る</a> · <a href="./">Unity WebGL版でPlay</a></p></main>
-          <script>
-          const button=document.getElementById('download'),statusText=document.getElementById('status'),progress=document.getElementById('progress');
-          const total=$total,expected='$sha',parts=[$partsJs];
-          button.addEventListener('click',async()=>{button.disabled=true;progress.hidden=false;progress.value=0;statusText.textContent='ダウンロードを準備しています…';try{let received=0;const chunks=[];for(const name of parts){const response=await fetch(name);if(!response.ok)throw Error('HTTP '+response.status);const reader=response.body.getReader();for(;;){const {value,done}=await reader.read();if(done)break;chunks.push(value);received+=value.length;progress.value=received;statusText.textContent='ダウンロード中… '+Math.floor(received/total*100)+'%';}}if(received!==total)throw Error('サイズを確認できませんでした');const blob=new Blob(chunks,{type:'application/zip'});const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).map(n=>n.toString(16).padStart(2,'0')).join('');if(digest!==expected)throw Error('ファイルを確認できませんでした');const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='CrossRhythm_Windows_0.3.13.zip';document.body.appendChild(link);link.click();statusText.textContent='準備ができました。';button.hidden=true;}catch(error){statusText.textContent='ダウンロードできませんでした。 ('+error.message+')';button.disabled=false;progress.hidden=true;}});
-          </script></body></html>
-          "@ | Set-Content -Encoding UTF8 download.html
+          <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Cross Rhythm 0.3.13 Development</title>
+          <style>body{font:16px system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;background:#0b1016;color:#eef4f7}a{color:#8fe5c2}code{background:#151d26;padding:2px 5px;border-radius:4px}.warn{border:1px solid #775;padding:12px;border-radius:8px}</style></head>
+          <body><h1>Cross Rhythm 0.3.13 Development</h1><p class="warn">開発確認用です。本公開版ではありません。検索エンジン向けに noindex を指定しています。</p>
+          <ul><li><a href="./unity/">Unity WebGL版 0.3.13</a></li><li><a href="./web/">HTML/JavaScript Web版 0.3.13</a></li><li><a href="./windows/">Windows版 0.3.13</a></li></ul></body></html>
+          "@ | Set-Content -Encoding UTF8 "$dev\index.html"
 
-          git add -A
-          git commit -m "Publish Cross Rhythm 0.3.13 WebGL and Windows builds"
-          git push origin main
+          @"
+          <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Cross Rhythm 0.3.13 Windows Development Build</title></head>
+          <body><h1>Cross Rhythm 0.3.13 Windows Development Build</h1><p>開発確認用です。本公開版ではありません。</p><button id="download">Download ZIP</button><p id="status"></p><script>
+          const total=$total,expected='$sha',parts=[$partsJs],button=document.getElementById('download'),status=document.getElementById('status');
+          button.onclick=async()=>{button.disabled=true;try{let received=0,chunks=[];for(const name of parts){const r=await fetch(name);if(!r.ok)throw Error('HTTP '+r.status);const reader=r.body.getReader();for(;;){const {value,done}=await reader.read();if(done)break;chunks.push(value);received+=value.length;status.textContent='Downloading '+Math.floor(received/total*100)+'%';}}if(received!==total)throw Error('size mismatch');const blob=new Blob(chunks,{type:'application/zip'});const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).map(n=>n.toString(16).padStart(2,'0')).join('');if(digest!==expected)throw Error('checksum mismatch');const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='CrossRhythm_Windows_0.3.13.zip';a.click();status.textContent='Ready';}catch(e){status.textContent='Failed: '+e.message;button.disabled=false;}}
+          </script></body></html>
+          "@ | Set-Content -Encoding UTF8 "$dev\windows\index.html"
+
+      - name: Commit development deployment only
+        run: |
+          git config user.name "TakKa Build"
+          git config user.email "80165829+takka-d@users.noreply.github.com"
+          git add dev/0.3.13
+          if (-not (git diff --cached --quiet)) {
+            git commit -m "Deploy Cross Rhythm 0.3.13 development builds (noindex)"
+            git push origin main
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrossRhythm-WebGL-0.3.13-dev
+          path: UnityProject/Builds/Web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrossRhythm-Windows-0.3.13-dev
+          path: UnityProject/Builds/Windows
