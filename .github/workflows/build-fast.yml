@@ -1,0 +1,201 @@
+name: Cross Rhythm 0.3.13 fast build
+
+on:
+  push:
+    branches: [build-0.3.13-fast]
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download source before repository checkout
+        env:
+          SOURCE_URL: "https://sdmntprindiasocentral.oaiusercontent.com/files/00000000-a8a0-8211-893d-1d8da5aee9f6/raw?se=2026-10-06T16%3A20%3A59Z&sp=r&sv=2026-02-06&sr=b&scid=143e9f2f-05f5-58cc-a909-0e1739be9ea1&skoid=6980ab1e-b994-4668-84de-ad0444c9d08b&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-06T01%3A51%3A28Z&ske=2026-10-07T01%3A51%3A28Z&sks=b&skv=2026-02-06&sig=OVC74q9vdOf5VbjjX2LWb8ywv3rraq8mIgbbFXyFwWE%3D"
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-delay 2 "$SOURCE_URL" -o /tmp/source.zip
+          echo "540a8ba0822ba5b88f2ea322a11a0bcdb170a39114ab2688a2a0e4b48487a388  /tmp/source.zip" | sha256sum -c -
+          mkdir -p /tmp/source
+          unzip -q /tmp/source.zip -d /tmp/source
+          test -f /tmp/source/cr13/ProjectSettings/ProjectVersion.txt
+
+      - name: Make build script portable on Linux CI
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/source/cr13/Assets/Editor/CrossRhythmBuild.cs')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('using NAudio.Wave;','#if UNITY_EDITOR_WIN\nusing NAudio.Wave;\n#endif')
+          old='string samples=Arg("-sampleSource");if(samples!="")foreach(string key in RhythmAudio.SampleKeys){string inputFile=Path.Combine(samples,key+".flac"),output="Assets/Resources/Drums/"+key+".wav";if(!File.Exists(output)){using(var reader=new MediaFoundationReader(inputFile))WaveFileWriter.CreateWaveFile(output,reader);}}'
+          new='string samples=Arg("-sampleSource");\n#if UNITY_EDITOR_WIN\n        if(samples!="")foreach(string key in RhythmAudio.SampleKeys){string inputFile=Path.Combine(samples,key+".flac"),output="Assets/Resources/Drums/"+key+".wav";if(!File.Exists(output)){using(var reader=new MediaFoundationReader(inputFile))WaveFileWriter.CreateWaveFile(output,reader);}}\n#else\n        if(samples!="")throw new Exception("sampleSource conversion requires a Windows Unity Editor");\n#endif'
+          if old not in s:
+              raise SystemExit('expected NAudio conversion block not found')
+          p.write_text(s.replace(old,new),encoding='utf-8')
+          PY
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            README.md
+            UnityProject
+            LegacyWeb
+          sparse-checkout-cone-mode: false
+
+      - name: Store canonical Unity project in main
+        run: |
+          set -euo pipefail
+          git config user.name "TakKa Build"
+          git config user.email "80165829+takka-d@users.noreply.github.com"
+          rm -rf UnityProject
+          mkdir UnityProject
+          rsync -a --delete --exclude 'Builds/' --exclude 'Library/' --exclude 'Temp/' --exclude 'Logs/' /tmp/source/cr13/ UnityProject/
+          git add -A UnityProject
+          if ! git diff --cached --quiet; then
+            git commit -m "Track canonical Unity 0.3.13 source"
+            git push origin HEAD:main
+          fi
+
+  build:
+    needs: bootstrap
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            UnityProject
+          sparse-checkout-cone-mode: false
+
+      - name: Verify Unity activation secrets
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          test -n "$UNITY_LICENSE" || { echo "::error::UNITY_LICENSE is not configured"; exit 86; }
+          test -n "$UNITY_EMAIL" || { echo "::error::UNITY_EMAIL is not configured"; exit 86; }
+          test -n "$UNITY_PASSWORD" || { echo "::error::UNITY_PASSWORD is not configured"; exit 86; }
+
+      - name: Build WebGL
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: UnityProject
+          unityVersion: 6000.3.25f1
+          targetPlatform: WebGL
+          buildMethod: CrossRhythm.CrossRhythmBuild.Web
+          customParameters: -buildOutput /github/workspace/out/Web
+
+      - name: Build Windows x64
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: UnityProject
+          unityVersion: 6000.3.25f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: CrossRhythm.CrossRhythmBuild.Windows
+          customParameters: -buildOutput /github/workspace/out/Windows/CrossRhythm.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: webgl
+          path: out/Web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: out/Windows
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            .nojekyll
+            Build
+            Downloads
+            StreamingAssets
+            index.html
+            download.html
+            project-picker.js
+            editor-input.js
+            fullscreen.js
+            README.md
+            UnityProject
+            LegacyWeb
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: webgl
+          path: /tmp/web
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows
+          path: /tmp/windows
+
+      - name: Package and publish
+        run: |
+          set -euo pipefail
+          test -f /tmp/web/index.html
+          test -f /tmp/windows/CrossRhythm.exe
+          rm -rf /tmp/release
+          mkdir -p /tmp/release/Downloads
+          (cd /tmp/windows && zip -qr /tmp/release/CrossRhythm_Windows_0.3.13.zip .)
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          src=Path('/tmp/release/CrossRhythm_Windows_0.3.13.zip')
+          data=src.read_bytes(); chunk=45*1024*1024
+          parts=[]
+          for i,start in enumerate(range(0,len(data),chunk),1):
+              p=Path('/tmp/release/Downloads')/f'CrossRhythm_Windows_0.3.13.zip.part{i}'
+              p.write_bytes(data[start:start+chunk]); parts.append(p.name)
+          sha=hashlib.sha256(data).hexdigest(); total=len(data)
+          parts_js=','.join(repr('Downloads/'+p) for p in parts)
+          html=f'''<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cross Rhythm | Windows Download</title><style>body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#070c10;color:#e8f0f4;font:17px system-ui,sans-serif}}main{{width:min(640px,calc(100% - 48px));padding:40px 0;line-height:1.8}}h1{{color:#8fe5c2;letter-spacing:.08em}}button,a{{font:inherit}}button{{padding:14px 24px;border:0;border-radius:6px;background:#8fe5c2;color:#071e16;cursor:pointer}}button:disabled{{opacity:.6;cursor:wait}}a{{color:#8fe5c2}}progress{{width:100%;height:18px;accent-color:#8fe5c2}}#status{{min-height:3.6em}}</style></head><body><main><h1>CROSS RHYTHM</h1><h2>Windows Download</h2><p>Windows 64bit版 (0.3.13 Preview / 約{{total//1024//1024}}MB)</p><button id="download" type="button">Download</button><p id="status" role="status" aria-live="polite">ZIPを展開し、CrossRhythm.exeを起動してください。</p><progress id="progress" value="0" max="{{total}}" hidden></progress><p><a href="https://takka-note.com/">TakKa noteへ戻る</a> · <a href="./">Unity WebGL版でPlay</a></p></main><script>const button=document.getElementById('download'),statusText=document.getElementById('status'),progress=document.getElementById('progress');const total={{total}},expected={{sha!r}},parts=[{{parts_js}}];button.addEventListener('click',async()=>{{button.disabled=true;progress.hidden=false;progress.value=0;statusText.textContent='ダウンロードを準備しています…';try{{let received=0;const chunks=[];for(const name of parts){{const response=await fetch(name);if(!response.ok)throw Error('HTTP '+response.status);const reader=response.body.getReader();for(;;){{const {{value,done}}=await reader.read();if(done)break;chunks.push(value);received+=value.length;progress.value=received;statusText.textContent='ダウンロード中… '+Math.floor(received/total*100)+'%';}}}}if(received!==total)throw Error('サイズを確認できませんでした');const blob=new Blob(chunks,{{type:'application/zip'}});const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).map(n=>n.toString(16).padStart(2,'0')).join('');if(digest!==expected)throw Error('ファイルを確認できませんでした');const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='CrossRhythm_Windows_0.3.13.zip';link.textContent='保存されなかった場合はここからDownload';document.querySelector('main').appendChild(link);link.click();statusText.textContent='準備ができました。ZIPを展開し、CrossRhythm.exeを起動してください。';button.hidden=true;window.addEventListener('pagehide',()=>URL.revokeObjectURL(url),{{once:true}});}}catch(error){{statusText.textContent='ダウンロードできませんでした。もう一度お試しください。 ('+error.message+')';button.disabled=false;progress.hidden=true;}}}});</script></body></html>'''
+          Path('/tmp/release/download.html').write_text(html,encoding='utf-8')
+          PY
+          git config user.name "TakKa Build"
+          git config user.email "80165829+takka-d@users.noreply.github.com"
+          rm -rf Build Downloads StreamingAssets
+          rm -f index.html download.html project-picker.js editor-input.js fullscreen.js
+          cp -a /tmp/web/. .
+          mkdir Downloads
+          cp -a /tmp/release/Downloads/. Downloads/
+          cp /tmp/release/download.html download.html
+          cat > README.md <<'EOF'
+          # Cross Rhythm
+
+          [Play on TakKa note](https://takka-note.com/cross-rhythm/) · [Unity WebGL player](https://takka-d.github.io/cross-rhythm/) · [Windows download](https://takka-d.github.io/cross-rhythm/download.html)
+
+          Unity 6 source is tracked in `UnityProject/`. The legacy HTML/JavaScript version is tracked in `LegacyWeb/`. Current preview: 0.3.13.
+
+          The bundled Rhythm Check is a generated demo. Song recordings and user projects are not included.
+
+          Third-party notices and licenses are included in this repository.
+          EOF
+          sed -i 's/^          //' README.md
+          git add -A
+          git commit -m "Publish Cross Rhythm 0.3.13 WebGL and Windows builds"
+          git push origin main
