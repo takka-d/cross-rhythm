@@ -1,0 +1,6 @@
+Reference: cross_rhythm_v175_save_permission.html
+Drawing source SHA256: 392ee2f93648cf9c85830d4b4bf82f4d235b600664142429a14d623f2e75c00d
+Canvas 1260x940; SCORE 220..1190; BASE_Y520; row42; pitch204.
+Original functions retained verbatim: line, text, roundedRect, drawPlayfieldBackdrop, drawMeasurePanel, drawLaneRail, drawCurrentBeatHighlight, drawGuideKeycap, drawGuideBracket, drawNormalLaneGuide, drawProGuideCard, drawProClusterBracket, drawProLaneGuide, drawHitFX, drawJudgeFX.
+Glyphs baked at each strength; panel, rails, glow, guides, labels and judge effects retained.
+Final assets rendered with Chrome Canvas from the original functions; no font-weight substitution. Includes count numbers and pedal bar.

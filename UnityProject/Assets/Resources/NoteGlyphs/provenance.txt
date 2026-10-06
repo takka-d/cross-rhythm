@@ -1,0 +1,4 @@
+Source: work/cross-rhythm/main-v178.html
+Renderer SHA256: d036b2c53ad768004271802658a88aed271bcbfe27d224125745be0489222533
+Generated from the original Canvas paths, gradients, outlines, rotations and colors.
+Logical tile:80x80; raster:240x240; velocity4. Runtime applies vertical-only strength scale.
