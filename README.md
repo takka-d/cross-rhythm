@@ -1,6 +1,6 @@
 # Cross Rhythm
 
-[Play on TakKa note](https://takka-note.com/cross-rhythm/) · [Unity WebGL player](https://takka-d.github.io/cross-rhythm/) · [Legacy Web 0.3.13](https://takka-d.github.io/cross-rhythm/LegacyWeb/) · [Windows download](https://takka-d.github.io/cross-rhythm/download.html)
+[Play on TakKa note](https://takka-note.com/cross-rhythm/) · [Unity WebGL player](https://takka-d.github.io/cross-rhythm/) · [Windows download](https://takka-d.github.io/cross-rhythm/download.html)
 
 Unity 6 source is tracked in `UnityProject/`. The HTML/JavaScript version is tracked in `LegacyWeb/`.
 
@@ -26,7 +26,7 @@ Outputs:
 - WebGL: `UnityProject\Builds\Web\`
 - Logs: `UnityProject\Builds\Windows.log`, `UnityProject\Builds\Web.log`
 
-The release process then publishes the WebGL build to the repository root/GitHub Pages and packages the Windows build under `Downloads/`.
+The 0.3.13 development build is deployed only under `/dev/0.3.13/` with `noindex`. The public root remains on the current release until an explicit production release.
 
 Current source preview: 0.3.13.
 
