@@ -47,20 +47,20 @@ jobs:
           export BROWSER="$RUNNER_TEMP/capture-browser.sh"
 
           cat > "$RUNNER_TEMP/auth-pub.pem" <<'KEY'
------BEGIN PUBLIC KEY-----
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAy61uUkSrs4Gis9VlztK4
-E6XyvCLaWudLr2Q+/ZZtq5UaFP6XnRZypAFx0zI55wnm/1vbBlpNslOqalnC9GyK
-9pWZzlcOSEDEv0xKDG4fZ2mTkFGUq+oonHHnRbzTpKm0VH6DVf2UpwXXV6GMG24D
-MxSE6KNeblfCUf0b4OCB77If0wCK1j4gSM0b3+iRNclacV3bnCd0jVSTZhKGOwKf
-zauTjQiJ403pWvPgNi/vhnncWpDeKENRB/KPjZAQAFL95aelpsuRcVcVB7mIM9vN
-+KYDECoGvhb713goCs1bHHm3SkL78AfAt5ij/Du9OsR6da5aKHQjpxIyB1bSSXKL
-rNH6O+TxsD3pInKcdia2CAp6dXfK6JmT8VuFTwgq/kRAecIxAiY96vFXR9S7w0gq
-hvVQBKg/FLVnp0LO1DKG0fCIvXAsQCZdjkR5wPYbj9jde0TAMG4ZpcVCIVbThWNO
-D3gu7ea1yfPefeLQd5rDrJUeTPVVvJij+dosXCDHjqaIVPn34Hzksy0FqaSha6dl
-6K9qMFelyG7kHkN38cuD60wNX8bUg3sNW4aLf2DwzDDFOvfAynvCsoQWpNBWcUIZ
-Lp+whXhybNotPXZPayv3Sg59CMiWVKNkWDsuADc7TR2mX7WFlzO773kI5gKtySqk
-Jv3v2pneITu4P/3pHq2KePkCAwEAAQ==
------END PUBLIC KEY-----
+          -----BEGIN PUBLIC KEY-----
+          MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAy61uUkSrs4Gis9VlztK4
+          E6XyvCLaWudLr2Q+/ZZtq5UaFP6XnRZypAFx0zI55wnm/1vbBlpNslOqalnC9GyK
+          9pWZzlcOSEDEv0xKDG4fZ2mTkFGUq+oonHHnRbzTpKm0VH6DVf2UpwXXV6GMG24D
+          MxSE6KNeblfCUf0b4OCB77If0wCK1j4gSM0b3+iRNclacV3bnCd0jVSTZhKGOwKf
+          zauTjQiJ403pWvPgNi/vhnncWpDeKENRB/KPjZAQAFL95aelpsuRcVcVB7mIM9vN
+          +KYDECoGvhb713goCs1bHHm3SkL78AfAt5ij/Du9OsR6da5aKHQjpxIyB1bSSXKL
+          rNH6O+TxsD3pInKcdia2CAp6dXfK6JmT8VuFTwgq/kRAecIxAiY96vFXR9S7w0gq
+          hvVQBKg/FLVnp0LO1DKG0fCIvXAsQCZdjkR5wPYbj9jde0TAMG4ZpcVCIVbThWNO
+          D3gu7ea1yfPefeLQd5rDrJUeTPVVvJij+dosXCDHjqaIVPn34Hzksy0FqaSha6dl
+          6K9qMFelyG7kHkN38cuD60wNX8bUg3sNW4aLf2DwzDDFOvfAynvCsoQWpNBWcUIZ
+          Lp+whXhybNotPXZPayv3Sg59CMiWVKNkWDsuADc7TR2mX7WFlzO773kI5gKtySqk
+          Jv3v2pneITu4P/3pHq2KePkCAwEAAQ==
+          -----END PUBLIC KEY-----
 KEY
 
           RUNNER_TRACKING_ID="" nohup unity auth login --format ndjson >"$RUNNER_TEMP/auth.out" 2>&1 &
