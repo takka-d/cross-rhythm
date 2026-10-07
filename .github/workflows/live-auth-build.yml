@@ -23,6 +23,12 @@ jobs:
         with:
           ref: main
           fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            UnityProject
+            LegacyWeb
+            dev/0.3.13
+          sparse-checkout-cone-mode: false
 
       - name: Install Unity CLI and Editor
         shell: bash
