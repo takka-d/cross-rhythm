@@ -1,0 +1,27 @@
+name: Inspect Unity WebGL toolchain
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/webgl-toolchain-probe.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install Unity CLI and WebGL toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://unity.com/install.sh | UNITY_CLI_CHANNEL=beta bash
+          export PATH="$HOME/.local/bin:$PATH"
+          unity install 6000.3.25f1 -m webgl --accept-eula --yes --non-interactive
+          ROOT="/home/runner/Unity/Hub/Editor/6000.3.25f1/Editor"
+          echo "=== IL2CPP ==="
+          find "$ROOT" -maxdepth 7 -type f \( -iname 'il2cpp' -o -iname 'il2cpp.exe' -o -iname 'UnityLinker*' -o -iname 'bee_backend*' -o -iname 'emcc*' -o -iname 'wasm-ld*' \) -print | sort | head -200
+          echo "=== WebGL dirs ==="
+          find "$ROOT/Data/PlaybackEngines/WebGLSupport" -maxdepth 4 -type d | sort | head -200
+          echo "=== Baselib/archive candidates ==="
+          find "$ROOT/Data/PlaybackEngines/WebGLSupport" -maxdepth 6 -type f \( -name '*.a' -o -name '*.bc' -o -name '*.o' -o -name '*.js' \) -printf '%p %s\n' | sort | head -300
