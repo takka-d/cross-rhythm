@@ -1,0 +1,19 @@
+name: Inspect Unity CLI auth internals
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspect-unity-cli.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install and inspect
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://unity.com/install.sh | UNITY_CLI_CHANNEL=beta bash
+          BIN="$HOME/.local/bin/unity"
+          strings "$BIN" | grep -Ei 'implicit|app-linking|callback/login/channel|oauth2|auth_url|device.?code|verification_uri|resident auth|auth broker' | head -n 500 || true
