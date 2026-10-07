@@ -1,0 +1,34 @@
+name: Unity auth browser capture test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/unity-auth-capture-test.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install CLI and intercept browser launch
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://unity.com/install.sh | UNITY_CLI_CHANNEL=beta bash
+          export PATH="$HOME/.local/bin:$PATH"
+          cat > "$RUNNER_TEMP/capture-browser.sh" <<'SH'
+          #!/usr/bin/env bash
+          printf '%s\n' "$1" > "$RUNNER_TEMP/unity-auth-url.txt"
+          exit 0
+          SH
+          chmod +x "$RUNNER_TEMP/capture-browser.sh"
+          export BROWSER="$RUNNER_TEMP/capture-browser.sh"
+          timeout 20s unity auth login --format ndjson > "$RUNNER_TEMP/auth.out" 2>&1 || true
+          if [ -s "$RUNNER_TEMP/unity-auth-url.txt" ]; then
+            echo "CAPTURED_BROWSER_URL=yes"
+            echo "URL_LENGTH=$(wc -c < "$RUNNER_TEMP/unity-auth-url.txt")"
+            sha256sum "$RUNNER_TEMP/unity-auth-url.txt" | sed 's/  .*/  [redacted]/'
+          else
+            echo "CAPTURED_BROWSER_URL=no"
+            echo "AUTH_OUTPUT_BYTES=$(wc -c < "$RUNNER_TEMP/auth.out")"
+          fi
