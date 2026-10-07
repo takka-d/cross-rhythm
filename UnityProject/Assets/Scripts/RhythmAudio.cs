@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using Newtonsoft.Json.Linq;
@@ -30,6 +32,9 @@ public sealed class RhythmAudio : MonoBehaviour {
     int voice,hatVoice;
     readonly List<HiHatEnvelope> hatVoices=new List<HiHatEnvelope>();
     int loadGeneration;
+    CancellationTokenSource decodeCancellation;
+    sealed class DecodedSong {public float[] PCM;public int Channels,Rate;public AudioWaveform Waveform;}
+    void OnDestroy(){decodeCancellation?.Cancel();decodeCancellation?.Dispose();}
     public double Beat => Running?AnchorBeat+(AudioSettings.dspTime-AnchorDSP)*BPM/60*Rate:AnchorBeat;
     public double BeatAt(double dsp)=>Running?AnchorBeat+(dsp-AnchorDSP)*BPM/60*Rate:AnchorBeat;
     public double DSPAt(double beat)=>AnchorDSP+(beat-AnchorBeat)*60/BPM/Rate;
@@ -47,6 +52,7 @@ public sealed class RhythmAudio : MonoBehaviour {
     public void Preview(){Stop();Rate=1;Backing.pitch=1;if(Song==null)return;Backing.clip=Song;Backing.volume=BackingGain;Backing.timeSamples=(int)Math.Min(Song.samples-1,Math.Max(0,Offset)*Song.frequency);Backing.Play();}
     void Update(){if(Backing!=null)Backing.volume=BackingGain;}
     public void Load(ChartProject p){
+        decodeCancellation?.Cancel();decodeCancellation?.Dispose();decodeCancellation=new CancellationTokenSource();
         Stop();Rate=1;Backing.pitch=1;foreach(var c in gainClips.Values)Destroy(c);gainClips.Clear();gainScales.Clear();loadGeneration++;Project=p;BPM=p.BPM;Offset=p.Offset;AnchorBeat=-8;
         if(Song!=null)Destroy(Song);Song=null;Waveform=null;
         BackingGain=PlayerPrefs.GetFloat("musicVolume",(float?)p.Chart["mix"]?["backing"]??.7f);DrumGain=PlayerPrefs.GetFloat("drumsVolume",(float?)p.Chart["mix"]?["drums"]??.8f);
@@ -65,24 +71,42 @@ public sealed class RhythmAudio : MonoBehaviour {
             if(generation!=loadGeneration)yield break;
             if(clip.loadState!=AudioDataLoadState.Loaded){OnReady?.Invoke("Drum sample could not load: "+clip.name);yield break;}
         }
+        string preparationError=null;
         try {
-        PrepareDrums();
+            PrepareDrums();
 #if UNITY_WEBGL && !UNITY_EDITOR
-        if(clips.TryGetValue("OHH",out var hat)&&hat!=null){var pcm=new float[hat.samples*hat.channels];if(!hat.GetData(pcm,0))throw new Exception("Cannot prepare open hi-hat");CRHatPrepare(pcm,hat.samples,hat.channels,hat.frequency);}
+            if(clips.TryGetValue("OHH",out var hat)&&hat!=null){var pcm=new float[hat.samples*hat.channels];if(!hat.GetData(pcm,0))throw new Exception("Cannot prepare open hi-hat");CRHatPrepare(pcm,hat.samples,hat.channels,hat.frequency);}
 #endif
-        if(!p.Files.ContainsKey(p.AudioPath)){OnReady?.Invoke("");yield break;}
+        }catch(Exception e){preparationError=e.Message;}
+        if(preparationError!=null){OnReady?.Invoke(preparationError);yield break;}
+        if(!p.Files.TryGetValue(p.AudioPath,out var data)){OnReady?.Invoke("");yield break;}
 #if UNITY_WEBGL && !UNITY_EDITOR
-            byte[] data=p.Files[p.AudioPath];CRDecodeAudio(data,data.Length,gameObject.name,loadGeneration);
+        CRDecodeAudio(data,data.Length,gameObject.name,generation);
 #else
-            string ext=Path.GetExtension(p.AudioPath);string temp=Path.Combine(Application.temporaryCachePath,"cross-rhythm-audio"+ext);File.WriteAllBytes(temp,p.Files[p.AudioPath]);
-            float[] pcm;int channels,rate;DecodeNative(temp,out pcm,out channels,out rate);
-            Song=AudioClip.Create("Backing",pcm.Length/channels,channels,rate,false);Song.SetData(pcm,0);Waveform=new AudioWaveform(pcm,channels,rate);OnReady?.Invoke("");
-#endif
+        string temp=Path.Combine(Application.temporaryCachePath,"cross-rhythm-audio-"+Guid.NewGuid().ToString("N")+Path.GetExtension(p.AudioPath));
+        var token=decodeCancellation.Token;
+        // Decoding and waveform aggregation never run on the UI thread. Each load owns its file.
+        var task=Task.Run(()=>{
+            try {
+                token.ThrowIfCancellationRequested();File.WriteAllBytes(temp,data);
+                DecodeNative(temp,out var pcm,out var channels,out var rate,token);
+                token.ThrowIfCancellationRequested();var waveform=new AudioWaveform(pcm,channels,rate);
+                token.ThrowIfCancellationRequested();return new DecodedSong{PCM=pcm,Channels=channels,Rate=rate,Waveform=waveform};
+            }finally{if(File.Exists(temp))File.Delete(temp);}
+        },token);
+        _=task.ContinueWith(t=>{var observed=t.Exception;},TaskContinuationOptions.OnlyOnFaulted);
+        while(!task.IsCompleted){if(generation!=loadGeneration)yield break;yield return null;}
+        if(generation!=loadGeneration||task.IsCanceled)yield break;
+        if(task.IsFaulted){OnReady?.Invoke(task.Exception.GetBaseException().Message);yield break;}
+        try {
+            var decoded=task.Result;Song=AudioClip.Create("Backing",decoded.PCM.Length/decoded.Channels,decoded.Channels,decoded.Rate,false);
+            Song.SetData(decoded.PCM,0);Waveform=decoded.Waveform;OnReady?.Invoke("");
         }catch(Exception e){OnReady?.Invoke(e.Message);}
+#endif
     }
-    public static void DecodeNative(string path,out float[] pcm,out int channels,out int rate){
+    public static void DecodeNative(string path,out float[] pcm,out int channels,out int rate,CancellationToken cancellation=default){
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-        using(var reader=new MediaFoundationReader(path)){var provider=reader.ToSampleProvider();channels=provider.WaveFormat.Channels;rate=provider.WaveFormat.SampleRate;var samples=new List<float>();var block=new float[65536];int count;while((count=provider.Read(block,0,block.Length))>0){for(int i=0;i<count;i++)samples.Add(block[i]);if(samples.Count>48000*2*60*30)throw new Exception("Audio too long");}pcm=samples.ToArray();}
+        using(var reader=new MediaFoundationReader(path)){var provider=reader.ToSampleProvider();channels=provider.WaveFormat.Channels;rate=provider.WaveFormat.SampleRate;var samples=new List<float>();var block=new float[65536];int count;while((count=provider.Read(block,0,block.Length))>0){cancellation.ThrowIfCancellationRequested();for(int i=0;i<count;i++)samples.Add(block[i]);if(samples.Count>48000*2*60*30)throw new Exception("Audio too long");}pcm=samples.ToArray();}
 #else
         pcm=new float[0];channels=2;rate=48000;throw new Exception("Audio decoder unavailable on this platform");
 #endif
@@ -93,10 +117,28 @@ public sealed class RhythmAudio : MonoBehaviour {
 #endif
     public void OnAudioDecoded(string json){
 #if UNITY_WEBGL && !UNITY_EDITOR
-        var o=JObject.Parse(json);int ptr=(int)o["pointer"];
-        try{if((int)o["generation"]!=loadGeneration)return;int count=(int)o["count"],ch=(int)o["channels"],rate=(int)o["rate"];var samples=new float[count];Marshal.Copy(new IntPtr(ptr),samples,0,count);Song=AudioClip.Create("Backing",count/ch,ch,rate,false);Song.SetData(samples,0);Waveform=new AudioWaveform(samples,ch,rate);OnReady?.Invoke("");}finally{CRFree(ptr);}
+        StartCoroutine(ReceiveWebAudio(JObject.Parse(json)));
 #endif
     }
+#if UNITY_WEBGL && !UNITY_EDITOR
+    IEnumerator ReceiveWebAudio(JObject o){
+        int ptr=(int)o["pointer"],generation=(int)o["generation"],count=(int)o["count"],ch=(int)o["channels"],rate=(int)o["rate"];AudioClip candidate=null;
+        try{
+            if(generation!=loadGeneration)yield break;
+            string error=null;AudioWaveform waveform=null;
+            try{candidate=AudioClip.Create("Backing",count/ch,ch,rate,false);waveform=new AudioWaveform(count/ch,rate);}catch(Exception e){error=e.Message;}
+            if(error!=null){OnReady?.Invoke(error);yield break;}
+            for(int at=0;at<count;){
+                if(generation!=loadGeneration)yield break;
+                int size=Math.Min(32768*ch,count-at);var chunk=new float[size];
+                try{Marshal.Copy(new IntPtr(ptr+at*4),chunk,0,size);candidate.SetData(chunk,at/ch);waveform.Append(chunk,ch,at/ch);}catch(Exception e){error=e.Message;}
+                if(error!=null){OnReady?.Invoke(error);yield break;}at+=size;yield return null;
+            }
+            if(generation!=loadGeneration)yield break;
+            Song=candidate;candidate=null;Waveform=waveform;OnReady?.Invoke("");
+        }finally{if(candidate!=null)Destroy(candidate);CRFree(ptr);}
+    }
+#endif
     public void OnAudioError(string msg){try{var o=JObject.Parse(msg);if((int)o["generation"]==loadGeneration)OnReady?.Invoke((string)o["error"]);}catch{OnReady?.Invoke(msg);}}
     public static string KeyFor(ChartNote n,bool closed){switch(n.Instrument){case "BD":return "BD";case "HH":return closed?"HH":"OHH";case "CR":return n.Articulation=="splash"?"SPLASH":n.Articulation=="china"?"CHINA":"CR";case "RD":return n.Articulation=="cup"?"CUP":n.Articulation=="crash"?"RIDE_CRASH":"RD";case "SN":return n.Articulation=="rim_closed"?"SIDE":n.Articulation=="rim_open"?"SN_RIM":n.Articulation=="buzz"?"SN_BUZZ":"SN";case "HT":case "MT":return n.Articulation=="rimshot"?"TOM_RIM":"HT";case "FT":return n.Articulation=="rimshot"?"TOM_RIM":"FT";default:return "HH_PEDAL";}}
     public void Choke(double when=-1){double close=when<0?AudioSettings.dspTime:when;

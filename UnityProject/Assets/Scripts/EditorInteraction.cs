@@ -19,7 +19,7 @@ public sealed class EditorInteraction {
     public double Cursor, ContextBeat,DefaultDuration=.25;
     public Vector2 ContextPoint;
     public string Message="";
-    enum Gesture {None,Right,Move,ResizeLeft,ResizeRight,Pedal,Seek}
+    enum Gesture {None,Right,Range,Move,ResizeLeft,ResizeRight,Pedal,Seek}
     Gesture gesture;
     Vector2 origin,current;
     bool moved,pushed,groupGrab;
@@ -31,7 +31,7 @@ public sealed class EditorInteraction {
     double[] copiedBeats;
     public bool Capturing=>gesture!=Gesture.None;
     public bool AutoScrolling=>moved||gesture==Gesture.Seek||gesture==Gesture.Pedal;
-    public bool Selecting=>gesture==Gesture.Right&&moved;
+    public bool Selecting=>(gesture==Gesture.Right||gesture==Gesture.Range)&&moved;
     public bool HasClipboard=>clipboard!=null&&clipboard.Count>0;
     public Rect SelectionBox=>Rect.MinMaxRect(Math.Min(origin.x,current.x),Math.Min(origin.y,current.y),Math.Max(origin.x,current.x),Math.Max(origin.y,current.y));
     public EditorInteraction(HashSet<int> selection){Selection=selection;}
@@ -68,10 +68,14 @@ public sealed class EditorInteraction {
         if(button!=0)return;
         if(point.y<0){if(Batch||Selection.Count>1)Clear();gesture=Gesture.Seek;SetCursor(point.x);return;}
         var hit=HitResizeEdge(point)??Hit(point);
-        if(clicks>=2&&hit!=null){Cancel();Delete(hit.Index);return;}
-        if(hit!=null&&shift){Range(hit);return;}
+        if(shift){
+            if(hit!=null)Range(hit);
+            else {var anchor=Note(Anchor);if(anchor!=null){double end=point.x/PPB,lo=Math.Min(anchor.Beat,end)-1e-9,hi=Math.Max(anchor.Beat,end)+1e-9;Selection.Clear();foreach(var n in Project.Notes.Where(n=>n.Beat>=lo&&n.Beat<=hi))Selection.Add(n.Index);Batch=true;}}
+            gesture=Gesture.Range;return;
+        }
         if(hit!=null&&control){if(!Selection.Add(hit.Index))Selection.Remove(hit.Index);if(Anchor<0||!Selection.Contains(Anchor))RefreshAnchor();Active=hit.Index;Batch=Selection.Count>1;return;}
         if(shift||control)return;
+        if(clicks>=2&&hit!=null){Cancel();Delete(hit.Index);return;}
         if(hit!=null&&(hit.Pedal||hit.Instrument=="SN")&&(hit.Pedal||Selection.Count<=1||!Selection.Contains(hit.Index))){
             Rect r=NoteRect(hit);float edge=hit.Pedal?Math.Min(10,Math.Max(5,r.width*.24f)):Math.Min(9,Math.Max(2,r.width*.22f));
             if(point.x<r.xMin+edge||point.x>r.xMax-edge){Only(hit);target=hit.Index;originalStart=hit.Beat;originalEnd=Math.Min(Project.Length,hit.Beat+hit.Duration);gesture=point.x<r.center.x?Gesture.ResizeLeft:Gesture.ResizeRight;return;}
@@ -93,7 +97,7 @@ public sealed class EditorInteraction {
     public void Move(Vector2 point){
         current=point;if(!Capturing)return;
         if(gesture==Gesture.Seek){SetCursor(point.x);return;}
-        if(gesture==Gesture.Right){if(Vector2.Distance(origin,point)>=5)moved=true;if(moved){Selection.Clear();foreach(var n in Project.Notes)if(NoteRect(n).Overlaps(SelectionBox,true))Selection.Add(n.Index);Batch=true;RefreshAnchor();}return;}
+        if(gesture==Gesture.Right||gesture==Gesture.Range){if(Vector2.Distance(origin,point)>=5)moved=true;if(moved){Selection.Clear();foreach(var n in Project.Notes)if(NoteRect(n).Overlaps(SelectionBox,true))Selection.Add(n.Index);Batch=true;RefreshAnchor();}return;}
         if(!moved&&Vector2.Distance(origin,point)<5)return;moved=true;
         if(gesture==Gesture.Move){
             var anchor=originals.First(n=>n.Index==target);double db=groupGrab?Math.Floor((point.x-origin.x)/PPB/Project.Grid+.5)*Project.Grid:CellStart(Project,point.x/PPB)-anchor.Beat;

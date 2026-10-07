@@ -5,6 +5,7 @@ namespace CrossRhythm {
 public static class PlatformFiles {
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]public static extern void CRInit();
+    [DllImport("__Internal")]public static extern void CRUnsaved(int dirty);
     [DllImport("__Internal")]public static extern void CRKeyboardFileMode(int mode);
     [DllImport("__Internal")]public static extern void CRProjectButtonsBegin();
     [DllImport("__Internal")]public static extern void CRProjectButtonsEnd();

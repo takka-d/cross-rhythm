@@ -7,16 +7,17 @@ public partial class CrossRhythmApp {
     sealed class MenuItem {public string Id;public Vector2 Center;}
     readonly List<MenuItem> menuItems=new List<MenuItem>();
     string menuFocus="",menuActivate="";
-    bool keyboardMenu,previewRequested;
+    bool keyboardMenu,previewRequested,songPreviewEnabled;
     double songPreviewDue;
     ChartProject pendingSongAudio;
     void ResetMenuFocus(){menuFocus="";menuActivate="";keyboardMenu=false;menuItems.Clear();}
-    void RequestSongPreview(){previewRequested=true;songPreviewDue=Time.unscaledTimeAsDouble+.2;}
+    void RequestSongPreview(){previewRequested=songPreviewEnabled;songPreviewDue=Time.unscaledTimeAsDouble+.2;}
+    void SetSongPreview(bool enabled){songPreviewEnabled=enabled;PlayerPrefs.SetInt("songPreview",enabled?1:0);PlayerPrefs.Save();Audio.Stop();RequestSongPreview();}
     void UpdateSongPreview(){
         if(Current!=Page.Songs){previewRequested=false;return;}
         if(Time.unscaledTimeAsDouble<songPreviewDue)return;
         if(pendingSongAudio!=null){var p=pendingSongAudio;pendingSongAudio=null;Audio.Load(p);return;}
-        if(previewRequested&&loaded&&!busy){previewRequested=false;Audio.Preview();}
+        if(songPreviewEnabled&&previewRequested&&loaded&&!busy){previewRequested=false;Audio.Preview();}
     }
     void FocusSong(int index){
         index=Mathf.Clamp(index,0,Library.Count-1);

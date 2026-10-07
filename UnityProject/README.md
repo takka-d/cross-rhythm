@@ -1,4 +1,4 @@
-# Cross Rhythm 0.3.13 development
+# Cross Rhythm 0.3.14 development
 
 Unity 6000.3.25f1. Windows and WebGL use the same Assets/Scripts source.
 Run `./Build.ps1 -Target Both` from PowerShell with the licensed Unity Editor
@@ -7,7 +7,7 @@ Tests run before BuildPipeline.BuildPlayer. No license activation workaround,
 DLL swap or player version-byte replacement is part of this build.
 
 The production root remains 0.3.12. Verified development builds are published
-under `/dev/0.3.13/`. The WordPress article remains a draft.
+under `/dev/0.3.14/`. The WordPress article remains a draft.
 
 Changes: common folder row in Songs/Config; Songs > Edit opens an independent
 editable copy; File in Edit header; Back in Play/Practice; Practice speed
@@ -20,3 +20,9 @@ No personal song projects/audio are bundled.
 
 LegacyWeb is the earlier HTML reference, not the current Unity implementation.
 Its old ADTOF title did not correspond to an implemented analysis client.
+
+0.3.14: six-cue count-in (1, 2, 1, 2, 3, 4); optional Songs preview
+(default OFF, remembered); background/cancellable audio decoding; Shift+left
+range selection and Ctrl+left multi-selection; unsaved-change confirmation
+for navigation and closing. Leave retains a recovery draft. Browser close
+uses the browser-native unsaved warning; save before closing to update a file.

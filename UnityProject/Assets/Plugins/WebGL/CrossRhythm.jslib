@@ -7,6 +7,10 @@ mergeInto(LibraryManager.library, {
   CRDisplayLayout: function(x,y,w,h,english,enabled) {
     if(window.CrossRhythmDisplay) window.CrossRhythmDisplay.layout(x,y,w,h,!!english,!!enabled);
   },
+  CRUnsaved: function(dirty) {
+    window.crossRhythmUnsaved=!!dirty;
+    if(!window.crossRhythmUnloadGuard){window.crossRhythmUnloadGuard=function(e){if(window.crossRhythmUnsaved){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',window.crossRhythmUnloadGuard);}
+  },
   CRInit: function() {
     if(Module.canvas&&!Module.canvas.crossRhythmContextHandled){Module.canvas.addEventListener('contextmenu',function(e){e.preventDefault();});Module.canvas.crossRhythmContextHandled=true;}
     if (window.CRFiles) return;
@@ -143,7 +147,22 @@ mergeInto(LibraryManager.library, {
   CRPickAudio: function(targetPtr) {window.CRFiles.fallback(UTF8ToString(targetPtr),'audio',false);},
   CRDecodeAudio: function(data,length,targetPtr,generation) {
     const bytes=HEAPU8.slice(data,data+length),target=UTF8ToString(targetPtr);
-    (async()=>{let ctx;try{ctx=new (window.AudioContext||window.webkitAudioContext)();const audio=await ctx.decodeAudioData(bytes.buffer);const channels=audio.numberOfChannels,count=audio.length*channels,ptr=_malloc(count*4);if(!ptr)throw Error('Insufficient audio memory');const out=HEAPF32.subarray(ptr/4,ptr/4+count);for(let c=0;c<channels;c++){const source=audio.getChannelData(c);for(let i=0;i<audio.length;i++)out[i*channels+c]=source[i];}SendMessage(target,'OnAudioDecoded',JSON.stringify({pointer:ptr,count,channels,rate:audio.sampleRate,generation}));}catch(e){SendMessage(target,'OnAudioError',JSON.stringify({error:e.message,generation}));}finally{if(ctx)await ctx.close();}})();
+    window.crossRhythmAudioGeneration=generation;
+    (async()=>{let ctx,ptr=0;try{
+      ctx=new (window.AudioContext||window.webkitAudioContext)();const audio=await ctx.decodeAudioData(bytes.buffer);
+      if(window.crossRhythmAudioGeneration!==generation)return;
+      const channels=audio.numberOfChannels,count=audio.length*channels;ptr=_malloc(count*4);if(!ptr)throw Error('Insufficient audio memory');
+      const inputs=Array.from({length:channels},(_,c)=>audio.getChannelData(c));
+      for(let frame=0;frame<audio.length;frame+=32768){
+        if(window.crossRhythmAudioGeneration!==generation)return;
+        // Reacquire the heap view after every yield: Unity can grow WASM memory meanwhile.
+        const end=Math.min(audio.length,frame+32768),out=HEAPF32;
+        for(let c=0;c<channels;c++)for(let i=frame;i<end;i++)out[ptr/4+i*channels+c]=inputs[c][i];
+        await new Promise(resolve=>setTimeout(resolve,0));
+      }
+      if(window.crossRhythmAudioGeneration!==generation)return;
+      const owned=ptr;ptr=0;SendMessage(target,'OnAudioDecoded',JSON.stringify({pointer:owned,count,channels,rate:audio.sampleRate,generation}));
+    }catch(e){SendMessage(target,'OnAudioError',JSON.stringify({error:e.message,generation}));}finally{if(ptr)_free(ptr);if(ctx)await ctx.close();}})();
   },
   CRFree: function(pointer) {_free(pointer);}
 });

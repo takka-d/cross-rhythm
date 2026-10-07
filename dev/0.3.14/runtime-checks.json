@@ -1,0 +1,28 @@
+{
+  "version": "0.3.14",
+  "checks": [
+    "audio finished loading",
+    "audio finished loading",
+    "preview OFF persists and does not autoplay",
+    "synthetic audio fixture supplied",
+    "background decode is in progress",
+    "song selection changes while previous audio is loading",
+    "audio finished loading",
+    "obsolete audio cannot start; preview remains OFF after decode",
+    "preview ON plays only the focused song",
+    "preview OFF immediately stops playback and persists",
+    "audio finished loading",
+    "navigation opens unsaved prompt and stays in Edit",
+    "Cancel retains edits and stays in Edit",
+    "Leave keeps the editor draft and recovery file",
+    "audio finished loading",
+    "Save and Continue waits for verified save and navigates",
+    "audio finished loading",
+    "save conflict keeps the prompt open and does not navigate",
+    "window close is blocked by unsaved prompt",
+    "cancelling close preserves changes",
+    "audio finished loading",
+    "Play starts one eight-beat count-in",
+    "Practice uses the same count-in"
+  ]
+}

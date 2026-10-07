@@ -34,12 +34,13 @@ public partial class CrossRhythmApp {
         bool stage=Current==Page.Play||Current==Page.Practice;
         bool uiEnabled=GUI.enabled;GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!(Current==Page.Edit&&(showMeterPanel||Editor.ContextOpen||draftRunning));
         if(!stage)Header();
-        GUI.enabled=uiEnabled&&!bindingsOpen;
+        GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt;
         switch(Current){case Page.Title:TitlePage();break;case Page.Songs:SongsPage();break;case Page.Config:ConfigPage();break;case Page.Result:ResultPage();break;case Page.Play:case Page.Practice:Stage();break;case Page.Edit:EditorPage();break;}
         editTextFocused=Current==Page.Edit&&GUI.GetNameOfFocusedControl().StartsWith("edit-");
         DisplaySizeButton();
         GUI.enabled=uiEnabled;
         if(bindingsOpen)BindingSettings();
+        UnsavedPrompt();
 #if UNITY_WEBGL && !UNITY_EDITOR
         if(Event.current.type==EventType.Repaint){PlatformFiles.CRProjectButtonsEnd();PlatformFiles.CRKeyboardFileMode(keyboardMenu&&menuFocus.StartsWith("file:")?int.Parse(menuFocus.Substring(5)):-1);}
 #endif
@@ -47,7 +48,6 @@ public partial class CrossRhythmApp {
         PlatformFiles.CREditorKeys(Current==Page.Edit&&!showMeterPanel&&!discardPrompt&&!draftRunning&&!editorFileOpen?1:0,editTextFocused?1:0);
 #endif
         if(!stage&&Current!=Page.Result)Text(new Rect(26,H-28,W-52,24),busy?T("読込中…","Loading…"):status,13,muted);
-        if(discardPrompt){RectFill(new Rect(0,0,W,H),new Color(0,0,0,.8f));var box=new Rect(W/2-260,H/2-110,520,220);RectFill(box,panel);Border(box,mint);Text(new Rect(box.x+24,box.y+25,480,35),T("未保存の編集があります","You have unsaved changes"),22);Text(new Rect(box.x+24,box.y+68,470,50),T("編集を続けるか、保存してから移動できます。","Keep editing or save before leaving."),16,muted);if(Button(new Rect(box.x+24,box.y+140,210,48),T("Editに戻る","Keep editing")))discardPrompt=false;if(Button(new Rect(box.x+250,box.y+140,240,48),T("保存済みなら移動","Leave after saving"),false,!Project.Dirty)){discardPrompt=false;NavigateNow(pendingPage);}if(Button(new Rect(box.x+250,box.y+85,240,40),"Save",true)){Save(false);}}
     }
     void Header(){
         Text(new Rect(26,18,250,42),"CROSS RHYTHM",21,mint,true);
@@ -74,7 +74,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(x,553,290,64),"Songs",true))Navigate(Page.Songs);
         if(Button(new Rect(x+308,553,180,64),"Edit"))Navigate(Page.Edit);
         if(Button(new Rect(x+506,553,180,64),"Config"))Navigate(Page.Config);
-        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.13",14,muted);
+        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.14",14,muted);
         for(int i=0;i<7;i++){float h=35+i%3*15;RectFill(new Rect(W-260+i*22,240+i*16,7,h),new Color(mint.r,mint.g,mint.b,.18f+i*.04f));}
     }
     void FittedText(Rect r,string value,int size,Color color,bool bold=false){
@@ -87,6 +87,7 @@ public partial class CrossRhythmApp {
     void SongsPage(){float x=(W-1160)/2;Text(new Rect(x,107,800,55),"Songs",38,Color.white,true);
         ProjectFolderRow(new Rect(x,169,1160,35));
         Text(new Rect(x,212,680,25),Library.Count+" tracks",14,muted);
+        if(Button(new Rect(x+934,210,226,32),"Preview "+(songPreviewEnabled?"ON":"OFF"),songPreviewEnabled,true,14,"song-preview"))SetSongPreview(!songPreviewEnabled);
         var view=new Rect(x,254,660,H-344);songScroll=GUI.BeginScrollView(view,songScroll,new Rect(0,0,640,Library.Count*138));
         for(int i=0;i<Library.Count;i++){
             var p=Library[i];var r=new Rect(0,i*138,630,126);bool choose=Button(r,"",false,true,18,"song:"+i);bool hoverFocus=Event.current.type==EventType.Repaint&&r.Contains(Event.current.mousePosition)&&UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.delta.ReadValue().sqrMagnitude>0;if(i==selected){RectFill(r,new Color(.09f,.19f,.18f));Border(r,mint,2);}
@@ -101,7 +102,7 @@ public partial class CrossRhythmApp {
         FittedText(new Rect(right+28,268,408,43),Project.Title,26,Color.white,true);FittedText(new Rect(right+28,313,408,28),ArtistDisplay(Project),17,muted);
         Text(new Rect(right+28,337,315,32),$"{Project.BPM:0.##} BPM    {(int)(Project.Length/Project.BPM)}:{(int)(Project.Length*60/Project.BPM)%60:00}",20,mint);
         Text(new Rect(right+341,332,70,22),"LEVEL",11,muted);Text(new Rect(right+352,355,70,50),Project.Difficulty,36,mint,true);
-        Text(new Rect(right+28,421,400,25),busy?T("試聴を準備中…","Loading preview…"):Audio.Backing.isPlaying?"Preview ♪":Audio.Song==null?T("音源なし","No audio"):"",14,mint);
+        Text(new Rect(right+28,421,400,25),busy?T("音源を準備中…","Preparing audio…"):!songPreviewEnabled?"Preview OFF":Audio.Backing.isPlaying?"Preview ♪":Audio.Song==null?T("音源なし","No audio"):"",14,mint);
         float best=PlayerPrefs.GetFloat("best:"+Project.Title,-1);Text(new Rect(right+28,387,295,32),"Best   "+(best<0?"—":best.ToString("0.0")+" / 100"),18,muted);
         if(Button(new Rect(right+28,452,198,44),"Normal",!pro)){pro=false;PlayerPrefs.SetInt("pro",0);}if(Button(new Rect(right+238,452,198,44),"Pro",pro)){pro=true;PlayerPrefs.SetInt("pro",1);}
         if(Button(new Rect(right+28,H-256,408,62),"Start",true,loaded&&!busy,18,"start"))Begin(false);

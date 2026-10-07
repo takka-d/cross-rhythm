@@ -15,8 +15,8 @@
       english=isEnglish;
       let b=controls[id];if(!b){b=document.createElement('button');b.type='button';b.className='cr-project-button';
         b.addEventListener('pointerenter',()=>{if(!b.disabled)feedback('hover');});
-        b.addEventListener('click',()=>{if(b.disabled)return;feedback('confirm');if(b.mode>=3)window.crossRhythm?.SendMessage('CrossRhythm','OnSaveButton',b.mode===4?'SaveAs':'Save');else window.CRFiles.pick('CrossRhythm',b.mode).finally(()=>{if(!window.CRFiles.picking)document.getElementById('unity-canvas')?.focus();});});document.body.appendChild(b);controls[id]=b;}
-      used=Math.max(used,id+1);b.mode=mode;b.textContent=mode===4?'Save As':mode===3?'Save':mode===1?'Open Folder':'Open Project';b.classList.toggle('primary',primary);b.disabled=!enabled;
+        b.addEventListener('click',()=>{if(b.disabled)return;feedback('confirm');if(b.mode>=3)window.crossRhythm?.SendMessage('CrossRhythm','OnSaveButton',b.mode===5?'Continue':b.mode===4?'SaveAs':'Save');else window.CRFiles.pick('CrossRhythm',b.mode).finally(()=>{if(!window.CRFiles.picking)document.getElementById('unity-canvas')?.focus();});});document.body.appendChild(b);controls[id]=b;}
+      used=Math.max(used,id+1);b.mode=mode;b.textContent=mode===5?'Save & Continue':mode===4?'Save As':mode===3?'Save':mode===1?'Open Folder':'Open Project';b.classList.toggle('primary',primary);b.disabled=!enabled;
       Object.assign(b.style,{display:'block',left:(x*100)+'%',top:(y*100)+'%',width:(w*100)+'%',height:(h*100)+'%',fontSize:fontSize+'px'});
     },
     end(){for(let i=used;i<controls.length;i++)controls[i].style.display='none';}

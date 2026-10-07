@@ -30,14 +30,14 @@ public partial class CrossRhythmApp {
             float w=beat?(edge?1.2f:1.05f):eighth?.9f:.75f,a=alpha*(beat?(edge?.13f:.10f)*.94f:eighth?.055f*.82f:.032f*.72f);
             float x=220+(float)(q/length)*970;ReferenceLine(x-w/2,top,w,168,z,new Color(1,1,1,a));
         }
-        if(current){double beat=Math.Floor(Math.Max(0,Math.Min(length-1e-8,b-start)));ReferenceBeat(220+(float)(beat/length)*970,top,Math.Min(970,(float)(970/length)),z,alpha);}
+        if(current){double unit=m==-2?2:1,beat=Math.Floor(Math.Max(0,Math.Min(length-1e-8,b-start))/unit)*unit;ReferenceBeat(220+(float)(beat/length)*970,top,Math.Min(970,(float)(970*unit/length)),z,alpha);}
         int labelIndex=count?0:m+1;Color labelColor=C(current?"#f1fbff":"#d9e3ec");
         if(labelIndex<=512)ReferenceSprite("bar-labels",new Rect(224,top-36,80,32),z,alpha,labelColor,AtlasUV(labelIndex,16,33));
         else Text(new Rect(224*z,(top-36)*z,120*z,32*z),"M"+(m+1),Mathf.RoundToInt(18*z),labelColor*new Color(1,1,1,alpha),true);
         int meterIndex=(int)Math.Round(length*16)-1;float meterX=count?292:290;
         if(meterIndex>=0&&meterIndex<256&&Math.Abs(length*16-Math.Round(length*16))<1e-7)ReferenceSprite("meters",new Rect(meterX,top-36,80,32),z,alpha,C(current?"#a9e6ff":"#a7b6c4"),AtlasUV(meterIndex,16,16));
         else Text(new Rect(meterX*z,(top-31)*z,100*z,26*z),length.ToString("0.##")+"/4",Mathf.RoundToInt(13*z),muted);
-        if(count){for(int q=0;q<4;q++)ReferenceSprite("count-numbers",new Rect(220+(q+.5f)/4*970-20,top-40,40,32),z,uv:AtlasUV(q,4,1));return;}
+        if(count){int cues=m==-2?2:4;for(int q=0;q<cues;q++)ReferenceSprite("count-numbers",new Rect(220+(q+.5f)/cues*970-20,top-40,40,32),z,uv:AtlasUV(q,4,1));return;}
         var visible=Project.Notes.Where(n=>n.Measure==m&&!n.Pedal&&NoteVisible(n)).ToArray();var offsets=ChartVisuals.SimultaneousOffsets(visible);
         foreach(var n in visible){bool missed=judged.TryGetValue(n.Index,out var hit)&&hit.Judge=="MISS";ReferenceGlyph(n,ChartVisuals.CellX(Project,m,n.Local,220,970)+offsets[n.Index],LaneY(n.Lane,top,42),z,(missed?.66f:.98f)*alpha,false,missed);}
         DrawPedalRanges(m,start,length,b,top*z,42*z,220*z,970*z,z,alpha);

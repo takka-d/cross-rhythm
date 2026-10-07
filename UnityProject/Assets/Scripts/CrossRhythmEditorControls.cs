@@ -19,7 +19,7 @@ public partial class CrossRhythmApp {
         SaveButton(new Rect(W-134,86,110,38),true);
         SaveStatusLine(new Rect(24,128,W-48,25));
         RectFill(new Rect(24,160,W-48,34),panel);
-        Text(new Rect(36,166,170,24),T("右ドラッグ: 範囲選択","Right drag: select"),13,muted);
+        Text(new Rect(36,166,188,24),T("Shift + 左: 範囲選択","Shift + Left: range"),13,muted);
         Text(new Rect(236,166,42,24),"Grid",13,muted);int q=(int?)Project.Chart["quantize"]??16;
         if(Button(new Rect(278,162,76,30),"1/"+q,false,true,14)){int i=Array.IndexOf(Grids,q);PushUndo();Project.Chart["quantize"]=Grids[(i+1)%Grids.Length];Edited();gridField="";}
         if(gridField=="")gridField=q.ToString();gridField=EditField("grid",new Rect(363,162,58,30),gridField);
@@ -27,7 +27,7 @@ public partial class CrossRhythmApp {
         Text(new Rect(510,166,66,24),"Zoom X",13,muted);float previousZoom=zoom;zoom=GUI.HorizontalSlider(new Rect(580,174,160,18),zoom,30f/56f,20);if(Math.Abs(zoom-previousZoom)>.00001f)editScroll.x*=zoom/previousZoom;
         Text(new Rect(763,166,W-787,24),$"Bar {editMeasure+1} / {Project.Measures.Length}   ·   {selection.Count} "+T("選択","selected"),13,muted);
         EditorTimeline();EditorInspector();
-        Text(new Rect(24,H-50,W-48,22),T("右クリック: メニュー / 右ドラッグ: 範囲 / 左ダブルクリック: 削除 / Ctrl: 追加選択 / Shift: 時間範囲 / 矢印: 移動","Right click: menu · Right drag: select · Double click: delete · Ctrl: toggle · Shift: range · Arrows: move"),12,muted);
+        Text(new Rect(24,H-50,W-48,22),T("Shift + 左クリック/ドラッグ: 範囲選択 / Ctrl + 左: 複数選択 / 右: メニュー / 左ダブルクリック: 削除 / 矢印: 移動","Shift + Left click/drag: range · Ctrl + Left: toggle · Right: menu · Double click: delete · Arrows: move"),12,muted);
         GUI.enabled=enabled;EditorFileMenu();EditorMeterControls();EditorContextMenu();if(!draftRunning)EditorKeys();
     }
     void EditorFileMenu(){

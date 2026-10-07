@@ -52,6 +52,15 @@ public static class EditorInteractionTests {
         var roundtrip=ChartProject.Read(h.P.Write(),"pedal.crproj");Check(roundtrip.Notes.First(n=>n.Pedal).Duration==.5,"pedal length survives save and reload");
         h.E.Clear();h.E.SetDuration(1.5);var pt=new Vector2(200,8.5f*46);h.E.Down(pt,0,1,false,false);h.E.Up(pt);Check(h.P.Notes.Any(n=>n.Pedal&&n.Beat==2&&n.Duration==1.5),"new pedal uses the chosen numeric length");
         Check(EditorInteraction.WheelBeat(2,3,.25,7)==2.75&&EditorInteraction.WheelBeat(0,-3,.25,7)==0&&EditorInteraction.WheelBeat(6.75,3,.25,7)==7,"wheel seeks by grid and clamps both ends");
+        h=new Harness();raw=h.P.Chart.ToString();
+        h.E.Down(new Vector2(0,0),0,1,true,false);h.E.Move(new Vector2(155,370));h.E.Up(new Vector2(155,370));
+        Check(h.E.Selection.SetEquals(new[]{0,1,2,3})&&!h.E.ContextOpen&&h.P.Chart.ToString()==raw&&h.Undo.Count==0,"Shift left drag selects a rectangle without adding or moving notes");
+        h.E.Clear();h.Click(1);h.E.Down(new Vector2(250,100),0,1,true,false);h.E.Up(new Vector2(250,100));
+        Check(h.E.Selection.SetEquals(new[]{1,2,3})&&h.P.Chart.ToString()==raw,"Shift blank click extends the anchored time range");
+        h.Click(4,ctrl:true,count:2);Check(h.E.Selection.Contains(4)&&h.P.Chart.ToString()==raw,"Ctrl double click never deletes a note");
+        h.Click(2,shift:true,count:2);Check(h.P.Chart.ToString()==raw,"Shift double click never deletes a note");
+        Check(CountIn.Between(-8,0).SequenceEqual(new double[]{-8,-6,-4,-3,-2,-1})&&CountIn.Numbers.SequenceEqual(new[]{1,2,1,2,3,4}),"count-in has exactly six cues and ends before the chart");
+        Check(CountIn.Between(-5.5,-2.5).SequenceEqual(new double[]{-4,-3}),"resuming part-way through count-in never repeats earlier cues");
         Debug.Log("CROSS_RHYTHM_EDITOR_INPUT_TESTS_PASS");
     }
 }
