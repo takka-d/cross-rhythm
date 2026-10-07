@@ -11,7 +11,7 @@ public partial class CrossRhythmApp {
     Texture2D ReferenceTexture(string name){if(!referenceTextures.TryGetValue(name,out var t)){var data=Resources.Load<TextAsset>("Stage175/"+name);if(data!=null){t=new Texture2D(2,2,TextureFormat.RGBA32,false);t.LoadImage(data.bytes,true);t.filterMode=FilterMode.Bilinear;t.wrapMode=TextureWrapMode.Clamp;}referenceTextures[name]=t;}return t;}
     void ReferenceSprite(string name,Rect rect,float z,float alpha=1,Color? tint=null,Rect? uv=null){var texture=ReferenceTexture(name);if(texture==null)return;var old=GUI.color;GUI.color=(tint??Color.white)*new Color(1,1,1,alpha);var target=new Rect(rect.x*z,rect.y*z,rect.width*z,rect.height*z);if(uv.HasValue)GUI.DrawTextureWithTexCoords(target,texture,uv.Value);else GUI.DrawTexture(target,texture);GUI.color=old;}
     static Rect AtlasUV(int i,int cols,int rows)=>new Rect((i%cols)/(float)cols,1-(i/cols+1)/(float)rows,1f/cols,1f/rows);
-    double ReferencePosition(double b){int bar=Project.BarAt(b);double start=bar<0?bar*4:Project.Starts[bar],length=bar<0?4:Project.Measures[bar];return bar+Math.Max(0,Math.Min(1,(b-start)/length));}
+    double ReferencePosition(double b){int bar=Project.BarAt(b);double start=bar<0?bar*CountIn.Length(Project):Project.Starts[bar],length=bar<0?CountIn.Length(Project):Project.Measures[bar];return bar+Math.Max(0,Math.Min(1,(b-start)/length));}
     float ReferenceTop(int bar,double b)=>520+(float)(bar-ReferencePosition(b))*204;
     void ReferenceGlyph(ChartNote note,float x,float y,float z,float alpha,bool outline=false,bool missed=false){ReferenceSprite(note.Instrument+"-"+(outline?"outline":missed?"miss":"normal")+"-"+note.Velocity,new Rect(x-40,y-40,80,80),z,alpha);}
     void ReferenceLine(float x,float y,float width,float height,float z,Color color)=>RectFill(new Rect(x*z,y*z,width*z,height*z),color);
@@ -23,21 +23,26 @@ public partial class CrossRhythmApp {
     }
     void ReferenceMeasure(int m,double b,float z){
         float top=ReferenceTop(m,b);if(top+168<-80||top>1020)return;
-        bool current=m==Project.BarAt(b),count=m<0;float d=Math.Abs(top+84-520),alpha=d<125?1:d<360?.46f:.16f;double length=count?4:Project.Measures[m],start=count?m*4:Project.Starts[m];
+        bool current=m==Project.BarAt(b),count=m<0;float d=Math.Abs(top+84-520),alpha=d<125?1:d<360?.46f:.16f;double length=count?CountIn.Length(Project):Project.Measures[m],start=count?m*length:Project.Starts[m];
         ReferenceSprite("panel-"+(current?"active":"quiet")+(count?"-count":""),new Rect(0,top-20,1260,208),z,alpha);
         foreach(double q in StageGrid(m)){
             bool beat=Math.Abs(q-Math.Round(q))<1e-8,eighth=Math.Abs(q*2-Math.Round(q*2))<1e-8,edge=Math.Abs(q)<1e-8||Math.Abs(q-length)<1e-8;
             float w=beat?(edge?1.2f:1.05f):eighth?.9f:.75f,a=alpha*(beat?(edge?.13f:.10f)*.94f:eighth?.055f*.82f:.032f*.72f);
             float x=220+(float)(q/length)*970;ReferenceLine(x-w/2,top,w,168,z,new Color(1,1,1,a));
         }
-        if(current){double unit=m==-2?2:1,beat=Math.Floor(Math.Max(0,Math.Min(length-1e-8,b-start))/unit)*unit;ReferenceBeat(220+(float)(beat/length)*970,top,Math.Min(970,(float)(970*unit/length)),z,alpha);}
+        if(current){double unit=count?CountIn.Unit(Project):1,beat=Math.Floor(Math.Max(0,Math.Min(length-1e-8,b-start))/unit)*unit;ReferenceBeat(220+(float)(beat/length)*970,top,Math.Min(970,(float)(970*unit/length)),z,alpha);}
         int labelIndex=count?0:m+1;Color labelColor=C(current?"#f1fbff":"#d9e3ec");
         if(labelIndex<=512)ReferenceSprite("bar-labels",new Rect(224,top-36,80,32),z,alpha,labelColor,AtlasUV(labelIndex,16,33));
         else Text(new Rect(224*z,(top-36)*z,120*z,32*z),"M"+(m+1),Mathf.RoundToInt(18*z),labelColor*new Color(1,1,1,alpha),true);
         int meterIndex=(int)Math.Round(length*16)-1;float meterX=count?292:290;
-        if(meterIndex>=0&&meterIndex<256&&Math.Abs(length*16-Math.Round(length*16))<1e-7)ReferenceSprite("meters",new Rect(meterX,top-36,80,32),z,alpha,C(current?"#a9e6ff":"#a7b6c4"),AtlasUV(meterIndex,16,16));
+        if(count&&Project.Meter(0).Item2!=4)Text(new Rect(meterX*z,(top-31)*z,100*z,26*z),Project.Meter(0).Item1+"/"+Project.Meter(0).Item2,Mathf.RoundToInt(13*z),muted);
+        else if(meterIndex>=0&&meterIndex<256&&Math.Abs(length*16-Math.Round(length*16))<1e-7)ReferenceSprite("meters",new Rect(meterX,top-36,80,32),z,alpha,C(current?"#a9e6ff":"#a7b6c4"),AtlasUV(meterIndex,16,16));
         else Text(new Rect(meterX*z,(top-31)*z,100*z,26*z),length.ToString("0.##")+"/4",Mathf.RoundToInt(13*z),muted);
-        if(count){int cues=m==-2?2:4;for(int q=0;q<cues;q++)ReferenceSprite("count-numbers",new Rect(220+(q+.5f)/cues*970-20,top-40,40,32),z,uv:AtlasUV(q,4,1));return;}
+        if(count){int beats=Project.Meter(0).Item1;for(int q=0;q<beats;q++){
+            var rect=new Rect(220+(q+.5f)/beats*970-20,top-40,40,32);
+            if(q<4)ReferenceSprite("count-numbers",rect,z,uv:AtlasUV(q,4,1));
+            else Text(new Rect(rect.x*z,(top-24)*z,40*z,32*z),(q+1).ToString(),Mathf.RoundToInt(10*z),muted);
+        }return;}
         var visible=Project.Notes.Where(n=>n.Measure==m&&!n.Pedal&&NoteVisible(n)).ToArray();var offsets=ChartVisuals.SimultaneousOffsets(visible);
         foreach(var n in visible){bool missed=judged.TryGetValue(n.Index,out var hit)&&hit.Judge=="MISS";ReferenceGlyph(n,ChartVisuals.CellX(Project,m,n.Local,220,970)+offsets[n.Index],LaneY(n.Lane,top,42),z,(missed?.66f:.98f)*alpha,false,missed);}
         DrawPedalRanges(m,start,length,b,top*z,42*z,220*z,970*z,z,alpha);

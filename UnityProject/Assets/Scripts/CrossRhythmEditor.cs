@@ -46,6 +46,7 @@ public partial class CrossRhythmApp {
     void DeleteSelected(){Editor.Delete();}
     void Copy(){Editor.Copy();status=T("コピーしました。選択を解除しました","Copied. Selection cleared");}
     void Paste(){Editor.Paste(Math.Max(0,Audio.Beat));SyncEditorNote();}
-    void NewProject(){if(Project.Dirty){status=T("先にSaveまたはSave Asで保存してください","Save your current project first");return;}var p=ChartProject.Demo();p.SetSongInfo("Untitled","");p.Chart["events"]=new JArray();p.Chart["measures"]=new JArray(4,4,4,4);p.FileName="Untitled.crproj";p.Rebuild();p.Dirty=true;OpenEditorProject(p);bpmField="";}
+    void NewProject(){if(editorProject.Dirty){AskBeforeLeaving(NewProjectNow);return;}NewProjectNow();}
+    void NewProjectNow(){ClearEditorDocument();NavigateNow(Page.Edit);status=T("新規プロジェクトを作成しました","Created a new project");}
 }
 }

@@ -1,0 +1,8 @@
+Cross Rhythm 0.3.15 development / Unity 6000.3.25f1
+Built for Windows x64 and WebGL with BuildPipeline.BuildPlayer from shared source.
+Core/editor regression tests passed before both builds.
+Runtime verified: menu navigation confirmation for Songs/Config/Title; Cancel;
+New Project; Leave clears editor/recovery without changing saved files;
+Save and Continue; save conflicts; Play/Practice meter-aware count-in.
+Count-in tests cover 4/4, 3/4, 5/4, 6/8, 7/8.
+No private song files or audio bundled. Production root remains 0.3.12.

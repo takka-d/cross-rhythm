@@ -53,7 +53,7 @@ public sealed class RhythmAudio : MonoBehaviour {
     void Update(){if(Backing!=null)Backing.volume=BackingGain;}
     public void Load(ChartProject p){
         decodeCancellation?.Cancel();decodeCancellation?.Dispose();decodeCancellation=new CancellationTokenSource();
-        Stop();Rate=1;Backing.pitch=1;foreach(var c in gainClips.Values)Destroy(c);gainClips.Clear();gainScales.Clear();loadGeneration++;Project=p;BPM=p.BPM;Offset=p.Offset;AnchorBeat=-8;
+        Stop();Rate=1;Backing.pitch=1;foreach(var c in gainClips.Values)Destroy(c);gainClips.Clear();gainScales.Clear();loadGeneration++;Project=p;BPM=p.BPM;Offset=p.Offset;AnchorBeat=CountIn.Start(p);
         if(Song!=null)Destroy(Song);Song=null;Waveform=null;
         BackingGain=PlayerPrefs.GetFloat("musicVolume",(float?)p.Chart["mix"]?["backing"]??.7f);DrumGain=PlayerPrefs.GetFloat("drumsVolume",(float?)p.Chart["mix"]?["drums"]??.8f);
         StartCoroutine(FinishLoad(p,loadGeneration));

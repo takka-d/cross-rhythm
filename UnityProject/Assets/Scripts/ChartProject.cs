@@ -89,7 +89,7 @@ public sealed class ChartProject {
     }
     public static double EventStep(JObject e){double explicitStep=(double?)e["gridStepBeats"]??0;if(explicitStep>=1.0/256&&explicitStep<=4)return explicitStep;double b=(double?)e["beat"]??0;if(Math.Abs(b-Math.Round(b*4)/4)<=.00051)return .25;foreach(int n in new[]{8,3,6,12,5,10,7,14,9,11,13,15,16,18,20,21,22,24,26,28,30,32,64})if(Math.Abs(b-Math.Round(b*n)/n)<=.00051)return 1.0/n;return .25;}
     public bool ClosedAt(double beat)=>Pedals.Any(p=>beat>=p.Start-1e-8&&beat<p.End-1e-8);
-    public int BarAt(double beat){if(beat<0)return (int)Math.Floor(beat/4);int i=Array.BinarySearch(Starts,beat);return i>=0?i:Math.Max(0,Math.Min(Starts.Length-1,~i-1));}
+    public int BarAt(double beat){if(beat<0)return CountIn.BarAt(this,beat);int i=Array.BinarySearch(Starts,beat);return i>=0?i:Math.Max(0,Math.Min(Starts.Length-1,~i-1));}
     public double SnapBeat(double beat){
         int m=Math.Max(0,BarAt(Math.Max(0,Math.Min(Length-1e-9,beat))));
         double local=Math.Round((beat-Starts[m])/Grid,MidpointRounding.AwayFromZero)*Grid;
@@ -104,12 +104,12 @@ public sealed class ChartProject {
     }
     public IEnumerable<double> Pulses(double from,double to){
         for(int bar=Math.Max(-2,BarAt(from));bar<=Math.Min(Measures.Length-1,BarAt(to));bar++){
-            double start=bar<0?bar*4:Starts[bar],length=bar<0?4:Measures[bar],unit=bar<0?1:4.0/Meter(bar).Item2;
+            double start=bar<0?bar*CountIn.Length(this):Starts[bar],length=bar<0?CountIn.Length(this):Measures[bar],unit=bar<0?CountIn.Unit(this):4.0/Meter(bar).Item2;
             int first=Math.Max(0,(int)Math.Ceiling((from-start-1e-8)/unit));
             for(int i=first;i*unit<length-1e-8;i++){double b=start+i*unit;if(b>to+1e-8)break;yield return b;}
         }
     }
-    public bool IsBarStart(double beat){int m=BarAt(beat);return Math.Abs(beat-(m<0?m*4:Starts[m]))<1e-7;}
+    public bool IsBarStart(double beat){int m=BarAt(beat);return Math.Abs(beat-(m<0?m*CountIn.Length(this):Starts[m]))<1e-7;}
     JArray MeterArray(){return new JArray(Enumerable.Range(0,Measures.Length).Select(m=>{var s=Meter(m);return new JObject{{"numerator",s.Item1},{"denominator",s.Item2}};}));}
     public bool CanSetMeter(int m,int numerator,int denominator){
         if(m<0||m>=Measures.Length||numerator<1||numerator>64||!new[]{1,2,4,8,16,32,64}.Contains(denominator))return false;

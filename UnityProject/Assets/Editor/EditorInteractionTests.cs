@@ -59,8 +59,8 @@ public static class EditorInteractionTests {
         Check(h.E.Selection.SetEquals(new[]{1,2,3})&&h.P.Chart.ToString()==raw,"Shift blank click extends the anchored time range");
         h.Click(4,ctrl:true,count:2);Check(h.E.Selection.Contains(4)&&h.P.Chart.ToString()==raw,"Ctrl double click never deletes a note");
         h.Click(2,shift:true,count:2);Check(h.P.Chart.ToString()==raw,"Shift double click never deletes a note");
-        Check(CountIn.Between(-8,0).SequenceEqual(new double[]{-8,-6,-4,-3,-2,-1})&&CountIn.Numbers.SequenceEqual(new[]{1,2,1,2,3,4}),"count-in has exactly six cues and ends before the chart");
-        Check(CountIn.Between(-5.5,-2.5).SequenceEqual(new double[]{-4,-3}),"resuming part-way through count-in never repeats earlier cues");
+        Check(CountIn.Between(ChartProject.Demo(),-8,0).SequenceEqual(new double[]{-8,-6,-4,-3,-2,-1}),"count-in has exactly six cues and ends before the chart");
+        Check(CountIn.Between(ChartProject.Demo(),-5.5,-2.5).SequenceEqual(new double[]{-4,-3}),"resuming part-way through count-in never repeats earlier cues");
         Debug.Log("CROSS_RHYTHM_EDITOR_INPUT_TESTS_PASS");
     }
 }

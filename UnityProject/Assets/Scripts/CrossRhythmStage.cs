@@ -33,7 +33,7 @@ public partial class CrossRhythmApp {
         if(gridProject!=Project||gridRevision!=revision){stageGrids.Clear();gridProject=Project;gridRevision=revision;}
         Rect area=new Rect(8,74,W-16,H-74-(practice?124:8));RoundFill(area,C("#090d13"));RoundBorder(area,line);
         ReferencePlayfield(area,b);
-        if(practice){PracticeControls();RectFill(new Rect(12,H-67,W-24,53),panel);Text(new Rect(28,H-56,180,28),$"{Math.Max(0,b)*60/Project.BPM:0.0} / {Project.Length*60/Project.BPM:0.0}s",16,muted);float next=GUI.HorizontalSlider(new Rect(230,H-48,W-550,20),(float)b,-8,(float)Project.Length);if(Math.Abs(next-b)>.01)Seek(next);Text(new Rect(W-295,H-56,270,30),"Wheel: ±4 beats · Space",14,muted);if(Event.current.type==EventType.ScrollWheel){Seek(b+Event.current.delta.y*4);Event.current.Use();}}
+        if(practice){PracticeControls();RectFill(new Rect(12,H-67,W-24,53),panel);Text(new Rect(28,H-56,180,28),$"{Math.Max(0,b)*60/Project.BPM:0.0} / {Project.Length*60/Project.BPM:0.0}s",16,muted);float next=GUI.HorizontalSlider(new Rect(230,H-48,W-550,20),(float)b,(float)CountIn.Start(Project),(float)Project.Length);if(Math.Abs(next-b)>.01)Seek(next);Text(new Rect(W-295,H-56,270,30),"Wheel: ±4 beats · Space",14,muted);if(Event.current.type==EventType.ScrollWheel){Seek(b+Event.current.delta.y*4);Event.current.Use();}}
     }
     void DrawPedalRanges(int bar,double start,double length,double b,float y,float rh,float left,float width,float z,float alpha){
         foreach(var p in Project.Pedals){

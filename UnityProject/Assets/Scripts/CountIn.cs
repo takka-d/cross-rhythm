@@ -1,12 +1,21 @@
 using System;
 using System.Collections.Generic;
 namespace CrossRhythm {
-// Two half-note cues, then four quarter-note cues. Beat zero starts the chart.
+// Count-in bars retain the chart's meter. Only 4/4 uses the slow first-bar cues.
 public static class CountIn {
-    public static readonly double[] Beats={-8,-6,-4,-3,-2,-1};
-    public static readonly int[] Numbers={1,2,1,2,3,4};
-    public static bool IsCue(double beat)=>Array.Exists(Beats,b=>Math.Abs(b-beat)<1e-7);
-    public static bool Accent(double beat)=>Math.Abs(beat+8)<1e-7||Math.Abs(beat+4)<1e-7;
-    public static IEnumerable<double> Between(double from,double to){foreach(var b in Beats)if(b>=from-1e-8&&b<=to+1e-8)yield return b;}
+    public static double Length(ChartProject p)=>p.Measures[0];
+    public static double Start(ChartProject p)=>-2*Length(p);
+    public static double Unit(ChartProject p)=>4.0/p.Meter(0).Item2;
+    public static int BarAt(ChartProject p,double beat)=>(int)Math.Floor(beat/Length(p));
+    public static IEnumerable<double> Between(ChartProject p,double from,double to){
+        double length=Length(p),unit=Unit(p);var meter=p.Meter(0);
+        for(int bar=-2;bar<0;bar++){
+            double step=bar==-2&&meter.Item1==4&&meter.Item2==4?2:unit;
+            for(int i=0;i*step<length-1e-8;i++){
+                double b=bar*length+i*step;if(b>=from-1e-8&&b<=to+1e-8)yield return b;
+            }
+        }
+    }
+    public static bool Accent(ChartProject p,double beat)=>Math.Abs(beat+2*Length(p))<1e-7||Math.Abs(beat+Length(p))<1e-7;
 }
 }

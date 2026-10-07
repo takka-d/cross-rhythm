@@ -64,7 +64,7 @@ public partial class CrossRhythmApp : MonoBehaviour {
 #else
         RestoreLibrary();RestoreEditorNative();
         var args=Environment.GetCommandLineArgs();int at=Array.IndexOf(args,"--project-file");if(at>=0&&at+1<args.Length)ImportNative(args[at+1]);
-        if(!string.IsNullOrEmpty(workspaceCheckRoot)){Application.runInBackground=true;StartCoroutine(args.Contains("--tasks-check")?TasksCheck():args.Contains("--practice-draft-check")?PracticeDraftCheck():WorkspaceCheck());}
+        if(!string.IsNullOrEmpty(workspaceCheckRoot)){Application.runInBackground=true;if(!args.Contains("--interactive-check"))StartCoroutine(args.Contains("--tasks-check")?TasksCheck():args.Contains("--practice-draft-check")?PracticeDraftCheck():WorkspaceCheck());}
         if(args.Contains("--revision-check")){Application.runInBackground=true;StartCoroutine(RevisionCheck());}
         if(args.Contains("--editor-audio-check")){Application.runInBackground=true;StartCoroutine(EditorAudioCheck());}
         if(args.Contains("--smoke-test")){Application.runInBackground=true;StartCoroutine(SmokeTest());}
@@ -93,10 +93,10 @@ public partial class CrossRhythmApp : MonoBehaviour {
     public void OnImportStart(string json){var p=JObject.Parse(json);incomingName=(string)p["name"];incomingToken=(string)p["token"];incomingKind=(string)p["kind"]??"project";incomingSource=p["source"] as JObject;expectedBytes=(int)p["size"];if(expectedBytes>256*1024*1024)throw new Exception("Project too large");incoming=new MemoryStream();}
     public void OnImportChunk(string data){byte[] b=Convert.FromBase64String(data);incoming.Write(b,0,b.Length);}
     public void OnImportEnd(string _){try{if(incoming.Length!=expectedBytes)throw new Exception("Incomplete project transfer");byte[] bytes=incoming.ToArray();incoming.Dispose();if(incomingKind=="audio"){SetAudio(bytes,incomingName);}else if(incomingKind=="midi"){ImportMidi(bytes,incomingName);}else{if(incomingSource!=null)projectOrigins[incomingToken]=incomingSource;if(incomingKind=="editor"||incomingKind=="editor-restore"){var p=ChartProject.Read(bytes,incomingName,incomingToken);OpenEditorProject(p,incomingKind=="editor-restore",incomingSource?["session"] as JObject);}else AddProject(bytes,incomingName,incomingToken);}}catch(Exception e){status=e.Message;busy=false;if(importBatch)importErrors.Add(incomingName+": "+e.Message);}}
-    void Navigate(Page page){if(page==Current)return;if(Current==Page.Edit&&Project.Dirty){AskBeforeLeaving(()=>NavigateNow(page));return;}NavigateNow(page);}
+    void Navigate(Page page){if(page==Current)return;if(Current==Page.Edit&&editorProject.Dirty){AskBeforeLeaving(()=>NavigateNow(page));return;}NavigateNow(page);}
     void NavigateNow(Page page){if(draftRunning)return;editorFileOpen=false;interaction?.Reset();Audio.Pause();Audio.Rate=1;if(pendingSongAudio!=null){var p=pendingSongAudio;pendingSongAudio=null;Audio.Load(p);}ReleaseInputs();closed=false;if(ReferenceEquals(Project,editorProject)){RememberEditorSession();QueueEditorRecovery();PersistEditorSession();}Current=page;if(page==Page.Edit)ActivateProject(editorProject);else if(page==Page.Songs)ActivateProject(Library[Mathf.Clamp(selected,0,Library.Count-1)]);if(page==Page.Edit&&Audio.AnchorBeat<0)Audio.AnchorBeat=0;ResetMenuFocus();if(page==Page.Songs)RequestSongPreview();GUI.FocusControl(null);}
-    void Begin(bool practice){if(!loaded||busy)return;Audio.Rate=practice?practiceSpeed:1;Current=practice?Page.Practice:Page.Play;stageGrids.Clear();Records.Clear();judged.Clear();ResetScheduled();stageEffects.Clear();ReleaseInputs();heldPedal.Clear();pedalStart=null;closed=false;auto=false;lastClick=-999;lastJudge="";Audio.Play(-8);}
-    void Seek(double beat){beat=Math.Max(-8,Math.Min(Project.Length,beat));Audio.Seek(beat);stageEffects.Clear();Records.Clear();judged.Clear();ResetScheduled();heldPedal.Clear();pedalStart=null;ReleaseInputs();closed=false;lastClick=Math.Floor(beat)-1;}
+    void Begin(bool practice){if(!loaded||busy)return;Audio.Rate=practice?practiceSpeed:1;Current=practice?Page.Practice:Page.Play;stageGrids.Clear();Records.Clear();judged.Clear();ResetScheduled();stageEffects.Clear();ReleaseInputs();heldPedal.Clear();pedalStart=null;closed=false;auto=false;lastClick=-999;lastJudge="";Audio.Play(CountIn.Start(Project));}
+    void Seek(double beat){beat=Math.Max(CountIn.Start(Project),Math.Min(Project.Length,beat));Audio.Seek(beat);stageEffects.Clear();Records.Clear();judged.Clear();ResetScheduled();heldPedal.Clear();pedalStart=null;ReleaseInputs();closed=false;lastClick=Math.Floor(beat)-1;}
     bool Matches(ChartNote n,Key key){
         if(n.Pedal)return false;
         if(!pro){if(key==Key.Digit9)return n.Lane=="H1"||n.Lane=="HANY";if(key==Key.Digit4)return n.Lane=="H2"||n.Lane=="HANY";return (key==Key.V||key==Key.M)&&n.Instrument=="BD"&&!footRoles.ContainsKey(key);}
@@ -132,7 +132,11 @@ public partial class CrossRhythmApp : MonoBehaviour {
         }
         if(Current!=Page.Edit){foreach(var n in Project.Notes){if(n.Pedal||judged.ContainsKey(n.Index)||n.Beat<Audio.AnchorBeat-1e-8)continue;if(auto&&n.Beat<=b)Judge(n,0,"JUST");else if(!auto&&b-n.Beat>.12*Project.BPM/60*Audio.Rate)Judge(n,double.NaN,"MISS");}}
         if(!pro&&!preview&&Project.ClosedAt(b)&&!closed){var releasedKick=footRoles.FirstOrDefault(kv=>kv.Value=="kick"&&held.Contains(kv.Key));if(!releasedKick.Equals(default(KeyValuePair<Key,string>))){bool near=Project.Notes.Any(n=>n.Instrument=="BD"&&Math.Abs(n.Beat-b)<.12*Project.BPM/60*Audio.Rate);if(!near){footRoles[releasedKick.Key]="pedal";SetPedal(true,b);}}}
-        if(metronome||b<0){double until=b+.12*Project.BPM/60*Audio.Rate;foreach(double q in Project.Pulses(Math.Max(Audio.AnchorBeat,lastClick+0.000001),until)){if(q<0?CountIn.IsCue(q):metronome)Audio.Click(q<0?CountIn.Accent(q):Project.IsBarStart(q),Audio.DSPAt(q));lastClick=q;}}
+        if(metronome||b<0){
+            double from=Math.Max(Audio.AnchorBeat,lastClick+0.000001),until=b+.12*Project.BPM/60*Audio.Rate;
+            foreach(double q in CountIn.Between(Project,from,until)){Audio.Click(CountIn.Accent(Project,q),Audio.DSPAt(q));lastClick=q;}
+            if(metronome&&until>=0)foreach(double q in Project.Pulses(Math.Max(0,from),until)){Audio.Click(Project.IsBarStart(q),Audio.DSPAt(q));lastClick=q;}
+        }
         if(b>Project.Length+.3*Project.BPM/60*Audio.Rate){Audio.Stop();Audio.AnchorBeat=Project.Length;if(Current==Page.Play){Result=RhythmScore.Calculate(Project.Notes,Records);SaveResult();Current=Page.Result;}}
     }
     void SaveResult(){string key="best:"+Project.Title;float old=PlayerPrefs.GetFloat(key,-1);if(Result.Score>old)PlayerPrefs.SetFloat(key,(float)Result.Score);PlayerPrefs.Save();}

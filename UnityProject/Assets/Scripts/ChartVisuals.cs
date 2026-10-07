@@ -28,11 +28,11 @@ public static class ChartVisuals {
     }
     public static double DisplayStep(ChartProject p,int bar)=>bar<0?.25:p.Notes.Where(n=>n.Measure==bar).Select(n=>n.Step).Append(.25).Min();
     public static double[] GridPoints(ChartProject p,int bar){
-        double length=bar<0?4:p.Measures[bar];var notes=p.Notes.Where(n=>n.Measure==bar).ToArray();var points=new SortedSet<double>{0,length};
+        double length=bar<0?CountIn.Length(p):p.Measures[bar];var notes=p.Notes.Where(n=>n.Measure==bar).ToArray();var points=new SortedSet<double>{0,length};
         foreach(double step in notes.Select(n=>n.Step).Concat(new[]{.25,1}).Distinct())for(int i=0;i*step<length-1e-8;i++)points.Add(Math.Round(i*step,9));
         foreach(var n in notes)points.Add(Math.Round(n.Local,9));return points.ToArray();
     }
-    public static float CellX(ChartProject p,int bar,double local,float left,float width){double len=bar<0?4:p.Measures[bar];return left+(float)((local+Math.Min(DisplayStep(p,bar),len-local)/2)/len)*width;}
+    public static float CellX(ChartProject p,int bar,double local,float left,float width){double len=bar<0?CountIn.Length(p):p.Measures[bar];return left+(float)((local+Math.Min(DisplayStep(p,bar),len-local)/2)/len)*width;}
     static int Order(string inst){switch(inst){case "BD":return 0;case "HH":return 1;case "SN":return 2;case "HT":return 3;case "MT":return 4;case "FT":return 5;case "CR":return 6;case "RD":return 7;default:return 8;}}
     public static Dictionary<int,float> SimultaneousOffsets(IEnumerable<ChartNote> notes){
         var result=new Dictionary<int,float>();foreach(var group in notes.GroupBy(n=>n.Lane+"|"+Math.Round(n.Beat,3).ToString(System.Globalization.CultureInfo.InvariantCulture))){var same=group.OrderBy(n=>Order(n.Instrument)).ThenBy(n=>n.Id,StringComparer.Ordinal).ToArray();for(int i=0;i<same.Length;i++)result[same[i].Index]=(i-(same.Length-1)*.5f)*16;}return result;

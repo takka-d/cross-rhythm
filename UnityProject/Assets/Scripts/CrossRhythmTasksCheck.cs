@@ -29,15 +29,32 @@ public partial class CrossRhythmApp {
             p.SetSongInfo("Unsaved title","Test artist");QueueEditorRecovery();Navigate(Page.Songs);
             Check(discardPrompt&&Current==Page.Edit&&p.Dirty,"navigation opens unsaved prompt and stays in Edit");
             CancelLeaving();Check(!discardPrompt&&Current==Page.Edit&&p.Title=="Unsaved title"&&p.Dirty,"Cancel retains edits and stays in Edit");
-            Navigate(Page.Songs);CompleteLeaving();Check(Current==Page.Songs&&editorProject==p&&p.Dirty&&File.Exists(EditorRecoveryPath),"Leave keeps the editor draft and recovery file");
-            NavigateNow(Page.Edit);yield return Ready();Navigate(Page.Title);SaveBeforeLeaving();
+            foreach(var destination in new[]{Page.Songs,Page.Config,Page.Title}){
+                editorFileOpen=true;Editor.ContextOpen=true;Navigate(destination);
+                Check(discardPrompt&&Current==Page.Edit&&!editorFileOpen&&!Editor.ContextOpen,"unsaved guard closes menus before navigating to "+destination);CancelLeaving();
+            }
+            Navigate(Page.Title);SaveBeforeLeaving();
             Check(Current==Page.Title&&!discardPrompt&&!p.Dirty&&ChartProject.Read(File.ReadAllBytes(path),"check").Title=="Unsaved title","Save and Continue waits for verified save and navigates");
             NavigateNow(Page.Edit);yield return Ready();p.SetSongInfo("Newer unsaved title","");File.AppendAllText(path,"external change");Navigate(Page.Songs);SaveBeforeLeaving();
             Check(discardPrompt&&Current==Page.Edit&&p.Dirty&&saveState==SaveState.Error,"save conflict keeps the prompt open and does not navigate");CancelLeaving();
             Check(!ConfirmApplicationQuit()&&discardPrompt&&Current==Page.Edit,"window close is blocked by unsaved prompt");CancelLeaving();
             Check(p.Title=="Newer unsaved title"&&p.Dirty,"cancelling close preserves changes");
+            NewProject();Check(discardPrompt&&ReferenceEquals(Project,p),"New Project asks before replacing a dirty project");
+            CancelLeaving();Check(Project.Title=="Newer unsaved title","New Project Cancel retains data");
+            string diskBefore=ChartProject.Hash(File.ReadAllBytes(path));NewProject();CompleteLeaving();yield return Ready();
+            Check(Current==Page.Edit&&Project.Title=="Untitled"&&Project.Notes.Count==0&&!Project.Dirty&&undo.Count==0&&redo.Count==0,"New Project Leave creates a clean empty document");
+            Check(ChartProject.Hash(File.ReadAllBytes(path))==diskBefore,"discard does not change the original file");
+            Check(!editorDocuments.Values.Contains(p)&&!editorSessions.ContainsKey(p),"discard removes old document and undo session");
+            Project.SetSongInfo("Disposable draft","");Edited();Navigate(Page.Config);CompleteLeaving();
+            Check(Current==Page.Config&&!editorProject.Dirty&&editorProject.Notes.Count==0&&editorProject.Title=="Untitled","Leave discards instead of retaining the draft");
+            var recovery=JObject.Parse(File.ReadAllText(EditorRecoveryPath));var recovered=ChartProject.Read(Convert.FromBase64String((string)recovery["bytes"]),"recovered");
+            Check(recovered.Title=="Untitled"&&recovered.Notes.Count==0&&!(bool)recovery["dirty"],"restart recovery cannot bring back discarded edits");
+            NavigateNow(Page.Edit);yield return Ready();p=EmptyEditorProject();p.SaveNative(Path.Combine(root,"new-after-save.crproj"),false);OpenEditorProject(p);yield return Ready();p.SetSongInfo("Saved before new","");NewProject();SaveBeforeLeaving();yield return Ready();
+            Check(Project.Title=="Untitled"&&!Project.Dirty&&ChartProject.Read(File.ReadAllBytes(p.FilePath),"saved").Title=="Saved before new","New Project Save and Continue saves before creating empty document");
             NavigateNow(Page.Songs);yield return Ready();Begin(false);Check(Current==Page.Play&&Audio.AnchorBeat==-8,"Play starts one eight-beat count-in");Audio.Stop();Begin(true);Check(Current==Page.Practice&&Audio.AnchorBeat==-8,"Practice uses the same count-in");
-            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.14"},{"checks",new JArray(checks)}}.ToString());
+            Audio.Stop();var odd=EmptyEditorProject();odd.SetMeter(0,7,8);Library.Add(odd);NavigateNow(Page.Songs);FocusSong(Library.Count-1);yield return Ready();Begin(true);
+            Check(Audio.AnchorBeat==-7&&Project.BarAt(-6.9)==-2&&Math.Abs(ReferencePosition(-3.5)+1)<1e-9,"7/8 count-in clock and displayed bars match");Seek(-100);Check(Audio.AnchorBeat==-7,"practice seek begins at the meter-specific count-in");Audio.Stop();
+            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.15"},{"checks",new JArray(checks)}}.ToString());
             Debug.Log("CROSS_RHYTHM_TASKS_CHECK_PASS");
         }finally{if(hadPreview)PlayerPrefs.SetInt("songPreview",originalPreview);else PlayerPrefs.DeleteKey("songPreview");PlayerPrefs.Save();allowApplicationQuit=true;}
         Application.Quit();
