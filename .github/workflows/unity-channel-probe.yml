@@ -1,0 +1,44 @@
+name: Inspect approved Unity auth channel state
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/unity-channel-probe.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe channel metadata without exposing response
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, urllib.request, urllib.error
+          ids=[
+            "K6YMfHDdD29OTl0sI3AskviwfflxRwqm6KJC",
+            "59sRyjcqQWzfDWEuMDwQKRkfb61fWG0FZumF",
+          ]
+          for cid in ids:
+              url="https://services.api.unity.com/app-linking/v1/channels/"+cid
+              try:
+                  with urllib.request.urlopen(url,timeout=20) as r:
+                      data=json.loads(r.read().decode())
+                  resp=data.get("Response")
+                  req=data.get("Request")
+                  print(json.dumps({
+                    "channel":cid[:8]+"...",
+                    "http":200,
+                    "keys":sorted(data.keys()),
+                    "request_type":type(req).__name__,
+                    "request_present":req is not None,
+                    "response_present":resp not in (None,""),
+                    "response_type":type(resp).__name__,
+                    "response_length":len(resp) if isinstance(resp,(str,list,dict)) else None,
+                  }))
+              except urllib.error.HTTPError as e:
+                  print(json.dumps({"channel":cid[:8]+"...","http":e.code}))
+              except Exception as e:
+                  print(json.dumps({"channel":cid[:8]+"...","error":type(e).__name__}))
+          PY
