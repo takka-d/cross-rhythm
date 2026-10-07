@@ -1,0 +1,24 @@
+name: Unity CLI auth help
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/unity-cli-help.yml'
+
+jobs:
+  help:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install CLI and print auth help
+        shell: bash
+        run: |
+          set -e
+          curl -fsSL https://unity.com/install.sh | UNITY_CLI_CHANNEL=beta bash
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "=== auth login help ==="
+          unity auth login --help || true
+          echo "=== auth status help ==="
+          unity auth status --help || true
+          echo "=== license activate help ==="
+          unity license activate --help || true
