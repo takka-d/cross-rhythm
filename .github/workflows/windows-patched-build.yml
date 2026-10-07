@@ -1,0 +1,117 @@
+name: Cross Rhythm 0.3.13 Windows patched build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-patched-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cross-rhythm-windows-patched-dev
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            UnityProject
+            Downloads/CrossRhythm_Windows_0.3.12.zip.part1
+            Downloads/CrossRhythm_Windows_0.3.12.zip.part2
+            dev/0.3.13
+          sparse-checkout-cone-mode: false
+
+      - name: Reconstruct 0.3.12 Windows player
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat Downloads/CrossRhythm_Windows_0.3.12.zip.part1 Downloads/CrossRhythm_Windows_0.3.12.zip.part2 > "$RUNNER_TEMP/base.zip"
+          mkdir -p "$RUNNER_TEMP/win"
+          unzip -q "$RUNNER_TEMP/base.zip" -d "$RUNNER_TEMP/win"
+          test -f "$RUNNER_TEMP/win/CrossRhythm.exe"
+          test -f "$RUNNER_TEMP/win/CrossRhythm_Data/Managed/Assembly-CSharp.dll"
+
+      - name: Compile 0.3.13 runtime assembly
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANAGED="$RUNNER_TEMP/win/CrossRhythm_Data/Managed"
+          CSC="$(find /usr/share/dotnet/sdk -path '*/Roslyn/bincore/csc.dll' | sort -V | tail -1)"
+          test -f "$CSC"
+          mapfile -t SOURCES < <(find UnityProject/Assets/Scripts -maxdepth 1 -name '*.cs' -type f | sort)
+          test "${#SOURCES[@]}" -gt 10
+          REFS=()
+          while IFS= read -r -d '' dll; do
+            [ "$(basename "$dll")" = "Assembly-CSharp.dll" ] && continue
+            REFS+=("/reference:$dll")
+          done < <(find "$MANAGED" -maxdepth 1 -name '*.dll' -type f -print0 | sort -z)
+          dotnet "$CSC" /noconfig /nostdlib+ /target:library /optimize+ /debug-             /langversion:latest /define:UNITY_STANDALONE,UNITY_STANDALONE_WIN,UNITY_64,ENABLE_INPUT_SYSTEM             /out:"$RUNNER_TEMP/Assembly-CSharp.dll" "${REFS[@]}" "${SOURCES[@]}"
+          test -s "$RUNNER_TEMP/Assembly-CSharp.dll"
+          cp "$RUNNER_TEMP/Assembly-CSharp.dll" "$MANAGED/Assembly-CSharp.dll"
+
+      - name: Patch version and add ADTOF companion
+        shell: python
+        run: |
+          from pathlib import Path
+          import shutil
+          root=Path(__import__('os').environ['RUNNER_TEMP'])/'win'
+          old=b'0.3.12'; new=b'0.3.13'
+          changed=[]
+          for p in root.rglob('*'):
+              if not p.is_file():
+                  continue
+              try:
+                  data=p.read_bytes()
+              except OSError:
+                  continue
+              if old in data:
+                  p.write_bytes(data.replace(old,new))
+                  changed.append(str(p.relative_to(root)))
+          print('version patched:', changed)
+          adtof=Path('UnityProject/Tools/ADTOF')
+          target=root/'ADTOF'
+          if target.exists(): shutil.rmtree(target)
+          shutil.copytree(adtof,target)
+          assert (target/'cross_rhythm_transcriber_server.py').exists()
+
+      - name: Package and validate Windows dev artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="dev/0.3.13/windows"
+          rm -rf "$OUT"
+          mkdir -p "$OUT"
+          (cd "$RUNNER_TEMP/win" && zip -qr "$GITHUB_WORKSPACE/$OUT/CrossRhythm_Windows_0.3.13.zip" .)
+          sha256sum "$OUT/CrossRhythm_Windows_0.3.13.zip" | tee "$OUT/CrossRhythm_Windows_0.3.13.sha256"
+          unzip -t "$OUT/CrossRhythm_Windows_0.3.13.zip" >/dev/null
+          unzip -l "$OUT/CrossRhythm_Windows_0.3.13.zip" | grep -q 'CrossRhythm_Data/Managed/Assembly-CSharp.dll'
+          unzip -l "$OUT/CrossRhythm_Windows_0.3.13.zip" | grep -q 'ADTOF/cross_rhythm_transcriber_server.py'
+          cat > "$OUT/index.html" <<'HTML'
+          <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Cross Rhythm 0.3.13 Windows Development Build</title></head><body><h1>Cross Rhythm 0.3.13 Windows Development Build</h1><p>開発確認用。本公開版ではありません。</p><p><a href="./CrossRhythm_Windows_0.3.13.zip" download>Windows版 0.3.13 ZIPをDownload</a></p></body></html>
+          HTML
+
+      - name: Commit Windows dev artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "TakKa Build"
+          git config user.email "80165829+takka-d@users.noreply.github.com"
+          git add -f dev/0.3.13/windows
+          git commit -m "Deploy Cross Rhythm Windows 0.3.13 dev build (noindex)"
+          git push origin main
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrossRhythm-Windows-0.3.13-dev
+          path: dev/0.3.13/windows/CrossRhythm_Windows_0.3.13.zip
+          retention-days: 7
