@@ -1,9 +1,1 @@
-fastapi
-uvicorn
-python-multipart
-pretty_midi
-librosa
-scipy
-scikit-learn
-soundfile
-git+https://github.com/xavriley/ADTOF-pytorch.git
+# Setup uses pinned dependencies in Start.ps1; run Start ADTOF.cmd.

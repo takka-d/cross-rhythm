@@ -15,15 +15,6 @@ public static class PracticeDraftTests {
         Check(job.Events.All(n=>Math.Abs((double)n["beat"]*3-Math.Round((double)n["beat"]*3))<1e-7),"draft respects triplet quantization");
         var applied=job.Apply(p,true);var outProject=new ChartProject{Chart=applied,Manifest=p.Manifest};outProject.Rebuild();var copy=ChartProject.Read(outProject.Write(),"draft.crproj");Check(JToken.DeepEquals(copy.Chart,applied),"generated notes and extended measures survive save and reload");
         var appended=job.Apply(outProject,false);Check(((JArray)appended["events"]).Count==job.Events.Count,"append draft does not duplicate existing hits");
-        var adtofEvents=new JArray(
-            new JObject{{"time",0.5},{"instrument","BD"},{"velocity",1.0}},
-            new JObject{{"time",1.0},{"instrument","HH"},{"velocity",.8}},
-            new JObject{{"time",1.5},{"instrument","OHH"},{"velocity",.6}},
-            new JObject{{"time",2.0},{"instrument","SN"},{"velocity",.7}});
-        var adtof=AudioDraft.FromAdtof(adtofEvents,p,8,true);
-        Check(adtof.Events.Any(n=>(string)n["source"]=="adtof"&&(string)n["instrument"]=="BD"),"ADTOF import maps kick");
-        Check(adtof.Events.Any(n=>(string)n["instrument"]=="HHSTATE"),"ADTOF closed hi-hat creates pedal state");
-        Check(adtof.Events.Where(n=>(string)n["instrument"]!="HHSTATE").All(n=>Math.Abs((double)n["beat"]*3-Math.Round((double)n["beat"]*3))<1e-7),"ADTOF import snaps to chart grid");
         var silent=new AudioDraft();foreach(var x in silent.Run(new float[22050],22050,p,false)){}Check(silent.Events.Count==0,"silence creates no phantom notes");
         p.SetMeter(0,7,8);p.Chart["audioOffsetSec"]=-.5;p.Rebuild();job=new AudioDraft();foreach(var x in job.Run(Signal(),22050,p,true)){}Check(job.Layout.Meter(1).Item1==7&&job.Layout.Meter(1).Item2==8,"draft extension preserves irregular meter");
         Check(job.Events.All(n=>job.Layout.Starts[(int)n["measure"]]+(double)n["beat"]>=1),"draft respects negative audio offset");

@@ -26,6 +26,10 @@ public partial class CrossRhythmApp {
         return "Edit: "+(string.IsNullOrEmpty(p.FilePath)?p.FileName:p.FilePath);
 #endif
     }
+    void ProjectFolderRow(Rect rect){
+        ReadOnlyLocation(new Rect(rect.x,rect.y,rect.width-156,rect.height));
+        ProjectButton(new Rect(rect.xMax-144,rect.y,144,rect.height),true,false,!HasExternalProjects,14);
+    }
     GUIStyle locationField;
     void ReadOnlyLocation(Rect rect){
         if(locationField==null)locationField=new GUIStyle(field){fontSize=16,alignment=TextAnchor.MiddleLeft,padding=new RectOffset(10,10,0,0)};

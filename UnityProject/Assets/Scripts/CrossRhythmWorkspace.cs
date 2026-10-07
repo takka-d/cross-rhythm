@@ -19,6 +19,14 @@ public partial class CrossRhythmApp {
         if(Current==Page.Songs){pendingSongAudio=p;RequestSongPreview();}else Audio.Load(p);
         editScroll=Vector2.zero;Editor.Reset();editMeasure=0;ResetEditorFields();RestoreEditorSession();
     }
+    public static ChartProject CopyForEditor(ChartProject p){
+        var copy=new ChartProject{Chart=(JObject)p.Chart.DeepClone(),Manifest=(JObject)p.Manifest.DeepClone(),Files=new Dictionary<string,byte[]>(p.Files),FileName=p.FileName,FilePath=p.FilePath,Baseline=p.Baseline,Dirty=p.Dirty};
+        copy.Rebuild();return copy;
+    }
+    void EditSelectedSong(){
+        if(Current!=Page.Songs||busy||selected<0||selected>=Library.Count)return;
+        OpenEditorProject(CopyForEditor(Library[selected]));
+    }
     void OpenEditorProject(ChartProject p,bool restoring=false,JObject metadata=null){
         if(restoring&&editorOpenedByUser)return;
         if(!restoring){RememberEditorSession();PersistEditorSession();editorOpenedByUser=true;if(!string.IsNullOrEmpty(p.FilePath)&&editorDocuments.TryGetValue(p.FilePath,out var existing)&&existing.Dirty)p=existing;}
@@ -27,17 +35,6 @@ public partial class CrossRhythmApp {
         if(metadata!=null){p.Baseline=(string)metadata["baseline"]??p.Baseline;p.Dirty=(bool?)metadata["dirty"]??false;editorSessions[p]=new EditorSession{Undo=new Stack<Snapshot>(),Redo=new Stack<Snapshot>(),Beat=(double?)metadata["beat"]??0,Scroll=new Vector2((float?)metadata["scrollX"]??0,(float?)metadata["scrollY"]??0)};zoom=Mathf.Clamp((float?)metadata["zoom"]??1,.25f,8);}
         if(Current==Page.Edit)ActivateProject(p);
         if(!restoring){NavigateNow(Page.Edit);QueueEditorRecovery();}
-    }
-    void EditSelectedSong(){
-        if(selected<0||selected>=Library.Count)return;
-        var source=Library[selected];
-        try{
-            // Editing from Songs is explicit. Keep the Play/Songs library object isolated
-            // so merely browsing tracks never replaces or mutates the editor document.
-            var edit=ChartProject.Read(source.Write(),source.FileName,source.FilePath);
-            edit.Baseline=source.Baseline;edit.Dirty=source.Dirty;
-            OpenEditorProject(edit);
-        }catch(Exception e){status=T("Editで開けません: ","Could not open in Edit: ")+e.Message;}
     }
     void QueueEditorRecovery(){editorRecoveryPending=true;editorRecoveryDue=Time.realtimeSinceStartupAsDouble+.75;}
     void UpdateEditorRecovery(){if(editorRecoveryPending&&!busy&&!Audio.Running&&Time.realtimeSinceStartupAsDouble>=editorRecoveryDue&&!(Current==Page.Edit&&Editor.Capturing))PersistEditorSession();}

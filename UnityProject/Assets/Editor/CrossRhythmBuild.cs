@@ -38,6 +38,7 @@ public static class CrossRhythmBuild {
     public static void Tests(){
         ControlBindingsTests.Run();
         PracticeDraftTests.Run();
+        AdtofTests.Run();
         LibraryTests();
         MetadataDifficultyTests();
         SaveSnapshotTests();

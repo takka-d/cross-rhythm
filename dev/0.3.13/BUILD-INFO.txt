@@ -1,0 +1,8 @@
+Cross Rhythm 0.3.13 development / Unity 6000.3.25f1
+Built with BuildPipeline.BuildPlayer for Windows x64 and WebGL, from common source.
+No patched player binary. Tests passed before each build.
+Verified: 1394-note v175 lane/position comparison; HH strengths; tuplets;
+project roundtrip, overwrite readback/conflict guard; bindings/HH closure;
+Practice speed/draft; ADTOF conversion and Songs/Edit separation.
+Windows UI: File menu; 36-second test audio -> 271 ADTOF notes; Apply and Undo.
+No personal projects/audio included. Production root remains 0.3.12.

@@ -85,9 +85,8 @@ public partial class CrossRhythmApp {
     }
     string ArtistDisplay(ChartProject p)=>string.IsNullOrWhiteSpace(p.Artist)?T("アーティスト未設定","Artist not set"):p.Artist;
     void SongsPage(){float x=(W-1160)/2;Text(new Rect(x,107,800,55),"Songs",38,Color.white,true);
-        ReadOnlyLocation(new Rect(x,169,1004,35));
+        ProjectFolderRow(new Rect(x,169,1160,35));
         Text(new Rect(x,212,680,25),Library.Count+" tracks",14,muted);
-        ProjectButton(new Rect(x+1016,169,144,35),true,false,!HasExternalProjects,14);
         var view=new Rect(x,254,660,H-344);songScroll=GUI.BeginScrollView(view,songScroll,new Rect(0,0,640,Library.Count*138));
         for(int i=0;i<Library.Count;i++){
             var p=Library[i];var r=new Rect(0,i*138,630,126);bool choose=Button(r,"",false,true,18,"song:"+i);bool hoverFocus=Event.current.type==EventType.Repaint&&r.Contains(Event.current.mousePosition)&&UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.delta.ReadValue().sqrMagnitude>0;if(i==selected){RectFill(r,new Color(.09f,.19f,.18f));Border(r,mint,2);}
@@ -105,17 +104,16 @@ public partial class CrossRhythmApp {
         Text(new Rect(right+28,421,400,25),busy?T("試聴を準備中…","Loading preview…"):Audio.Backing.isPlaying?"Preview ♪":Audio.Song==null?T("音源なし","No audio"):"",14,mint);
         float best=PlayerPrefs.GetFloat("best:"+Project.Title,-1);Text(new Rect(right+28,387,295,32),"Best   "+(best<0?"—":best.ToString("0.0")+" / 100"),18,muted);
         if(Button(new Rect(right+28,452,198,44),"Normal",!pro)){pro=false;PlayerPrefs.SetInt("pro",0);}if(Button(new Rect(right+238,452,198,44),"Pro",pro)){pro=true;PlayerPrefs.SetInt("pro",1);}
-        if(Button(new Rect(right+28,H-300,408,54),"Start",true,loaded&&!busy,18,"start"))Begin(false);
-        if(Button(new Rect(right+28,H-234,408,46),"Practice",false,loaded&&!busy,18,"practice"))Begin(true);
-        if(Button(new Rect(right+28,H-176,408,46),"Edit",false,!busy,18,"edit-song"))EditSelectedSong();
+        if(Button(new Rect(right+28,H-256,408,62),"Start",true,loaded&&!busy,18,"start"))Begin(false);
+        if(Button(new Rect(right+28,H-180,198,48),"Practice",false,loaded&&!busy,18,"practice"))Begin(true);
+        if(Button(new Rect(right+238,H-180,198,48),"Edit",false,loaded&&!busy,18,"edit-selected"))EditSelectedSong();
         Text(new Rect(x,H-73,1150,30),!HasExternalProjects?T("Open Folderで曲を開けます。Rhythm Checkは動作確認用です。","Open a folder to add tracks. Rhythm Check is a test track."):T("Open Folderで対象フォルダーを変更できます。","Change the project folder with Open Folder."),14,muted);
     }
     void ConfigPage(){float x=(W-1160)/2;Text(new Rect(x,102,800,50),"Config",38,Color.white,true);
-        RectFill(new Rect(x,174,1160,204),panel);Text(new Rect(x+24,190,1000,32),T("プロジェクトの場所","Project location"),22,Color.white,true);
-        ReadOnlyLocation(new Rect(x+24,230,940,35));
-        ProjectButton(new Rect(x+976,230,156,35),true,false,true,14);
-        Text(new Rect(x+24,270,1100,20),T("Songsと同じフォルダーを使用します。","Uses the same project folder as Songs."),12,muted);
-        FittedText(new Rect(x+24,304,1100,26),CurrentFileLine(),16,muted);
+        RectFill(new Rect(x,174,1160,204),panel);Text(new Rect(x+24,190,1000,32),"Project Folder",22,Color.white,true);
+        ProjectFolderRow(new Rect(x+24,236,1112,35));
+        Text(new Rect(x+24,286,1100,22),T("Songsに表示する曲のフォルダー","Folder containing the tracks shown in Songs"),14,muted);
+        FittedText(new Rect(x+24,323,1100,26),CurrentFileLine(),14,muted);
         float y=398;RectFill(new Rect(x,y,556,304),panel);Text(new Rect(x+24,y+16,500,32),"Audio & Timing",22,Color.white,true);
         Audio.BackingGain=VolumeRow(x+24,y+62,"Music",Audio.BackingGain,"musicVolume");
         Audio.DrumGain=VolumeRow(x+24,y+106,"Drums",Audio.DrumGain,"drumsVolume");

@@ -1,16 +1,22 @@
-# Cross Rhythm — Unity 0.3.13 Preview
+# Cross Rhythm 0.3.13 development
 
-Unity 6000.3.25f1 project for Cross Rhythm.
+Unity 6000.3.25f1. Windows and WebGL use the same Assets/Scripts source.
+Run `./Build.ps1 -Target Both` from PowerShell with the licensed Unity Editor
+and its Web Build Support installed. Builds go to `Builds/Windows` and `Builds/Web`.
+Tests run before BuildPipeline.BuildPlayer. No license activation workaround,
+DLL swap or player version-byte replacement is part of this build.
 
-## 0.3.13
-- Songs: selected project can be explicitly opened in Edit.
-- Config: project folder uses the same read-only path + Open Folder row as Songs; Open Project was removed from Config.
-- Practice: Back navigation, −0.05 / ×1 / +0.05 speed controls, and backing-audio pitch follows practice speed.
-- Edit: File menu is in the top application header.
-- ADTOF: WebGL and Windows can call the local companion at http://127.0.0.1:8765. Windows builds include Tools/ADTOF next to the executable and try to start the companion automatically.
-- WebGL keeps the maximize/restore control; native mobile targets hide it.
+The production root remains 0.3.12. Verified development builds are published
+under `/dev/0.3.13/`. The WordPress article remains a draft.
 
-## Build
-Run `Build.ps1 -Target Both` on Windows with Unity 6000.3.25f1 installed, or pass `-UnityEditor` explicitly.
+Changes: common folder row in Songs/Config; Songs > Edit opens an independent
+editable copy; File in Edit header; Back in Play/Practice; Practice speed
+buttons (0.25–2); ADTOF local companion under Tools/ADTOF.
 
-The Windows output receives an `ADTOF` folder. Run `ADTOF/install_adtof.bat` once if the model dependencies are not installed.
+ADTOF: run Start ADTOF.cmd, then Edit > Analyze > Check > ADTOF.
+Review the generated count and Apply; Undo reverses Apply. The model is
+downloaded separately. See Tools/ADTOF/README.txt for setup and model license.
+No personal song projects/audio are bundled.
+
+LegacyWeb is the earlier HTML reference, not the current Unity implementation.
+Its old ADTOF title did not correspond to an implemented analysis client.
