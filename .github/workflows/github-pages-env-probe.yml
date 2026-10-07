@@ -1,0 +1,31 @@
+name: Cross Rhythm github-pages env probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/github-pages-env-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    environment: github-pages
+    steps:
+      - name: Report Unity environment configuration presence
+        env:
+          S_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          S_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          S_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          S_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          V_LICENSE: ${{ vars.UNITY_LICENSE }}
+          V_EMAIL: ${{ vars.UNITY_EMAIL }}
+          V_PASSWORD: ${{ vars.UNITY_PASSWORD }}
+          V_SERIAL: ${{ vars.UNITY_SERIAL }}
+        run: |
+          python - <<'PY'
+          import os
+          for k in ['S_LICENSE','S_EMAIL','S_PASSWORD','S_SERIAL','V_LICENSE','V_EMAIL','V_PASSWORD','V_SERIAL']:
+              v=os.environ.get(k,'')
+              print(f"{k}={'SET' if v else 'EMPTY'} length={len(v)}")
+          PY
