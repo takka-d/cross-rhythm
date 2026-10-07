@@ -1,0 +1,190 @@
+name: Cross Rhythm 0.3.13 live authenticated dev build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-auth-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cross-rhythm-live-auth-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Install Unity CLI and Editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://unity.com/install.sh | UNITY_CLI_CHANNEL=beta bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          unity install 6000.3.25f1 -m webgl windows-mono --accept-eula --yes --non-interactive
+
+      - name: Start browser sign-in and expose encrypted URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          cat > "$RUNNER_TEMP/capture-browser.sh" <<'SH'
+          #!/usr/bin/env bash
+          printf '%s\n' "$1" > "$RUNNER_TEMP/unity-auth-url.txt"
+          exit 0
+          SH
+          chmod +x "$RUNNER_TEMP/capture-browser.sh"
+          export BROWSER="$RUNNER_TEMP/capture-browser.sh"
+
+          cat > "$RUNNER_TEMP/auth-pub.pem" <<'KEY'
+-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAy61uUkSrs4Gis9VlztK4
+E6XyvCLaWudLr2Q+/ZZtq5UaFP6XnRZypAFx0zI55wnm/1vbBlpNslOqalnC9GyK
+9pWZzlcOSEDEv0xKDG4fZ2mTkFGUq+oonHHnRbzTpKm0VH6DVf2UpwXXV6GMG24D
+MxSE6KNeblfCUf0b4OCB77If0wCK1j4gSM0b3+iRNclacV3bnCd0jVSTZhKGOwKf
+zauTjQiJ403pWvPgNi/vhnncWpDeKENRB/KPjZAQAFL95aelpsuRcVcVB7mIM9vN
++KYDECoGvhb713goCs1bHHm3SkL78AfAt5ij/Du9OsR6da5aKHQjpxIyB1bSSXKL
+rNH6O+TxsD3pInKcdia2CAp6dXfK6JmT8VuFTwgq/kRAecIxAiY96vFXR9S7w0gq
+hvVQBKg/FLVnp0LO1DKG0fCIvXAsQCZdjkR5wPYbj9jde0TAMG4ZpcVCIVbThWNO
+D3gu7ea1yfPefeLQd5rDrJUeTPVVvJij+dosXCDHjqaIVPn34Hzksy0FqaSha6dl
+6K9qMFelyG7kHkN38cuD60wNX8bUg3sNW4aLf2DwzDDFOvfAynvCsoQWpNBWcUIZ
+Lp+whXhybNotPXZPayv3Sg59CMiWVKNkWDsuADc7TR2mX7WFlzO773kI5gKtySqk
+Jv3v2pneITu4P/3pHq2KePkCAwEAAQ==
+-----END PUBLIC KEY-----
+KEY
+
+          RUNNER_TRACKING_ID="" nohup unity auth login --format ndjson >"$RUNNER_TEMP/auth.out" 2>&1 &
+          echo $! > "$RUNNER_TEMP/auth.pid"
+
+          for i in $(seq 1 90); do
+            if [ -s "$RUNNER_TEMP/unity-auth-url.txt" ]; then break; fi
+            if ! kill -0 "$(cat "$RUNNER_TEMP/auth.pid")" 2>/dev/null; then
+              echo "::error::Unity auth process ended before browser URL was captured."
+              exit 1
+            fi
+            sleep 2
+          done
+          test -s "$RUNNER_TEMP/unity-auth-url.txt"
+
+          openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/auth-pub.pem"             -in "$RUNNER_TEMP/unity-auth-url.txt" -out "$RUNNER_TEMP/unity-auth-url.bin"             -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256
+          base64 -w 0 "$RUNNER_TEMP/unity-auth-url.bin" > dev/0.3.13/.unity-auth-url.enc
+          git config user.name "TakKa Build"
+          git config user.email "80165829+takka-d@users.noreply.github.com"
+          git add dev/0.3.13/.unity-auth-url.enc
+          git commit -m "Stage encrypted Unity auth URL for 0.3.13 build"
+          git push origin main
+
+      - name: Wait for Unity sign-in
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          pid="$(cat "$RUNNER_TEMP/auth.pid")"
+          deadline=$((SECONDS+1800))
+          while kill -0 "$pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do
+            sleep 3
+          done
+          if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" || true
+            echo "::error::Unity sign-in timed out."
+            exit 1
+          fi
+          unity auth status --format json
+
+      - name: Activate Unity Personal
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          unity license activate --personal --accept-eula --yes --format json
+          unity license status --format json
+
+      - name: Build WebGL and Windows
+        shell: bash
+        env:
+          CROSSRHYTHM_DEV_BUILD: '1'
+        run: |
+          set -euo pipefail
+          EDITOR="/home/runner/Unity/Hub/Editor/6000.3.25f1/Editor/Unity"
+          test -x "$EDITOR"
+          rm -rf UnityProject/Builds/Web UnityProject/Builds/Windows
+          mkdir -p UnityProject/Builds/Web UnityProject/Builds/Windows
+          "$EDITOR" -batchmode -nographics -quit -accept-apiupdate             -buildTarget WebGL             -projectPath "$GITHUB_WORKSPACE/UnityProject"             -executeMethod CrossRhythm.CrossRhythmBuild.Web             -buildOutput "$GITHUB_WORKSPACE/UnityProject/Builds/Web"             -logFile "$GITHUB_WORKSPACE/UnityProject/Builds/Web.log"
+          test -f UnityProject/Builds/Web/index.html
+          "$EDITOR" -batchmode -nographics -quit -accept-apiupdate             -buildTarget Win64             -projectPath "$GITHUB_WORKSPACE/UnityProject"             -executeMethod CrossRhythm.CrossRhythmBuild.Windows             -buildOutput "$GITHUB_WORKSPACE/UnityProject/Builds/Windows/CrossRhythm.exe"             -logFile "$GITHUB_WORKSPACE/UnityProject/Builds/Windows.log"
+          test -f UnityProject/Builds/Windows/CrossRhythm.exe
+
+      - name: Prepare noindex dev deployment
+        shell: python
+        run: |
+          import hashlib, pathlib, shutil, zipfile, re
+          root=pathlib.Path.cwd()
+          dev=root/"dev"/"0.3.13"
+          unity=dev/"unity"; web=dev/"web"; windows=dev/"windows"
+          for p in (unity,windows):
+              if p.exists(): shutil.rmtree(p)
+              p.mkdir(parents=True,exist_ok=True)
+          web.mkdir(parents=True,exist_ok=True)
+          shutil.copytree(root/"UnityProject"/"Builds"/"Web",unity,dirs_exist_ok=True)
+          shutil.copy2(root/"LegacyWeb"/"CrossRhythm_Web_v171_ADTOF.html",web/"index.html")
+          robots='<meta name="robots" content="noindex,nofollow,noarchive">'
+          for p in (unity/"index.html",web/"index.html"):
+              s=p.read_text(encoding="utf-8",errors="replace")
+              if re.search(r'<meta[^>]+name=["\']robots["\'][^>]*>',s,re.I):
+                  s=re.sub(r'<meta[^>]+name=["\']robots["\'][^>]*>',robots,s,count=1,flags=re.I)
+              else:
+                  s=re.sub(r'<head([^>]*)>',r'<head\1>'+robots,s,count=1,flags=re.I)
+              p.write_text(s,encoding="utf-8")
+          z=windows/"CrossRhythm_Windows_0.3.13.zip"
+          with zipfile.ZipFile(z,"w",zipfile.ZIP_DEFLATED) as out:
+              base=root/"UnityProject"/"Builds"/"Windows"
+              for p in base.rglob("*"):
+                  if p.is_file(): out.write(p,p.relative_to(base))
+          sha=hashlib.sha256(z.read_bytes()).hexdigest()
+          (windows/"CrossRhythm_Windows_0.3.13.sha256").write_text(sha+"\n",encoding="utf-8")
+          (windows/"index.html").write_text('<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cross Rhythm 0.3.13 Windows Development Build</title></head><body><h1>Cross Rhythm 0.3.13 Windows Development Build</h1><p>開発確認用です。本公開版ではありません。</p><p><a href="./CrossRhythm_Windows_0.3.13.zip" download>Windows版ZIPをDownload</a></p></body></html>',encoding="utf-8")
+          (dev/"index.html").write_text('<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cross Rhythm 0.3.13 Development</title></head><body><h1>Cross Rhythm 0.3.13 Development</h1><p>開発確認用です。本公開版ではありません。</p><ul><li><a href="./unity/">Unity WebGL版 0.3.13</a></li><li><a href="./web/">HTML/JavaScript Web版 0.3.13</a></li><li><a href="./windows/">Windows版 0.3.13</a></li></ul></body></html>',encoding="utf-8")
+          auth=dev/".unity-auth-url.enc"
+          if auth.exists(): auth.unlink()
+
+      - name: Commit dev deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin main
+          git config user.name "TakKa Build"
+          git config user.email "80165829+takka-d@users.noreply.github.com"
+          git add -A dev/0.3.13
+          if ! git diff --cached --quiet; then
+            git commit -m "Deploy Cross Rhythm 0.3.13 development builds (noindex)"
+            git push origin main
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrossRhythm-WebGL-0.3.13-dev
+          path: UnityProject/Builds/Web
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrossRhythm-Windows-0.3.13-dev
+          path: dev/0.3.13/windows/CrossRhythm_Windows_0.3.13.zip
+          retention-days: 7
+
+      - name: Return temporary Unity Personal license
+        if: always()
+        shell: bash
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          unity license return --yes --format json || true
