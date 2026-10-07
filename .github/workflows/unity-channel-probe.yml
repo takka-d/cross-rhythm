@@ -10,30 +10,42 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe nested channel metadata without exposing response
+      - name: Inspect channel request schema without response contents
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, urllib.request, urllib.error
-          ids=["K6YMfHDdD29OTl0sI3AskviwfflxRwqm6KJC","59sRyjcqQWzfDWEuMDwQKRkfb61fWG0FZumF"]
-          for cid in ids:
-              try:
-                  with urllib.request.urlopen("https://services.api.unity.com/app-linking/v1/channels/"+cid,timeout=20) as r:
-                      data=json.loads(r.read().decode())
-                  ch=data.get("channel")
-                  out={"channel":cid[:8]+"...","http":200,"outer_keys":sorted(data.keys()),"channel_type":type(ch).__name__}
-                  if isinstance(ch,dict):
-                      out["channel_keys"]=sorted(ch.keys())
-                      for k,v in ch.items():
-                          lk=k.lower()
-                          if "response" in lk or "request" in lk or "content" in lk:
-                              out[k+"_present"]=v not in (None,"")
-                              out[k+"_type"]=type(v).__name__
-                              if isinstance(v,(str,list,dict)): out[k+"_length"]=len(v)
-                  print(json.dumps(out))
-              except urllib.error.HTTPError as e:
-                  print(json.dumps({"channel":cid[:8]+"...","http":e.code}))
-              except Exception as e:
-                  print(json.dumps({"channel":cid[:8]+"...","error":type(e).__name__}))
+          import json, urllib.request
+          cid="K6YMfHDdD29OTl0sI3AskviwfflxRwqm6KJC"
+          data=json.loads(urllib.request.urlopen("https://services.api.unity.com/app-linking/v1/channels/"+cid,timeout=20).read().decode())["channel"]
+          req=data.get("Request") or {}
+          print("request_keys", sorted(req.keys()))
+          for k,v in req.items():
+              if isinstance(v,dict):
+                  print(k+"_keys", sorted(v.keys()))
+                  for kk,vv in v.items():
+                      if kk.lower()=="content":
+                          try:
+                              parsed=json.loads(vv) if isinstance(vv,str) else vv
+                              if isinstance(parsed,dict):
+                                  print(k+"."+kk+"_json_keys",sorted(parsed.keys()))
+                                  for pkey,pval in parsed.items():
+                                      if isinstance(pval,str):
+                                          print(k+"."+kk+"."+pkey+"_len",len(pval))
+                                      else:
+                                          print(k+"."+kk+"."+pkey+"_type",type(pval).__name__)
+                              else:
+                                  print(k+"."+kk+"_type",type(parsed).__name__)
+                          except Exception:
+                              print(k+"."+kk+"_len",len(vv) if isinstance(vv,str) else None)
+                      elif isinstance(vv,str):
+                          print(k+"."+kk+"_len",len(vv))
+                      else:
+                          print(k+"."+kk+"_type",type(vv).__name__)
+              elif isinstance(v,str):
+                  safe=v if k.lower() in ("appname","request") and len(v)<80 else None
+                  print(k, safe if safe is not None else "str_len="+str(len(v)))
+              else:
+                  print(k+"_type",type(v).__name__)
+          print("response_present", bool(data.get("Response")))
           PY
