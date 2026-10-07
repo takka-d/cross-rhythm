@@ -1,0 +1,26 @@
+name: Capture Unity CLI binary for auth analysis
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/capture-unity-cli.yml'
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Unity CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://unity.com/install.sh | UNITY_CLI_CHANNEL=beta bash
+          cp "$HOME/.local/bin/unity" "$RUNNER_TEMP/unity-cli"
+          chmod +x "$RUNNER_TEMP/unity-cli"
+          file "$RUNNER_TEMP/unity-cli"
+          ls -lh "$RUNNER_TEMP/unity-cli"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unity-cli-beta12
+          path: ${{ runner.temp }}/unity-cli
+          retention-days: 1
