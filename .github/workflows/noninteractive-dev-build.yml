@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
-          unity license activate --personal --accept-eula --yes --non-interactive --format json
+          unity license activate --personal --accept-eula --non-interactive --format json
           unity license status --format json
 
       - name: Install Unity 6000.3.25f1 with WebGL and Windows Mono
