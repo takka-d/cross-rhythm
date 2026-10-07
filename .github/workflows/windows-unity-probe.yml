@@ -1,0 +1,29 @@
+name: Cross Rhythm Windows Unity probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-unity-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: windows-latest
+    steps:
+      - name: Probe Unity installation
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Continue'
+          Write-Host "ProgramFiles=$env:ProgramFiles"
+          if (Test-Path "$env:ProgramFiles\Unity") {
+            Get-ChildItem "$env:ProgramFiles\Unity" -Recurse -Depth 4 -ErrorAction SilentlyContinue | Select-Object -First 200 FullName
+          } else {
+            Write-Host "NO_PROGRAMFILES_UNITY"
+          }
+          $paths=@(
+            "$env:ProgramFiles\Unity\Hub\Editor\6000.3.25f1\Editor\Unity.exe",
+            "C:\ProgramData\Unity\Unity_lic.ulf",
+            "$env:LOCALAPPDATA\Programs\Unity Hub\Unity Hub.exe"
+          )
+          foreach($p in $paths){ Write-Host "$p => $(Test-Path $p)" }
