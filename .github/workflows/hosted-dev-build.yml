@@ -1,0 +1,189 @@
+name: Cross Rhythm 0.3.13 hosted development build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hosted-dev-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cross-rhythm-hosted-dev-0.3.13
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            UnityProject
+            LegacyWeb
+            dev/0.3.13
+          sparse-checkout-cone-mode: false
+
+      - name: Install Unity CLI
+        run: |
+          $ErrorActionPreference='Stop'
+          winget install --id Unity.CLI --exact --silent --accept-package-agreements --accept-source-agreements
+          $candidates=@(
+            "$env:LOCALAPPDATA\Microsoft\WinGet\Links\unity.exe",
+            "$env:LOCALAPPDATA\Programs\Unity CLI\unity.exe",
+            "$env:ProgramFiles\Unity CLI\unity.exe"
+          )
+          $unityCli=$candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (!$unityCli) {
+            $unityCli=(Get-Command unity -ErrorAction SilentlyContinue).Source
+          }
+          if (!$unityCli) { throw 'Unity CLI was installed but unity.exe was not found.' }
+          "UNITY_CLI=$unityCli" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          & $unityCli --version
+
+      - name: Install Unity 6000.3.25f1 and WebGL module
+        run: |
+          $ErrorActionPreference='Stop'
+          & $env:UNITY_CLI install 6000.3.25f1 -m webgl --accept-eula --yes --non-interactive
+          if ($LASTEXITCODE -ne 0) { throw "Unity Editor install failed: $LASTEXITCODE" }
+          & $env:UNITY_CLI editors --format json
+
+      - name: Sign in to Unity
+        id: unity_auth
+        run: |
+          $ErrorActionPreference='Stop'
+          $out=Join-Path $env:RUNNER_TEMP 'unity-auth-out.log'
+          $err=Join-Path $env:RUNNER_TEMP 'unity-auth-err.log'
+          Remove-Item $out,$err -Force -ErrorAction SilentlyContinue
+
+          $p=Start-Process -FilePath $env:UNITY_CLI -ArgumentList @('auth','login','--format','ndjson') -PassThru -RedirectStandardOutput $out -RedirectStandardError $err -WindowStyle Hidden
+
+          $shown=$false
+          $deadline=(Get-Date).AddMinutes(15)
+          while(!$p.HasExited -and (Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 2
+            if(Test-Path $out) {
+              $raw=Get-Content $out -Raw -ErrorAction SilentlyContinue
+              if(!$shown -and $raw -match 'https://[^"\s]+') {
+                $url=$Matches[0].Replace('\u0026','&').Replace('\\/','/')
+                Write-Host ""
+                Write-Host "============================================================"
+                Write-Host "UNITY SIGN-IN REQUIRED"
+                Write-Host $url
+                Write-Host "Open the URL above, sign in to the Unity account, then return here."
+                Write-Host "============================================================"
+                Write-Host ""
+                "### Unity sign-in required" >> $env:GITHUB_STEP_SUMMARY
+                "Open this URL and finish Unity sign-in:" >> $env:GITHUB_STEP_SUMMARY
+                "" >> $env:GITHUB_STEP_SUMMARY
+                $url >> $env:GITHUB_STEP_SUMMARY
+                $shown=$true
+              }
+            }
+            $p.Refresh()
+          }
+
+          if(!$p.HasExited) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            if(Test-Path $out){ Get-Content $out }
+            if(Test-Path $err){ Get-Content $err }
+            throw 'Unity sign-in timed out.'
+          }
+          if(Test-Path $out){ Get-Content $out }
+          if(Test-Path $err){ Get-Content $err }
+          if($p.ExitCode -ne 0){ throw "Unity auth login failed: $($p.ExitCode)" }
+
+          & $env:UNITY_CLI auth status --format json
+          if($LASTEXITCODE -ne 0){ throw 'Unity auth status failed after login.' }
+
+      - name: Activate Unity Personal
+        run: |
+          $ErrorActionPreference='Stop'
+          & $env:UNITY_CLI license activate --personal --accept-eula --yes --format json
+          if($LASTEXITCODE -ne 0){ throw "Unity Personal activation failed: $LASTEXITCODE" }
+          & $env:UNITY_CLI license status --format json
+
+      - name: Build WebGL and Windows
+        env:
+          CROSSRHYTHM_DEV_BUILD: '1'
+        run: |
+          $ErrorActionPreference='Stop'
+          $editor="$env:ProgramFiles\Unity\Hub\Editor\6000.3.25f1\Editor\Unity.exe"
+          if(!(Test-Path $editor)) {
+            $json=& $env:UNITY_CLI editors --format json | Out-String
+            $match=[regex]::Match($json,'[A-Za-z]:\\[^"\r\n]*6000\.3\.25f1[^"\r\n]*Editor\\Unity\.exe')
+            if($match.Success){ $editor=$match.Value }
+          }
+          if(!(Test-Path $editor)){ throw 'Installed Unity 6000.3.25f1 executable was not found.' }
+          .\UnityProject\Build.ps1 -Target Both -UnityEditor $editor
+          if(!(Test-Path .\UnityProject\Builds\Web\index.html)){ throw 'WebGL output missing.' }
+          if(!(Test-Path .\UnityProject\Builds\Windows\CrossRhythm.exe)){ throw 'Windows output missing.' }
+
+      - name: Prepare noindex development outputs
+        run: |
+          $ErrorActionPreference='Stop'
+          $dev='.\dev\0.3.13'
+          Remove-Item "$dev\unity","$dev\windows" -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item "$dev\unity" -ItemType Directory -Force | Out-Null
+          New-Item "$dev\web" -ItemType Directory -Force | Out-Null
+          New-Item "$dev\windows" -ItemType Directory -Force | Out-Null
+          Copy-Item .\UnityProject\Builds\Web\* "$dev\unity\" -Recurse -Force
+          Copy-Item .\LegacyWeb\CrossRhythm_Web_v171_ADTOF.html "$dev\web\index.html" -Force
+
+          foreach($htmlPath in @("$dev\unity\index.html","$dev\web\index.html")){
+            $html=Get-Content $htmlPath -Raw
+            if($html -notmatch 'name=["'']robots["'']'){
+              $html=$html -replace '<head([^>]*)>', '<head$1><meta name="robots" content="noindex,nofollow,noarchive">'
+            } else {
+              $html=$html -replace '<meta[^>]+name=["'']robots["''][^>]*>', '<meta name="robots" content="noindex,nofollow,noarchive">'
+            }
+            Set-Content -Path $htmlPath -Value $html -Encoding UTF8
+          }
+
+          $zip=Join-Path $env:RUNNER_TEMP 'CrossRhythm_Windows_0.3.13.zip'
+          Compress-Archive -Path '.\UnityProject\Builds\Windows\*' -DestinationPath $zip -Force
+          Copy-Item $zip "$dev\windows\CrossRhythm_Windows_0.3.13.zip" -Force
+
+          @"
+          <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Cross Rhythm 0.3.13 Development</title><style>body{font:16px system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;background:#0b1016;color:#eef4f7}a{color:#8fe5c2}.warn{border:1px solid #775;padding:12px;border-radius:8px}</style></head><body><h1>Cross Rhythm 0.3.13 Development</h1><p class="warn">開発確認用です。本公開版ではありません。検索エンジン向けに noindex を指定しています。</p><ul><li><a href="./unity/">Unity WebGL版 0.3.13</a></li><li><a href="./web/">HTML/JavaScript Web版 0.3.13</a></li><li><a href="./windows/CrossRhythm_Windows_0.3.13.zip">Windows版 0.3.13 ZIP</a></li></ul></body></html>
+          "@ | Set-Content -Path "$dev\index.html" -Encoding UTF8
+
+          @"
+          <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Cross Rhythm 0.3.13 Windows</title></head><body><h1>Cross Rhythm 0.3.13 Windows Development Build</h1><p>開発確認用です。本公開版ではありません。</p><p><a href="./CrossRhythm_Windows_0.3.13.zip" download>Windows版ZIPをDownload</a></p></body></html>
+          "@ | Set-Content -Path "$dev\windows\index.html" -Encoding UTF8
+
+      - name: Commit development outputs
+        run: |
+          $ErrorActionPreference='Stop'
+          git config user.name "TakKa Build"
+          git config user.email "80165829+takka-d@users.noreply.github.com"
+          git add dev/0.3.13
+          if(-not (git diff --cached --quiet)){
+            git commit -m "Deploy Cross Rhythm 0.3.13 development builds (noindex)"
+            git push origin main
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrossRhythm-WebGL-0.3.13-dev
+          path: UnityProject/Builds/Web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrossRhythm-Windows-0.3.13-dev
+          path: UnityProject/Builds/Windows
+
+      - name: Return temporary Unity Personal activation
+        if: always()
+        run: |
+          & $env:UNITY_CLI license return --yes --format json
+          exit 0
