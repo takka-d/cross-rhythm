@@ -61,7 +61,7 @@ jobs:
           Lp+whXhybNotPXZPayv3Sg59CMiWVKNkWDsuADc7TR2mX7WFlzO773kI5gKtySqk
           Jv3v2pneITu4P/3pHq2KePkCAwEAAQ==
           -----END PUBLIC KEY-----
-KEY
+          KEY
 
           RUNNER_TRACKING_ID="" nohup unity auth login --format ndjson >"$RUNNER_TEMP/auth.out" 2>&1 &
           echo $! > "$RUNNER_TEMP/auth.pid"
