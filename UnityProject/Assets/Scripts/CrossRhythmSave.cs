@@ -44,6 +44,7 @@ public partial class CrossRhythmApp {
                 savingProject.FilePath=(string)r["token"]??savingProject.FilePath;
                 savingProject.FileName=(string)r["name"]??savingProject.FileName;
                 savingProject.Dirty=!savingSnapshot.Matches(savingProject);
+                RefreshSavedLibrary(savingProject,savingBytes);
                 SetSaveState(SaveState.Saved);QueueEditorRecovery();PersistEditorSession();status=T("保存しました: ","Saved: ")+savingProject.FileName;
             }else{SetSaveState(SaveState.Download);status=T("ダウンロード先で保存を確認してください。元ファイルは未更新です。","Check the downloaded file. The original has not been overwritten.");}
         }catch(Exception e){SetSaveState(SaveState.Error,e.Message);status=e.Message;}
@@ -51,6 +52,7 @@ public partial class CrossRhythmApp {
     }
     void Save(bool saveAs){
         if(savingProject!=null)return;
+        EndSongInfoEdit();
         try{
             savingProject=Project;SetSaveState(SaveState.Saving);status=T("保存中…","Saving…");
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -60,7 +62,7 @@ public partial class CrossRhythmApp {
             string path=Project.FilePath;
             if(saveAs||string.IsNullOrEmpty(path))path=PlatformFiles.Pick(true,Project.FileName);
             if(path==null){SetSaveState(SaveState.Cancelled);ClearSave();return;}
-            Project.SaveNative(path,!saveAs);QueueEditorRecovery();PersistEditorSession();SetSaveState(SaveState.Saved);status=T("保存しました: ","Saved: ")+Project.FileName;ClearSave();
+            Project.SaveNative(path,!saveAs);RefreshSavedLibrary(Project);QueueEditorRecovery();PersistEditorSession();SetSaveState(SaveState.Saved);status=T("保存しました: ","Saved: ")+Project.FileName;ClearSave();
 #endif
         }catch(Exception e){SetSaveState(SaveState.Error,e.Message);status=T("保存エラー: ","Save error: ")+e.Message;ClearSave();}
     }

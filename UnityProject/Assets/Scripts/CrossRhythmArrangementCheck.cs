@@ -30,8 +30,24 @@ public partial class CrossRhythmApp {
         int snapshots=undo.Count;waveCaptured=waveMoved=true;wavePreviewOffset=3;CancelWaveMove();
         check(undo.Count==snapshots&&p.Offset==-.731,"cancelled wave preview does not modify history or timing");
         File.WriteAllText(Path.Combine(workspaceCheckRoot,"metadata-performance.json"),new JObject{{"notes",6000},{"characters",40},{"previousSnapshotMs",previous},{"groupedEditMs",grouped},{"undoGroups",1}}.ToString());
-        File.WriteAllText(Path.Combine(workspaceCheckRoot,"arrangement.crproj"),"");
         p.SaveNative(Path.Combine(workspaceCheckRoot,"arrangement-saved.crproj"),false);
+        int librarySize=Library.Count,selectedBefore=selected;Library.Add(CopyForEditor(p));int savedIndex=Library.Count-1;
+        string previousTitle=Library[savedIndex].SongTitle;
+        SetSongInfoField("title","Saved song title");SetSongInfoField("artist","Saved artist");
+        check(Library[savedIndex].SongTitle==previousTitle,"unsaved metadata remains isolated from Songs");
+        OnSaveButton("Save");
+        var onDisk=ChartProject.Read(File.ReadAllBytes(p.FilePath),p.FileName,p.FilePath);
+        check(saveState==SaveState.Saved&&!p.Dirty&&onDisk.SongTitle=="Saved song title"&&onDisk.Artist=="Saved artist","Save button writes title and artist to the existing Windows file");
+        check(Library.Count==librarySize+1&&selected==selectedBefore&&Library[savedIndex].SongTitle==onDisk.SongTitle&&Library[savedIndex].Artist==onDisk.Artist,"verified save refreshes existing Songs entry without changing membership or selection");
+        check(!ReferenceEquals(Library[savedIndex],p),"saved Songs entry stays independent of Edit document");
+        byte[] written=p.Write();SetSongInfoField("artist","Unsaved later edit");RefreshSavedLibrary(p,written);
+        check(Library[savedIndex].Artist=="Saved artist"&&p.Artist=="Unsaved later edit"&&p.Dirty,"asynchronous save refresh uses written snapshot not later unsaved edits");
+        var unrelated=CopyForEditor(p);unrelated.FilePath=Path.Combine(workspaceCheckRoot,"not-in-songs.crproj");unrelated.SetSongInfo("Unlisted edit","");RefreshSavedLibrary(unrelated);
+        check(Library.Count==librarySize+1&&Library[savedIndex].SongTitle=="Saved song title","saving unrelated Edit file does not add or replace Songs entry");
+        Restore(false);selected=savedIndex;NavigateNow(Page.Songs);end=Time.realtimeSinceStartupAsDouble+30;while((busy||!loaded)&&Time.realtimeSinceStartupAsDouble<end)yield return null;
+        check(Project.SongTitle=="Saved song title"&&Project.Artist=="Saved artist","returning to Songs immediately shows saved metadata");
+        NavigateNow(Page.Edit);end=Time.realtimeSinceStartupAsDouble+30;while((busy||!loaded)&&Time.realtimeSinceStartupAsDouble<end)yield return null;
+        check(ReferenceEquals(Project,p)&&p.SongTitle=="Saved song title","returning to Edit preserves its document after Songs refresh");
         NavigateNow(Page.Songs);yield return null;
     }
 }
