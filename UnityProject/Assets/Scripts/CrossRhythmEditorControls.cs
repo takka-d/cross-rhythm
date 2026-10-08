@@ -45,7 +45,7 @@ public partial class CrossRhythmApp {
     void EditorInspector(){
         float top=EditorBottom,x=40,y=top+55,cw=(W-104)/3;
         RectFill(new Rect(24,top,W-48,H-top-52),panel);Border(new Rect(24,top,W-48,H-top-52),line);
-        string[] tabs={"Note","Song","Analyze"};for(int i=0;i<3;i++)if(Button(new Rect(36+i*102,top+10,92,32),tabs[i],editorPanel==i,true,14)){editorPanel=i;GUI.FocusControl(null);}
+        string[] tabs={"Note","Song","Tempo","Analyze"};int[] panels={0,1,3,2};for(int i=0;i<tabs.Length;i++)if(Button(new Rect(36+i*102,top+10,92,32),tabs[i],editorPanel==panels[i],true,14)){editorPanel=panels[i];if(editorPanel==3)SelectTempoPosition(Math.Max(0,Audio.Beat));GUI.FocusControl(null);}
         if(editorPanel==0){
             Text(new Rect(x,y,cw,24),LaneNames[instrument]+" · "+T("種別","Type"),14,mint,true);
             var types=Types[instrument];for(int i=0;i<types.Length;i++){int ix=i;if(Button(new Rect(x+i%2*(cw/2),y+32+i/2*35,cw/2-8,29),EditorTypeLabel(types[i]),kind==i,true,13)){kind=ix;ChangeSelected(e=>{if((string)e["instrument"]==Instruments[instrument])e["articulation"]=types[ix];});}}
@@ -63,9 +63,9 @@ public partial class CrossRhythmApp {
             string next=EditField("title",new Rect(x,y+25,cw-10,30),Project.SongTitle);if(next!=Project.SongTitle){PushUndo();Project.SetSongInfo(next,Project.Artist);QueueEditorRecovery();}
             Text(new Rect(x,y+66,cw,22),T("アーティスト名","Artist"),13,muted);
             string artist=EditField("artist",new Rect(x,y+91,cw-10,30),Project.Artist);if(artist!=Project.Artist){PushUndo();Project.SetSongInfo(Project.SongTitle,artist);QueueEditorRecovery();}
-            x+=cw+12;Text(new Rect(x,y,cw,22),"BPM",13,muted);
+            x+=cw+12;Text(new Rect(x,y,cw,22),"Initial BPM",13,muted);
             if(bpmField=="")bpmField=Project.BPM.ToString(System.Globalization.CultureInfo.InvariantCulture);bpmField=EditField("bpm",new Rect(x,y+25,cw-90,30),bpmField);
-            if(Button(new Rect(x+cw-80,y+25,68,30),"Set",false,true,14)&&double.TryParse(bpmField,out var bpm)&&bpm>=20&&bpm<=600){PushUndo();Audio.Pause();Project.Chart["bpm"]=bpm;Edited();}
+            if(Button(new Rect(x+cw-80,y+25,68,30),"Set",false,true,14)&&double.TryParse(bpmField,out var bpm)&&bpm>=20&&bpm<=600){PushUndo();Audio.Pause();Project.SetTempo(0,0,bpm);Edited();}
             Text(new Rect(x,y+66,cw,22),T("音源の開始位置(秒)","Audio offset (sec)"),13,muted);
             offsetField=EditField("offset",new Rect(x,y+91,cw-90,30),offsetField);
             if(Button(new Rect(x+cw-80,y+91,68,30),"Set",false,true,14)&&double.TryParse(offsetField,out var sec)&&!double.IsNaN(sec)&&!double.IsInfinity(sec)){PushUndo();Audio.Pause();Project.Chart["audioOffsetSec"]=sec;Edited();}
@@ -73,7 +73,7 @@ public partial class CrossRhythmApp {
             if(Button(new Rect(x,y+30,280,32),"Bar / Meter",false,true,15))showMeterPanel=true;
             Text(new Rect(x,y+76,cw,26),"Difficulty "+Project.Difficulty+" · Auto",18,mint,true);
             Text(new Rect(x,y+106,cw,24),Project.NotesPerSecond.ToString("0.00")+" "+T("ノーツ/秒","notes/sec"),12,muted);
-        }else DraftControls(x,y,cw);
+        }else if(editorPanel==3)EditorTempoControls(x,y,cw);else DraftControls(x,y,cw);
         if(draftRunning){bool enabled=GUI.enabled;GUI.enabled=true;Text(new Rect(W-430,top+15,240,26),$"Analyze {draftProgress*100:0}%",14,mint);if(Button(new Rect(W-166,top+10,126,32),"Cancel",false,true,14))draftCancel=true;GUI.enabled=enabled;}
     }
     string EditorTypeLabel(string type){switch(type){case "center":case "normal":return "Normal";case "rim_closed":return "Closed rimshot";case "rim_open":return "Open rimshot";case "buzz":return "Buzz roll";case "auto":return "Auto";default:return char.ToUpperInvariant(type[0])+type.Substring(1);}}

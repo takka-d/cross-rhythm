@@ -53,8 +53,8 @@ public partial class CrossRhythmApp {
         RectFill(new Rect(0,0,totalWidth,notesTop+notesHeight),C("#070b10"));
         float left=editScroll.x,right=Math.Min(totalWidth,left+viewport.width);
         RectFill(new Rect(left,rulerHeight+waveHeight/2,right-left,1),line);
-        if(Event.current.type==EventType.Repaint&&Audio.Waveform!=null){for(float xx=left;xx<right;xx+=2){double from=Project.Offset+xx/ppb*60/Project.BPM,to=Project.Offset+(xx+2)/ppb*60/Project.BPM;Audio.Waveform.Range(from,to,out float lo,out float hi);float amp=(waveHeight-6)/2;float y=rulerHeight+waveHeight/2-Mathf.Clamp(hi,-1,1)*amp;float h=Math.Max(1,(Mathf.Clamp(hi,-1,1)-Mathf.Clamp(lo,-1,1))*amp);RectFill(new Rect(xx,y,1.5f,h),C("#a7bdca"));}}
-        else if(Audio.Waveform==null)Text(new Rect(left+12,rulerHeight+6,600,26),busy?T("音源を読込中…","Loading audio…"):T("Audioで音源を選択","Choose a track with Audio"),13,muted);
+        if(Event.current.type==EventType.Repaint&&Audio.Waveform!=null){for(float xx=left;xx<right;xx+=2){double from=Project.Offset+Project.SecondsAtBeat(xx/ppb),to=Project.Offset+Project.SecondsAtBeat((xx+2)/ppb);Audio.Waveform.Range(from,to,out float lo,out float hi);float amp=(waveHeight-6)/2;float y=rulerHeight+waveHeight/2-Mathf.Clamp(hi,-1,1)*amp;float h=Math.Max(1,(Mathf.Clamp(hi,-1,1)-Mathf.Clamp(lo,-1,1))*amp);RectFill(new Rect(xx,y,1.5f,h),C("#a7bdca"));}}
+        else if(Audio.Waveform==null)Text(new Rect(left+12,rulerHeight+22,600,24),busy?T("音源を読込中…","Loading audio…"):T("Audioで音源を選択","Choose a track with Audio"),13,muted);
         for(int row=0;row<9;row++){RectFill(new Rect(left,notesTop+row*rh,right-left,rh),C(row%2==0?"#0d141c":"#0a1017"));RectFill(new Rect(left,notesTop+row*rh,right-left,1),C("#202c39"));}
         int first=Math.Max(0,Project.BarAt(left/ppb)),last=Project.BarAt(right/ppb);
         for(int m=first;m<=last;m++){
@@ -63,6 +63,11 @@ public partial class CrossRhythmApp {
             var grid=editorGrid;ChartVisuals.EditGridPoints(Project,m,grid);
             foreach(double local in grid){float gx=(float)(Project.Starts[m]+local)*ppb;if(gx<left||gx>right)continue;bool major=Math.Abs(local-Math.Round(local))<1e-7;RectFill(new Rect(gx,notesTop,major?1:.6f,notesHeight),C(major?"#344456":"#1b2631"));}
             RectFill(new Rect(xx,0,1.5f,notesTop+notesHeight),C("#344456"));
+        }
+        float tempoLabelEnd=left;
+        foreach(var tempo in Project.Tempo.Points){float tx=(float)tempo.Beat*ppb;if(tx<left||tx>right)continue;
+            RectFill(new Rect(tx,rulerHeight,1,waveHeight+notesHeight),new Color(.57f,.91f,.79f,.38f));
+            if(tx>=tempoLabelEnd){float tw=92;RectFill(new Rect(tx+2,rulerHeight+1,tw,18),bg);Text(new Rect(tx+5,rulerHeight+1,tw,18),$"{tempo.BPM:0.##} BPM",11,mint);tempoLabelEnd=tx+tw+4;}
         }
         var visible=visibleNotes;visible.Clear();
         foreach(var n in Project.Notes){int row=Array.IndexOf(Instruments,n.Instrument);if(row<0)continue;Rect rect=ChartVisuals.EditRect(Project,n,row,ppb,rh);rect.y+=notesTop;if(rect.xMax<left||rect.x>right)continue;visible.Add((n,rect));bool sel=selection.Contains(n.Index);RoundFill(rect,ChartVisuals.EditColor(Project,n),3);RoundBorder(rect,sel?Color.white:new Color(1,1,1,.55f),sel?2.5f:1,3);

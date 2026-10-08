@@ -74,7 +74,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(x,553,290,64),"Songs",true))Navigate(Page.Songs);
         if(Button(new Rect(x+308,553,180,64),"Edit"))Navigate(Page.Edit);
         if(Button(new Rect(x+506,553,180,64),"Config"))Navigate(Page.Config);
-        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.16",14,muted);
+        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.17",14,muted);
         for(int i=0;i<7;i++){float h=35+i%3*15;RectFill(new Rect(W-260+i*22,240+i*16,7,h),new Color(mint.r,mint.g,mint.b,.18f+i*.04f));}
     }
     void FittedText(Rect r,string value,int size,Color color,bool bold=false){
@@ -94,13 +94,13 @@ public partial class CrossRhythmApp {
             FittedText(new Rect(20,r.y+10,500,32),p.Title+(p.Dirty?" *":""),23,Color.white,true);
             FittedText(new Rect(20,r.y+46,490,25),ArtistDisplay(p),15,muted);
             FittedText(new Rect(20,r.y+70,510,21),p.FileName,12,muted);
-            Text(new Rect(20,r.y+95,500,24),$"{p.BPM:0.##} BPM   ·   {p.PlayableNoteCount} notes",13,muted);
+            Text(new Rect(20,r.y+95,500,24),$"{p.TempoLabel} BPM   ·   {p.PlayableNoteCount} notes",13,muted);
             Text(new Rect(548,r.y+18,64,25),"LEVEL",11,muted);Text(new Rect(556,r.y+45,60,55),p.Difficulty,36,mint,true);
             if(choose||hoverFocus){if(hoverFocus)keyboardMenu=false;FocusSong(i);}
         }GUI.EndScrollView();
         float right=x+695;RectFill(new Rect(right,254,465,H-344),panel);
         FittedText(new Rect(right+28,268,408,43),Project.Title,26,Color.white,true);FittedText(new Rect(right+28,313,408,28),ArtistDisplay(Project),17,muted);
-        Text(new Rect(right+28,337,315,32),$"{Project.BPM:0.##} BPM    {(int)(Project.Length/Project.BPM)}:{(int)(Project.Length*60/Project.BPM)%60:00}",20,mint);
+        Text(new Rect(right+28,337,315,32),$"{Project.TempoLabel} BPM    {(int)(Project.DurationSeconds/60)}:{(int)Project.DurationSeconds%60:00}",20,mint);
         Text(new Rect(right+341,332,70,22),"LEVEL",11,muted);Text(new Rect(right+352,355,70,50),Project.Difficulty,36,mint,true);
         Text(new Rect(right+28,421,400,25),busy?T("音源を準備中…","Preparing audio…"):!songPreviewEnabled?"Preview OFF":Audio.Backing.isPlaying?"Preview ♪":Audio.Song==null?T("音源なし","No audio"):"",14,mint);
         float best=PlayerPrefs.GetFloat("best:"+Project.Title,-1);Text(new Rect(right+28,387,295,32),"Best   "+(best<0?"—":best.ToString("0.0")+" / 100"),18,muted);

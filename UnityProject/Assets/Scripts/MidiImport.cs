@@ -65,10 +65,13 @@ public static class MidiImport {
         if(resolved.Count==0)throw new InvalidDataException("No drum notes found in MIDI");
         int channel=resolved.Any(n=>n.Channel==9)?9:resolved.GroupBy(n=>n.Channel).OrderByDescending(g=>g.Count()).First().Key;
         var hits=resolved.Where(n=>n.Channel==channel).OrderBy(n=>n.Beat).ThenBy(n=>n.Pitch).ToArray();
-        var orderedTempos=tempos.OrderBy(t=>t.Item1).ToArray();double bpm=orderedTempos.Length>0?orderedTempos[0].Item2:120;result.TempoChanges=orderedTempos.Count(t=>Math.Abs(t.Item2-bpm)>.001);
+        var orderedTempos=tempos.GroupBy(t=>t.Item1).Select(g=>g.Last()).OrderBy(t=>t.Item1).ToArray();double bpm=orderedTempos.FirstOrDefault(t=>t.Item1==0)?.Item2??120;
+        if(orderedTempos.Any(t=>!TempoMap.ValidBPM(t.Item2)))throw new InvalidDataException("BPM must be 20-600");
+        result.TempoChanges=orderedTempos.Count(t=>t.Item1>0);
         if(bpm<20||bpm>600)throw new InvalidDataException("BPM must be 20–600");
         var time=meters.GroupBy(m=>m.Tick).Select(g=>g.Last()).OrderBy(m=>m.Tick).ToList();if(time.Count==0||time[0].Tick>0)time.Insert(0,new Meter{Tick=0,N=4,D=4});
-        double total=Math.Max(4,Math.Ceiling((hits.Last().Beat+1e-8)/source.Grid)*source.Grid+source.Grid*2),cursor=0;int ti=0;
+        double lastEvent=Math.Max(hits.Last().Beat,Math.Max(tempos.Count==0?0:tempos.Max(t=>t.Item1)/(double)ppq,meters.Count==0?0:meters.Max(m=>m.Tick)/(double)ppq));
+        double total=Math.Max(4,Math.Ceiling((lastEvent+1e-8)/source.Grid)*source.Grid+source.Grid*2),cursor=0;int ti=0;
         var bars=new JArray();var signatures=new JArray();
         while(cursor<total-1e-8){
             while(ti+1<time.Count&&time[ti+1].Tick/(double)ppq<=cursor+1e-8)ti++;
@@ -77,7 +80,7 @@ public static class MidiImport {
             len=Math.Min(len,next-cursor);if(len<=0||len>64||bars.Count>=100000)throw new InvalidDataException("Invalid MIDI measure map");
             bars.Add(len);signatures.Add(new JObject{{"numerator",m.N},{"denominator",m.D}});cursor+=len;
         }
-        var chart=(JObject)source.Chart.DeepClone();chart["title"]=source.Title=="Untitled"?Path.GetFileNameWithoutExtension(name):source.Title;chart["bpm"]=bpm;chart["measures"]=bars;chart["timeSignatures"]=signatures;chart["events"]=new JArray();chart["velocityScaleVersion"]=4;
+        var chart=(JObject)source.Chart.DeepClone();chart["title"]=source.Title=="Untitled"?Path.GetFileNameWithoutExtension(name):source.Title;chart["bpm"]=bpm;chart["measures"]=bars;chart["timeSignatures"]=signatures;chart["events"]=new JArray();chart["velocityScaleVersion"]=4;chart["tempoChanges"]=new JArray();
         var p=new ChartProject{Chart=chart,Manifest=source.Manifest};p.Rebuild();int id=0;
         // MIDI ticks are discrete. Infer display cells within half a tick, but
         // never quantize the imported onset itself. Neighbouring hits give the
@@ -105,6 +108,7 @@ public static class MidiImport {
             if(last!=null&&n.Beat<=last.Item2+1e-8){last.Item1.Velocity=Math.Max(last.Item1.Velocity,n.Velocity);ranges[ranges.Count-1]=Tuple.Create(last.Item1,Math.Max(last.Item2,end));}else ranges.Add(Tuple.Create(state,end));
         }
         foreach(var range in ranges)add(range.Item1,range.Item2-range.Item1.Beat);
+        foreach(var tempo in orderedTempos.Where(t=>t.Item1>0)){double beat=tempo.Item1/(double)ppq;int bar=p.BarAt(beat);((JArray)chart["tempoChanges"]).Add(new JObject{{"measure",bar},{"beat",beat-p.Starts[bar]},{"bpm",tempo.Item2}});}
         p.Rebuild();result.Chart=chart;result.Hits=p.Notes.Count(n=>!n.Pedal);return result;
     }
 }

@@ -16,7 +16,7 @@ public sealed class ChartNote {
     public bool Pedal => Instrument == "HHSTATE";
 }
 public sealed class PedalRange { public double Start, End; }
-public sealed class ChartProject {
+public sealed partial class ChartProject {
     public JObject Manifest, Chart;
     public Dictionary<string, byte[]> Files = new Dictionary<string, byte[]>();
     public string FilePath = "", FileName = "Untitled.crproj", Baseline = "";
@@ -31,7 +31,7 @@ public sealed class ChartProject {
     public string Title => string.IsNullOrWhiteSpace(SongTitle) ? Path.GetFileNameWithoutExtension(FileName) : SongTitle;
     public string Artist => (string)Chart["artist"] ?? (string)Manifest["artist"] ?? "";
     public int PlayableNoteCount {get;private set;}
-    public double NotesPerSecond => Length>0 ? PlayableNoteCount*BPM/(60*Length) : 0;
+    public double NotesPerSecond => DurationSeconds>0 ? PlayableNoteCount/DurationSeconds : 0;
     // Automatic chart difficulty, separate from the A-E performance result.
     public string Difficulty => NotesPerSecond>=11 ? "S" : NotesPerSecond>=8 ? "A" : NotesPerSecond>=3 ? "B" : "C";
     public void SetSongInfo(string title,string artist){Chart["title"]=Manifest["title"]=title??"";Chart["artist"]=Manifest["artist"]=artist??"";Dirty=true;}
@@ -62,6 +62,7 @@ public sealed class ChartProject {
         if(BPM<20 || BPM>600 || double.IsNaN(BPM)) throw new Exception("BPM must be 20–600");
         Measures=bars.Select(x=>(double)x).ToArray(); Starts=new double[Measures.Length];
         for(int i=0;i<Measures.Length;i++){if(Measures[i]<=0 || Measures[i]>64)throw new Exception("Invalid measure length");if(i>0)Starts[i]=Starts[i-1]+Measures[i-1];}
+        Tempo=new TempoMap(BPM,Chart["tempoChanges"],Starts,Measures);
         Notes.Clear(); Pedals.Clear();
         int ix=0;
         foreach(JObject e in Events){
@@ -114,7 +115,7 @@ public sealed class ChartProject {
     public bool CanSetMeter(int m,int numerator,int denominator){
         if(m<0||m>=Measures.Length||numerator<1||numerator>64||!new[]{1,2,4,8,16,32,64}.Contains(denominator))return false;
         double length=numerator*4.0/denominator;
-        return length<=64&&!Events.OfType<JObject>().Any(e=>(int?)e["measure"]==m&&((double?)e["beat"]??0)>=length);
+        return length<=64&&!Events.OfType<JObject>().Concat(TempoChanges).Any(e=>(int?)e["measure"]==m&&((double?)e["beat"]??0)>=length);
     }
     public bool SetMeter(int m,int numerator,int denominator){
         if(!CanSetMeter(m,numerator,denominator))return false;
@@ -124,13 +125,13 @@ public sealed class ChartProject {
     public void InsertMeasure(int after){
         int at=Math.Max(0,Math.Min(Measures.Length,after+1));var meters=MeterArray();
         meters.Insert(at,new JObject{{"numerator",4},{"denominator",4}});Chart["timeSignatures"]=meters;
-        ((JArray)Chart["measures"]).Insert(at,4);foreach(JObject e in Events)if(((int?)e["measure"]??0)>=at)e["measure"]=(int)e["measure"]+1;
+        ((JArray)Chart["measures"]).Insert(at,4);foreach(JObject e in Events.OfType<JObject>().Concat(TempoChanges))if(((int?)e["measure"]??0)>=at)e["measure"]=(int)e["measure"]+1;
         Dirty=true;Rebuild();
     }
-    public bool CanRemoveMeasure(int m)=>Measures.Length>1&&m>=0&&m<Measures.Length&&!Events.OfType<JObject>().Any(e=>(int?)e["measure"]==m);
+    public bool CanRemoveMeasure(int m)=>Measures.Length>1&&m>=0&&m<Measures.Length&&!Events.OfType<JObject>().Concat(TempoChanges).Any(e=>(int?)e["measure"]==m);
     public bool RemoveMeasure(int m){
         if(!CanRemoveMeasure(m))return false;var meters=MeterArray();meters.RemoveAt(m);Chart["timeSignatures"]=meters;
-        ((JArray)Chart["measures"]).RemoveAt(m);foreach(JObject e in Events)if(((int?)e["measure"]??0)>m)e["measure"]=(int)e["measure"]-1;
+        ((JArray)Chart["measures"]).RemoveAt(m);foreach(JObject e in Events.OfType<JObject>().Concat(TempoChanges))if(((int?)e["measure"]??0)>m)e["measure"]=(int)e["measure"]-1;
         Dirty=true;Rebuild();return true;
     }
     public byte[] Write() {

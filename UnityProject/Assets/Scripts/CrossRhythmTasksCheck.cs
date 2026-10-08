@@ -72,7 +72,8 @@ public partial class CrossRhythmApp {
                 foreach(var n in Project.Notes)Check(Math.Abs(Audio.BeatAt(Audio.DSPAt(n.Beat))-n.Beat)<1e-8,"Practice audio clock preserves tuplet onset "+n.Index);
                 Audio.Stop();
             }finally{pro=oldPro;}
-            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.16"},{"checks",new JArray(checks)}}.ToString());
+            yield return TempoRuntimeCheck(Check,bytes);
+            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.17"},{"checks",new JArray(checks)}}.ToString());
             Debug.Log("CROSS_RHYTHM_TASKS_CHECK_PASS");
         }finally{if(hadPreview)PlayerPrefs.SetInt("songPreview",originalPreview);else PlayerPrefs.DeleteKey("songPreview");PlayerPrefs.Save();allowApplicationQuit=true;}
         Application.Quit();

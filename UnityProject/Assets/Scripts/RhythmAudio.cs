@@ -35,9 +35,11 @@ public sealed class RhythmAudio : MonoBehaviour {
     CancellationTokenSource decodeCancellation;
     sealed class DecodedSong {public float[] PCM;public int Channels,Rate;public AudioWaveform Waveform;}
     void OnDestroy(){decodeCancellation?.Cancel();decodeCancellation?.Dispose();}
-    public double Beat => Running?AnchorBeat+(AudioSettings.dspTime-AnchorDSP)*BPM/60*Rate:AnchorBeat;
-    public double BeatAt(double dsp)=>Running?AnchorBeat+(dsp-AnchorDSP)*BPM/60*Rate:AnchorBeat;
-    public double DSPAt(double beat)=>AnchorDSP+(beat-AnchorBeat)*60/BPM/Rate;
+    double ChartSeconds(double beat)=>Project!=null?Project.SecondsAtBeat(beat):beat*60/BPM;
+    double ChartBeat(double seconds)=>Project!=null?Project.BeatAtSeconds(seconds):seconds*BPM/60;
+    public double Beat => BeatAt(AudioSettings.dspTime);
+    public double BeatAt(double dsp)=>Running?ChartBeat(ChartSeconds(AnchorBeat)+(dsp-AnchorDSP)*Rate):AnchorBeat;
+    public double DSPAt(double beat)=>AnchorDSP+(ChartSeconds(beat)-ChartSeconds(AnchorBeat))/Rate;
     public static readonly string[] SampleKeys={"BD","SN","SN_RIM","SIDE","SN_BUZZ","HH","OHH","HH_PEDAL","HT","FT","TOM_RIM","RD","CUP","RIDE_CRASH","CR","SPLASH","CHINA"};
     static readonly float[] SampleGains={.78f,1.141123f,1.172821f,1.109425f,1.077727f,.54f,.57f,.58f,.70f,.72f,.74f,.50f,.54f,.168936f,1.505649f,.56f,.56f};
     void Awake(){Backing=gameObject.AddComponent<AudioSource>();Backing.playOnAwake=false;Backing.priority=0;for(int i=0;i<128;i++){var s=gameObject.AddComponent<AudioSource>();s.playOnAwake=false;voices.Add(s);}foreach(string k in SampleKeys)clips[k]=Resources.Load<AudioClip>("Drums/"+k);
@@ -48,7 +50,7 @@ public sealed class RhythmAudio : MonoBehaviour {
     public void Stop(){Running=false;Backing.Stop();foreach(var s in voices)s.Stop();openHats.Clear();voiceStarts.Clear();StopHats();}
     public void Pause(){double b=Beat;Stop();AnchorBeat=b;}
     public void Seek(double beat){bool play=Running;Stop();AnchorBeat=beat;if(play)Play(beat);}
-    public void Play(double beat){Stop();AnchorBeat=beat;AnchorDSP=AudioSettings.dspTime+.08;Running=true;if(Song!=null){Backing.clip=Song;Backing.pitch=(float)Rate;Backing.volume=BackingGain;double sec=Offset+beat*60/BPM;double wait=Math.Max(0,-sec)/Rate;if(sec<Song.length){Backing.timeSamples=(int)Math.Max(0,Math.Min(Song.samples-1,Math.Round(Math.Max(0,sec)*Song.frequency)));Backing.PlayScheduled(AnchorDSP+wait);}}}
+    public void Play(double beat){Stop();AnchorBeat=beat;AnchorDSP=AudioSettings.dspTime+.08;Running=true;if(Song!=null){Backing.clip=Song;Backing.pitch=(float)Rate;Backing.volume=BackingGain;double sec=Offset+ChartSeconds(beat);double wait=Math.Max(0,-sec)/Rate;if(sec<Song.length){Backing.timeSamples=(int)Math.Max(0,Math.Min(Song.samples-1,Math.Round(Math.Max(0,sec)*Song.frequency)));Backing.PlayScheduled(AnchorDSP+wait);}}}
     public void Preview(){Stop();Rate=1;Backing.pitch=1;if(Song==null)return;Backing.clip=Song;Backing.volume=BackingGain;Backing.timeSamples=(int)Math.Min(Song.samples-1,Math.Max(0,Offset)*Song.frequency);Backing.Play();}
     void Update(){if(Backing!=null)Backing.volume=BackingGain;}
     public void Load(ChartProject p){
@@ -185,7 +187,7 @@ public sealed class RhythmAudio : MonoBehaviour {
         float kitGain=1,kitRate=1;string kit=(string)Project?.Chart["drumKit"]??"studio";
         // Preset maps are copied from the HTML reference without altering project values.
         var preset=KitPreset.Get(kit,key);kitGain=preset.x;kitRate=preset.y;
-        PlayKey(key,ChartProject.Gains[n.Velocity]*mix*kitGain,pitch*kitRate,when,n.Articulation=="buzz"?n.Duration*60/BPM/Rate:0);
+        PlayKey(key,ChartProject.Gains[n.Velocity]*mix*kitGain,pitch*kitRate,when,n.Articulation=="buzz"?(ChartSeconds(n.Beat+n.Duration)-ChartSeconds(n.Beat))/Rate:0);
     }
     public void Pedal(double when=-1){PlayKey("HH_PEDAL",1,1,when,0);}
     public void Click(bool accent,double when){PlayKey("SIDE",accent?.5f:.25f,accent?1.7f:1.4f,when,0);}

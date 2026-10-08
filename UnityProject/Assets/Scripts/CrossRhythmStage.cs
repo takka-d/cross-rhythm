@@ -26,14 +26,14 @@ public partial class CrossRhythmApp {
         bool practice=Current==Page.Practice;double b=Audio.Beat;
         RoundFill(new Rect(8,8,W-16,58),panel);RoundBorder(new Rect(8,8,W-16,58),line);
         Text(new Rect(22,18,W*.32f,36),Project.Title,19,Color.white,true);
-        Text(new Rect(W*.35f,24,175,28),$"{Project.BPM:0.##} BPM · "+(pro?"PRO":"NORMAL"),13,muted);
+        Text(new Rect(W*.35f,24,175,28),$"{Project.Tempo.BPMAt(Audio.Beat):0.##} BPM · "+(pro?"PRO":"NORMAL"),13,muted);
         if(!practice){var live=RhythmScore.Calculate(Project.Notes,Records);Text(new Rect(W*.51f,16,210,40),$"Score {live.Score:0.0}",24,mint,true);if(Button(new Rect(W-178,16,100,42),"Back"))NavigateNow(Page.Songs);}
         else{if(Button(new Rect(W-438,16,118,42),Audio.Running?"Pause":"Play",true)){if(Audio.Running)Audio.Pause();else {ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}if(Button(new Rect(W-308,16,118,42),"Auto "+(auto?"ON":"OFF"))){auto=!auto;ResetScheduled();}if(Button(new Rect(W-178,16,100,42),"Back"))NavigateNow(Page.Songs);}
         string revision=Project.Events.Count+":"+Project.Measures.Length+":"+Project.Grid;
         if(gridProject!=Project||gridRevision!=revision){stageGrids.Clear();gridProject=Project;gridRevision=revision;}
         Rect area=new Rect(8,74,W-16,H-74-(practice?124:8));RoundFill(area,C("#090d13"));RoundBorder(area,line);
         ReferencePlayfield(area,b);
-        if(practice){PracticeControls();RectFill(new Rect(12,H-67,W-24,53),panel);Text(new Rect(28,H-56,180,28),$"{Math.Max(0,b)*60/Project.BPM:0.0} / {Project.Length*60/Project.BPM:0.0}s",16,muted);float next=GUI.HorizontalSlider(new Rect(230,H-48,W-550,20),(float)b,(float)CountIn.Start(Project),(float)Project.Length);if(Math.Abs(next-b)>.01)Seek(next);Text(new Rect(W-295,H-56,270,30),"Wheel: ±4 beats · Space",14,muted);if(Event.current.type==EventType.ScrollWheel){Seek(b+Event.current.delta.y*4);Event.current.Use();}}
+        if(practice){PracticeControls();RectFill(new Rect(12,H-67,W-24,53),panel);Text(new Rect(28,H-56,180,28),$"{Project.SecondsAtBeat(Math.Max(0,b)):0.0} / {Project.DurationSeconds:0.0}s",16,muted);float next=GUI.HorizontalSlider(new Rect(230,H-48,W-550,20),(float)b,(float)CountIn.Start(Project),(float)Project.Length);if(Math.Abs(next-b)>.01)Seek(next);Text(new Rect(W-295,H-56,270,30),"Wheel: ±4 beats · Space",14,muted);if(Event.current.type==EventType.ScrollWheel){Seek(b+Event.current.delta.y*4);Event.current.Use();}}
     }
     void DrawPedalRanges(int bar,double start,double length,double b,float y,float rh,float left,float width,float z,float alpha){
         foreach(var p in Project.Pedals){

@@ -102,16 +102,18 @@ public partial class CrossRhythmApp : MonoBehaviour {
         if(!pro){if(key==Key.Digit9)return n.Lane=="H1"||n.Lane=="HANY";if(key==Key.Digit4)return n.Lane=="H2"||n.Lane=="HANY";return (key==Key.V||key==Key.M)&&n.Instrument=="BD"&&!footRoles.ContainsKey(key);}
         return (key==Key.R||key==Key.O)?n.Instrument=="SN":(key==Key.E||key==Key.P)?new[]{"HT","MT","FT"}.Contains(n.Instrument):(key==Key.Digit4||key==Key.Digit9)?n.Instrument=="HH":(key==Key.Digit3||key==Key.Digit0)?n.Instrument=="CR"||n.Instrument=="RD":(key==Key.V||key==Key.M)&&n.Instrument=="BD";
     }
+    double NoteSeconds(double from,double to)=>(Project.SecondsAtBeat(to)-Project.SecondsAtBeat(from))/Audio.Rate;
+    double BeatAfter(double beat,double seconds)=>Project.BeatAtSeconds(Project.SecondsAtBeat(beat)+seconds*Audio.Rate);
     void HandleKey(Key key,double beat){
         if(auto)return;
         if(pro&&(key==Key.C||key==Key.Comma)){SetPedal(true,beat);return;}
-        var n=Project.Notes.Where(n=>Matches(n,key)&&!judged.ContainsKey(n.Index)&&Math.Abs(n.Beat-beat)*60/Project.BPM/Audio.Rate<=.12).OrderBy(n=>Math.Abs(n.Beat-beat)).FirstOrDefault();
+        var n=Project.Notes.Where(n=>Matches(n,key)&&!judged.ContainsKey(n.Index)&&Math.Abs(NoteSeconds(n.Beat,beat))<=.12).OrderBy(n=>Math.Abs(NoteSeconds(n.Beat,beat))).FirstOrDefault();
         if(!pro&&(key==Key.V||key==Key.M)){
             if(n==null&&Project.ClosedAt(beat)){footRoles[key]="pedal";SetPedal(true,beat);return;}
             if(n!=null)footRoles[key]="kick";
         }
         if(n==null)return;
-        double ms=(beat-n.Beat)*60000/Project.BPM/Audio.Rate;Judge(n,ms,Math.Abs(ms)<=45?"JUST":ms<0?"FAST":"LATE");Audio.Drum(n,closed);
+        double ms=NoteSeconds(n.Beat,beat)*1000;Judge(n,ms,Math.Abs(ms)<=45?"JUST":ms<0?"FAST":"LATE");Audio.Drum(n,closed);
     }
     void SetPedal(bool value,double beat){if(value==closed)return;closed=value;if(value){pedalStart=beat;Audio.Pedal();}else if(pedalStart.HasValue){heldPedal.Add(new PedalRange{Start=pedalStart.Value,End=beat});pedalStart=null;}}
     void Judge(ChartNote n,double ms,string kind){if(judged.ContainsKey(n.Index))return;var r=new HitRecord{Index=n.Index,Beat=n.Beat,Instrument=n.Instrument,Ms=ms,Judge=kind};judged[n.Index]=r;AddReferenceEffect(n,kind);if(Current==Page.Play)Records.Add(r);lastJudge=kind+(kind=="MISS"?"":$"  {ms:+0.0;-0.0;0.0} ms");lastJudgeTime=Time.realtimeSinceStartupAsDouble;}
@@ -127,17 +129,17 @@ public partial class CrossRhythmApp : MonoBehaviour {
         bool preview=Current==Page.Edit||auto;
         if(preview){
             bool nextClosed=Project.ClosedAt(b);SetPedal(nextClosed,b);
-            double until=b+.35*Project.BPM/60*Audio.Rate;
+            double until=BeatAfter(b,.35);
             while(previewCursor<Project.Notes.Count){var n=Project.Notes[previewCursor];if(n.Beat>until)break;previewCursor++;if(n.Pedal||n.Beat<Audio.AnchorBeat-1e-8||scheduled.Contains(n.Index))continue;scheduled.Add(n.Index);Audio.Drum(n,Project.ClosedAt(n.Beat),Audio.DSPAt(n.Beat));}
         }
-        if(Current!=Page.Edit){foreach(var n in Project.Notes){if(n.Pedal||judged.ContainsKey(n.Index)||n.Beat<Audio.AnchorBeat-1e-8)continue;if(auto&&n.Beat<=b)Judge(n,0,"JUST");else if(!auto&&b-n.Beat>.12*Project.BPM/60*Audio.Rate)Judge(n,double.NaN,"MISS");}}
-        if(!pro&&!preview&&Project.ClosedAt(b)&&!closed){var releasedKick=footRoles.FirstOrDefault(kv=>kv.Value=="kick"&&held.Contains(kv.Key));if(!releasedKick.Equals(default(KeyValuePair<Key,string>))){bool near=Project.Notes.Any(n=>n.Instrument=="BD"&&Math.Abs(n.Beat-b)<.12*Project.BPM/60*Audio.Rate);if(!near){footRoles[releasedKick.Key]="pedal";SetPedal(true,b);}}}
+        if(Current!=Page.Edit){foreach(var n in Project.Notes){if(n.Pedal||judged.ContainsKey(n.Index)||n.Beat<Audio.AnchorBeat-1e-8)continue;if(auto&&n.Beat<=b)Judge(n,0,"JUST");else if(!auto&&NoteSeconds(n.Beat,b)>.12)Judge(n,double.NaN,"MISS");}}
+        if(!pro&&!preview&&Project.ClosedAt(b)&&!closed){var releasedKick=footRoles.FirstOrDefault(kv=>kv.Value=="kick"&&held.Contains(kv.Key));if(!releasedKick.Equals(default(KeyValuePair<Key,string>))){bool near=Project.Notes.Any(n=>n.Instrument=="BD"&&Math.Abs(NoteSeconds(n.Beat,b))<.12);if(!near){footRoles[releasedKick.Key]="pedal";SetPedal(true,b);}}}
         if(metronome||b<0){
-            double from=Math.Max(Audio.AnchorBeat,lastClick+0.000001),until=b+.12*Project.BPM/60*Audio.Rate;
+            double from=Math.Max(Audio.AnchorBeat,lastClick+0.000001),until=BeatAfter(b,.12);
             foreach(double q in CountIn.Between(Project,from,until)){Audio.Click(CountIn.Accent(Project,q),Audio.DSPAt(q));lastClick=q;}
             if(metronome&&until>=0)foreach(double q in Project.Pulses(Math.Max(0,from),until)){Audio.Click(Project.IsBarStart(q),Audio.DSPAt(q));lastClick=q;}
         }
-        if(b>Project.Length+.3*Project.BPM/60*Audio.Rate){Audio.Stop();Audio.AnchorBeat=Project.Length;if(Current==Page.Play){Result=RhythmScore.Calculate(Project.Notes,Records);SaveResult();Current=Page.Result;}}
+        if(NoteSeconds(Project.Length,b)>.3){Audio.Stop();Audio.AnchorBeat=Project.Length;if(Current==Page.Play){Result=RhythmScore.Calculate(Project.Notes,Records);SaveResult();Current=Page.Result;}}
     }
     void SaveResult(){string key="best:"+Project.Title;float old=PlayerPrefs.GetFloat(key,-1);if(Result.Score>old)PlayerPrefs.SetFloat(key,(float)Result.Score);PlayerPrefs.Save();}
     public void SetAudio(byte[] bytes,string name){editorPanel=2;ClearDraft();PushUndo();string audioPath="audio/"+Path.GetFileName(name);Project.Files[audioPath]=bytes;Project.Manifest["audio"]=new JObject{{"path",audioPath},{"originalName",name},{"size",bytes.Length}};Project.Dirty=true;QueueEditorRecovery();busy=true;loaded=false;Audio.Load(Project);}

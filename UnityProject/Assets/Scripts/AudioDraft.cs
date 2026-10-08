@@ -10,7 +10,7 @@ public sealed class AudioDraft {
     struct Point {public int Bar;public double Local,Beat;}
     public IEnumerable<float> Run(float[] mono,int sampleRate,ChartProject source,bool extend){
         Layout=new ChartProject{Chart=(JObject)source.Chart.DeepClone(),Manifest=(JObject)source.Manifest.DeepClone()};Layout.Rebuild();
-        double end=Math.Max(0,(mono.Length/(double)sampleRate-Layout.Offset)*Layout.BPM/60);
+        double end=Math.Max(0,Layout.BeatAtSeconds(mono.Length/(double)sampleRate-Layout.Offset));
         if(extend&&end>Layout.Length){
             var bars=(JArray)Layout.Chart["measures"];double length=Layout.Measures.Last(),total=Layout.Length;
             var meters=new JArray(Enumerable.Range(0,bars.Count).Select(i=>{var t=Layout.Meter(i);return new JObject{{"numerator",t.Item1},{"denominator",t.Item2}};}));
@@ -27,7 +27,7 @@ public sealed class AudioDraft {
             var filter=new Biquad(band,sampleRate);levels[band]=new float[points.Count];
             for(int i=0;i<mono.Length;i++){filtered[i]=filter.Next(mono[i]);if((i&32767)==32767)yield return (band+i/(float)mono.Length)/3;}
             for(int i=0;i<points.Count;i++){
-                double t=Layout.Offset+points[i].Beat*60/Layout.BPM;
+                double t=Layout.Offset+Layout.SecondsAtBeat(points[i].Beat);
                 levels[band][i]=Rms(filtered,sampleRate,t,.025);
                 if(band==2){early[i]=Rms(filtered,sampleRate,t+.015,.018);late[i]=Rms(filtered,sampleRate,t+.16,.035);}
                 if((i&2047)==2047)yield return (band+.98f)/3;
@@ -35,7 +35,7 @@ public sealed class AudioDraft {
         }
         double[] thresholds={Percentile(levels[0],.82),Percentile(levels[1],.83),Percentile(levels[2],.70)};
         for(int i=0;i<points.Count;i++){
-            var p=points[i];double t=Layout.Offset+p.Beat*60/Layout.BPM;if(t<0||t>=mono.Length/(double)sampleRate)continue;
+            var p=points[i];double t=Layout.Offset+Layout.SecondsAtBeat(p.Beat);if(t<0||t>=mono.Length/(double)sampleRate)continue;
             for(int band=0;band<3;band++){
                 var values=levels[band];double value=values[i],threshold=thresholds[band];
                 if(value<=Math.Max(1e-8,threshold))continue;
