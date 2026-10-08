@@ -205,16 +205,18 @@ public sealed partial class RhythmAudio : MonoBehaviour {
         if(n.Instrument=="HT")pitch=n.Articulation=="rimshot"?1.34f:n.Articulation=="high"?1.18f:1;
         if(n.Instrument=="MT")pitch=n.Articulation=="rimshot"?1.16f:n.Articulation=="high"?1:.84f;
         if(n.Instrument=="FT"&&n.Articulation=="high")pitch=1.18f;
-        float mix=(float?)Project?.Chart["mix"]?["instruments"]?[n.Instrument]??1;
+        float mix=Project?.InstrumentGain(n.Instrument)??1;
         float kitGain=1,kitRate=1;string kit=(string)Project?.Chart["drumKit"]??"studio";
         // Preset maps are copied from the HTML reference without altering project values.
         var preset=KitPreset.Get(kit,key);kitGain=preset.x;kitRate=preset.y;
         PlayKey(key,ChartProject.Gains[n.Velocity]*mix*kitGain,pitch*kitRate,when,n.Articulation=="buzz"?(ChartSeconds(n.Beat+n.Duration)-ChartSeconds(n.Beat))/Rate:0);
     }
-    public void Pedal(double when=-1){PlayKey("HH_PEDAL",1,1,when,0);}
+    public void Pedal(double when=-1){PlayKey("HH_PEDAL",Project?.InstrumentGain("HH")??1,1,when,0);}
     public void Click(bool accent,double when){PlayKey("SIDE",accent?.5f:.25f,accent?1.7f:1.4f,when,0);}
     void PrepareDrums(){
-        float maxMix=1;var mix=Project.Chart["mix"]?["instruments"] as JObject;
+        // Reserve the whole editor fader range once; live mixing must not allocate
+        // or rebuild clips while the music is playing.
+        float maxMix=ChartProject.MaxInstrumentGain;var mix=Project.Chart["mix"]?["instruments"] as JObject;
         if(mix!=null)foreach(var item in mix.Properties())maxMix=Math.Max(maxMix,(float?)item.Value??1);
         string kit=(string)Project.Chart["drumKit"]??"studio";
         for(int k=0;k<SampleKeys.Length;k++){

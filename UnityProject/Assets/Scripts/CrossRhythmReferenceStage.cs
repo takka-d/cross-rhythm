@@ -26,16 +26,18 @@ public partial class CrossRhythmApp {
         bool current=m==Project.BarAt(b),count=m<0;float d=Math.Abs(top+84-520),alpha=d<125?1:d<360?.46f:.16f;double length=count?CountIn.Length(Project):Project.Measures[m],start=count?m*length:Project.Starts[m];
         ReferenceSprite("panel-"+(current?"active":"quiet")+(count?"-count":""),new Rect(0,top-20,1260,208),z,alpha);
         foreach(double q in StageGrid(m)){
-            bool beat=Math.Abs(q-Math.Round(q))<1e-8,eighth=Math.Abs(q*2-Math.Round(q*2))<1e-8,edge=Math.Abs(q)<1e-8||Math.Abs(q-length)<1e-8;
+            double subdivision=q/ChartVisuals.BeatUnit(Project,m)*2;
+            bool beat=ChartVisuals.IsBeatLine(Project,m,q),eighth=Math.Abs(subdivision-Math.Round(subdivision))<1e-8,edge=Math.Abs(q)<1e-8||Math.Abs(q-length)<1e-8;
             float w=beat?(edge?1.2f:1.05f):eighth?.9f:.75f,a=alpha*(beat?(edge?.13f:.10f)*.94f:eighth?.055f*.82f:.032f*.72f);
             float x=220+(float)(q/length)*970;ReferenceLine(x-w/2,top,w,168,z,new Color(1,1,1,a));
         }
-        if(current){double unit=count?CountIn.Unit(Project):1,beat=Math.Floor(Math.Max(0,Math.Min(length-1e-8,b-start))/unit)*unit;ReferenceBeat(220+(float)(beat/length)*970,top,Math.Min(970,(float)(970*unit/length)),z,alpha);}
+        if(current){double unit=ChartVisuals.BeatUnit(Project,m),beat=Math.Floor(Math.Max(0,Math.Min(length-1e-8,b-start))/unit)*unit;ReferenceBeat(220+(float)(beat/length)*970,top,Math.Min(970,(float)(970*unit/length)),z,alpha);}
         int labelIndex=count?0:m+1;Color labelColor=C(current?"#f1fbff":"#d9e3ec");
         if(labelIndex<=512)ReferenceSprite("bar-labels",new Rect(224,top-36,80,32),z,alpha,labelColor,AtlasUV(labelIndex,16,33));
         else Text(new Rect(224*z,(top-36)*z,120*z,32*z),"M"+(m+1),Mathf.RoundToInt(18*z),labelColor*new Color(1,1,1,alpha),true);
         int meterIndex=(int)Math.Round(length*16)-1;float meterX=count?292:290;
-        if(count&&Project.Meter(0).Item2!=4)Text(new Rect(meterX*z,(top-31)*z,100*z,26*z),Project.Meter(0).Item1+"/"+Project.Meter(0).Item2,Mathf.RoundToInt(13*z),muted);
+        var meter=Project.Meter(count?0:m);
+        if(meter.Item2!=4)Text(new Rect(meterX*z,(top-31)*z,100*z,26*z),meter.Item1+"/"+meter.Item2,Mathf.RoundToInt(13*z),muted*new Color(1,1,1,alpha));
         else if(meterIndex>=0&&meterIndex<256&&Math.Abs(length*16-Math.Round(length*16))<1e-7)ReferenceSprite("meters",new Rect(meterX,top-36,80,32),z,alpha,C(current?"#a9e6ff":"#a7b6c4"),AtlasUV(meterIndex,16,16));
         else Text(new Rect(meterX*z,(top-31)*z,100*z,26*z),length.ToString("0.##")+"/4",Mathf.RoundToInt(13*z),muted);
         if(count){int beats=Project.Meter(0).Item1;for(int q=0;q<beats;q++){

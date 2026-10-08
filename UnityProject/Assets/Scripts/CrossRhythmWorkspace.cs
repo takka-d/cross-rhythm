@@ -37,7 +37,7 @@ public partial class CrossRhythmApp {
         if(!restoring){NavigateNow(Page.Edit);QueueEditorRecovery();}
     }
     void QueueEditorRecovery(){editorRecoveryPending=true;editorRecoveryDue=Time.realtimeSinceStartupAsDouble+.75;}
-    void UpdateEditorRecovery(){if(editorRecoveryPending&&!busy&&!Audio.Running&&Time.realtimeSinceStartupAsDouble>=editorRecoveryDue&&!(Current==Page.Edit&&(Editor.Capturing||waveCaptured||editTextFocused)))PersistEditorSession();}
+    void UpdateEditorRecovery(){if(editorRecoveryPending&&!busy&&!Audio.Running&&Time.realtimeSinceStartupAsDouble>=editorRecoveryDue&&!(Current==Page.Edit&&(Editor.Capturing||waveCaptured||editTextFocused||mixerEditing!="")))PersistEditorSession();}
     string EditorRecoveryPath=>Path.Combine(workspaceCheckRoot??Application.persistentDataPath,"editor-session-v2.json");
     void PersistEditorSession(){
         if(editorProject==null||!editorRecoveryPending)return;

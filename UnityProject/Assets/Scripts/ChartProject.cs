@@ -42,6 +42,18 @@ public sealed partial class ChartProject {
     public static string Hash(byte[] bytes) { using (var sha = SHA256.Create()) return BitConverter.ToString(sha.ComputeHash(bytes)); }
     public static int Strength(JToken v) { double n; return v == null || v.Type == JTokenType.Null || !double.TryParse(v.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n) ? 4 : (int)Math.Max(0, Math.Min(5, Math.Floor(n + .5))); }
     public static readonly float[] Gains = { 0, .25f, .5f, .75f, 1, 1.27f };
+    public const float MaxInstrumentGain=1.5f;
+    public float InstrumentGain(string instrument){
+        if(instrument=="HHSTATE"||instrument=="HH_PEDAL"||instrument=="OHH")instrument="HH";
+        float value=(float?)Chart["mix"]?["instruments"]?[instrument]??1;
+        return float.IsNaN(value)||float.IsInfinity(value)?1:Math.Max(0,value);
+    }
+    public void SetInstrumentGain(string instrument,float value){
+        if(float.IsNaN(value)||float.IsInfinity(value))return;
+        if(!(Chart["mix"] is JObject mix))Chart["mix"]=mix=new JObject();
+        if(!(mix["instruments"] is JObject gains))mix["instruments"]=gains=new JObject();
+        gains[instrument]=Math.Max(0,Math.Min(MaxInstrumentGain,value));Dirty=true;
+    }
     public static readonly float[] Heights = { .24f, .30f, .36f, .43f, .5f, .62f };
     public static ChartProject Read(byte[] bytes, string name, string filePath = "") {
         var p = new ChartProject {FileName=name,FilePath=filePath,Baseline=Hash(bytes)};

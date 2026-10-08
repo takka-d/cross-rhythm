@@ -27,16 +27,18 @@ public static class ChartVisuals {
         return new Rect(x,Mathf.Round(row*rh+rh/2-rawH/2)+.5f,w,h);
     }
     public static double DisplayStep(ChartProject p,int bar)=>bar<0?.25:p.Notes.Where(n=>n.Measure==bar).Select(n=>n.Step).Append(.25).Min();
+    public static double BeatUnit(ChartProject p,int bar)=>bar<0?CountIn.Unit(p):4.0/p.Meter(bar).Item2;
+    public static bool IsBeatLine(ChartProject p,int bar,double local){double beat=local/BeatUnit(p,bar);return Math.Abs(beat-Math.Round(beat))<1e-7;}
     public static void EditGridPoints(ChartProject p,int bar,SortedSet<double> points){
         points.Clear();
-        foreach(double step in new[]{1.0,p.Grid})for(int i=0;i*step<p.Measures[bar]-1e-8;i++)points.Add(i*step);
+        foreach(double step in new[]{BeatUnit(p,bar),p.Grid})for(int i=0;i*step<p.Measures[bar]-1e-8;i++)points.Add(i*step);
         // Imported and mixed-grid onsets remain visible even when the placement
         // grid differs. Guides use their actual timing, including MIDI tick rounding.
         foreach(var n in p.Notes)if(n.Measure==bar)points.Add(n.Local);
     }
     public static double[] GridPoints(ChartProject p,int bar){
         double length=bar<0?CountIn.Length(p):p.Measures[bar];var notes=p.Notes.Where(n=>n.Measure==bar).ToArray();var points=new SortedSet<double>{0,length};
-        foreach(double step in notes.Select(n=>n.Step).Concat(new[]{.25,1}).Distinct())for(int i=0;i*step<length-1e-8;i++)points.Add(Math.Round(i*step,9));
+        foreach(double step in notes.Select(n=>n.Step).Concat(new[]{.25,BeatUnit(p,bar)}).Distinct())for(int i=0;i*step<length-1e-8;i++)points.Add(Math.Round(i*step,9));
         foreach(var n in notes)points.Add(Math.Round(n.Local,9));return points.ToArray();
     }
     public static float CellX(ChartProject p,int bar,double local,float left,float width){double len=bar<0?CountIn.Length(p):p.Measures[bar];return left+(float)((local+Math.Min(DisplayStep(p,bar),len-local)/2)/len)*width;}

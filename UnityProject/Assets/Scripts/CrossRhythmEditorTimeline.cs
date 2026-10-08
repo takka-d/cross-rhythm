@@ -61,7 +61,7 @@ public partial class CrossRhythmApp {
             float xx=(float)Project.Starts[m]*ppb,ww=(float)Project.Measures[m]*ppb;
             RectFill(new Rect(xx,0,ww,rulerHeight),m==editMeasure?C("#203c55"):bg);var sig=Project.Meter(m);Text(new Rect(xx+5,2,ww-6,22),$"M{m+1}  {sig.Item1}/{sig.Item2}",12,m==editMeasure?mint:muted);
             var grid=editorGrid;ChartVisuals.EditGridPoints(Project,m,grid);
-            foreach(double local in grid){if(!Project.SnapToGrid)continue;float gx=(float)(Project.Starts[m]+local)*ppb;if(gx<left||gx>right)continue;bool major=Math.Abs(local-Math.Round(local))<1e-7;RectFill(new Rect(gx,notesTop,major?1:.6f,notesHeight),C(major?"#344456":"#1b2631"));}
+            foreach(double local in grid){if(!Project.SnapToGrid)continue;float gx=(float)(Project.Starts[m]+local)*ppb;if(gx<left||gx>right)continue;bool major=ChartVisuals.IsBeatLine(Project,m,local);RectFill(new Rect(gx,notesTop,major?1:.6f,notesHeight),C(major?"#344456":"#1b2631"));}
             RectFill(new Rect(xx,0,1.5f,notesTop+notesHeight),C("#344456"));
         }
         float tempoLabelEnd=left;
