@@ -35,7 +35,7 @@ public partial class CrossRhythmApp {
         if(mod&&ev.keyCode==KeyCode.S){Save(ev.shift);ev.Use();return;}
         if(text)return;
         if(mod){switch(ev.keyCode){case KeyCode.O:PickProject(false,true);break;case KeyCode.A:Editor.SelectAll();break;case KeyCode.Z:Restore(ev.shift);break;case KeyCode.Y:Restore(true);break;case KeyCode.C:Copy();break;case KeyCode.V:Paste();break;default:return;}}
-        else {switch(ev.keyCode){case KeyCode.Space:EditorPlayback();break;case KeyCode.Escape:Editor.ContextOpen=false;Editor.Clear();Editor.Cancel();GUIUtility.hotControl=0;break;case KeyCode.Delete:case KeyCode.Backspace:DeleteSelected();break;case KeyCode.LeftArrow:Editor.Nudge(-Project.Grid,0);break;case KeyCode.RightArrow:Editor.Nudge(Project.Grid,0);break;case KeyCode.UpArrow:Editor.Nudge(0,-1);break;case KeyCode.DownArrow:Editor.Nudge(0,1);break;default:return;}}
+        else {switch(ev.keyCode){case KeyCode.Space:EditorPlayback();break;case KeyCode.Escape:Editor.ContextOpen=false;Editor.Clear();Editor.Cancel();GUIUtility.hotControl=0;break;case KeyCode.Delete:case KeyCode.Backspace:DeleteSelected();break;case KeyCode.LeftArrow:Editor.Nudge(-(Project.SnapToGrid?Project.Grid:1/(EditorPPB*zoom)),0);break;case KeyCode.RightArrow:Editor.Nudge(Project.SnapToGrid?Project.Grid:1/(EditorPPB*zoom),0);break;case KeyCode.UpArrow:Editor.Nudge(0,-1);break;case KeyCode.DownArrow:Editor.Nudge(0,1);break;default:return;}}
         SyncEditorNote();ev.Use();
     }
     void EditorPointerInput(Rect viewport,float notesTop){
@@ -44,7 +44,8 @@ public partial class CrossRhythmApp {
         Vector2 screen=ev.mousePosition;if(ev.isMouse)editorPointer=screen;
         Vector2 Local(Vector2 p)=>new Vector2(Mathf.Clamp(p.x-viewport.x,0,viewport.width-17)+editScroll.x,p.y-viewport.y-notesTop);
         bool inside=new Rect(viewport.x,viewport.y,viewport.width-16,viewport.height-18).Contains(screen);
-        if(!can)return;
+        if(!can){CancelWaveMove();return;}
+        if(!Editor.ContextOpen&&WavePointerInput(viewport,notesTop,Local(screen)))return;
         if(Editor.Capturing&&(ev.type==EventType.MouseDrag||ev.type==EventType.MouseUp)){
             if(ev.type==EventType.MouseUp){Editor.Up(Local(screen));GUIUtility.hotControl=0;if(Editor.ContextOpen)menuPosition=screen;}else Editor.Move(Local(screen));
             SyncEditorNote();ev.Use();return;
@@ -59,12 +60,15 @@ public partial class CrossRhythmApp {
         if(Current!=Page.Edit||MidiPromptOpen||Project==null||editorViewport.width<=0){lastEditorFrame=Time.realtimeSinceStartupAsDouble;return;}
         double now=Time.realtimeSinceStartupAsDouble,dt=Math.Min(.05,Math.Max(0,now-lastEditorFrame));lastEditorFrame=now;
         double ppb=EditorPPB*zoom,span=(editorViewport.width-16)/ppb;
-        if(Editor.Capturing){
+        if(waveCaptured){
+            double speed=waveMoved?EditorInteraction.EdgeSpeed(editorPointer.x-editorViewport.x,editorViewport.width-16):0;
+            if(speed!=0){editScroll.x=(float)Math.Max(0,Math.Min(Math.Max(0,Project.Length-span)*ppb,editScroll.x+speed*dt*ppb));MoveWave(new Vector2(Mathf.Clamp(editorPointer.x-editorViewport.x,0,editorViewport.width-17)+editScroll.x,0));}
+        }else if(Editor.Capturing){
             double speed=Editor.AutoScrolling?EditorInteraction.EdgeSpeed(editorPointer.x-editorViewport.x,editorViewport.width-16):0;
             if(speed!=0){float before=editScroll.x;editScroll.x=(float)Math.Max(0,Math.Min(Math.Max(0,Project.Length-span)*ppb,editScroll.x+speed*dt*ppb));if(before!=editScroll.x)Editor.Move(new Vector2(Mathf.Clamp(editorPointer.x-editorViewport.x,0,editorViewport.width-17)+editScroll.x,editorPointer.y-editorViewport.y-editorNotesTop));}
         }else if(Audio.Running){editScroll.x=(float)(EditorInteraction.Follow(editScroll.x/ppb,span,Audio.Beat,Project.Length)*ppb);SelectMeasure(Project.BarAt(Math.Max(0,Audio.Beat)));}
     }
-    void OnApplicationFocus(bool focused){ReleaseOnFocusLoss(focused);if(!focused){interaction?.Cancel();}}
+    void OnApplicationFocus(bool focused){ReleaseOnFocusLoss(focused);if(!focused){interaction?.Cancel();CancelWaveMove();EndSongInfoEdit();}}
     void DrawEditorSelection(float notesTop){
         if(selection.Count>1){var r=Editor.Bounds();r.y+=notesTop;r.xMin-=5;r.xMax+=5;r.yMin-=5;r.yMax+=5;Border(r,Color.white,1);}
         if(selection.Count==1){var n=Project.Notes.FirstOrDefault(v=>selection.Contains(v.Index));if(n!=null&&(n.Pedal||n.Instrument=="SN")){Rect r=Editor.NoteRect(n);r.y+=notesTop;float w=Math.Min(8,Math.Max(2,r.width*.18f));RectFill(new Rect(r.x,r.y,w,r.height),Color.white);RectFill(new Rect(r.xMax-w,r.y,w,r.height),Color.white);}}

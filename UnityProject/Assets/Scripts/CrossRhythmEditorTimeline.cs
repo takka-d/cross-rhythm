@@ -41,7 +41,7 @@ public partial class CrossRhythmApp {
             if(selectedCount>0&&rh>=40)Text(new Rect(36,y+25,labelWidth-12,20),$"{selectedCount} / {laneCount} "+T("選択","selected"),10,C("#a9cae1"));
             if(!showMeterPanel&&!editorFileOpen&&!draftRunning&&GUI.Button(new Rect(24,y,labelWidth,rh),GUIContent.none,GUIStyle.none)){instrument=row;kind=0;Editor.SelectLane(row,Event.current.control||Event.current.command);GUI.FocusControl(null);}
         }
-        Text(new Rect(36,top+rulerHeight+10,166,25),"Wave",13,muted);Text(new Rect(36,top+2,166,24),"Bar",13,muted);
+        Text(new Rect(36,top+rulerHeight+2,124,20),"Wave ↔",13,muted);Text(new Rect(36,top+rulerHeight+23,124,20),$"{EditorAudioOffset:0.000} s",11,waveCaptured?mint:muted);Text(new Rect(36,top+2,166,24),"Bar",13,muted);
         var wheel=Event.current;
         if(GUI.enabled&&!MidiPromptOpen&&!showMeterPanel&&!editorFileOpen&&!draftRunning&&!Editor.ContextOpen&&viewport.Contains(wheel.mousePosition)&&wheel.type==EventType.ScrollWheel){
             // v175: Shift+wheel or a horizontal trackpad gesture pans the timeline.
@@ -53,7 +53,7 @@ public partial class CrossRhythmApp {
         RectFill(new Rect(0,0,totalWidth,notesTop+notesHeight),C("#070b10"));
         float left=editScroll.x,right=Math.Min(totalWidth,left+viewport.width);
         RectFill(new Rect(left,rulerHeight+waveHeight/2,right-left,1),line);
-        if(Event.current.type==EventType.Repaint&&Audio.Waveform!=null){for(float xx=left;xx<right;xx+=2){double from=Project.Offset+Project.SecondsAtBeat(xx/ppb),to=Project.Offset+Project.SecondsAtBeat((xx+2)/ppb);Audio.Waveform.Range(from,to,out float lo,out float hi);float amp=(waveHeight-6)/2;float y=rulerHeight+waveHeight/2-Mathf.Clamp(hi,-1,1)*amp;float h=Math.Max(1,(Mathf.Clamp(hi,-1,1)-Mathf.Clamp(lo,-1,1))*amp);RectFill(new Rect(xx,y,1.5f,h),C("#a7bdca"));}}
+        if(Event.current.type==EventType.Repaint&&Audio.Waveform!=null){for(float xx=left;xx<right;xx+=2){double from=EditorAudioOffset+Project.SecondsAtBeat(xx/ppb),to=EditorAudioOffset+Project.SecondsAtBeat((xx+2)/ppb);Audio.Waveform.Range(from,to,out float lo,out float hi);float amp=(waveHeight-6)/2;float y=rulerHeight+waveHeight/2-Mathf.Clamp(hi,-1,1)*amp;float h=Math.Max(1,(Mathf.Clamp(hi,-1,1)-Mathf.Clamp(lo,-1,1))*amp);RectFill(new Rect(xx,y,1.5f,h),C("#a7bdca"));}}
         else if(Audio.Waveform==null)Text(new Rect(left+12,rulerHeight+22,600,24),busy?T("音源を読込中…","Loading audio…"):T("Audioで音源を選択","Choose a track with Audio"),13,muted);
         for(int row=0;row<9;row++){RectFill(new Rect(left,notesTop+row*rh,right-left,rh),C(row%2==0?"#0d141c":"#0a1017"));RectFill(new Rect(left,notesTop+row*rh,right-left,1),C("#202c39"));}
         int first=Math.Max(0,Project.BarAt(left/ppb)),last=Project.BarAt(right/ppb);
@@ -61,7 +61,7 @@ public partial class CrossRhythmApp {
             float xx=(float)Project.Starts[m]*ppb,ww=(float)Project.Measures[m]*ppb;
             RectFill(new Rect(xx,0,ww,rulerHeight),m==editMeasure?C("#203c55"):bg);var sig=Project.Meter(m);Text(new Rect(xx+5,2,ww-6,22),$"M{m+1}  {sig.Item1}/{sig.Item2}",12,m==editMeasure?mint:muted);
             var grid=editorGrid;ChartVisuals.EditGridPoints(Project,m,grid);
-            foreach(double local in grid){float gx=(float)(Project.Starts[m]+local)*ppb;if(gx<left||gx>right)continue;bool major=Math.Abs(local-Math.Round(local))<1e-7;RectFill(new Rect(gx,notesTop,major?1:.6f,notesHeight),C(major?"#344456":"#1b2631"));}
+            foreach(double local in grid){if(!Project.SnapToGrid)continue;float gx=(float)(Project.Starts[m]+local)*ppb;if(gx<left||gx>right)continue;bool major=Math.Abs(local-Math.Round(local))<1e-7;RectFill(new Rect(gx,notesTop,major?1:.6f,notesHeight),C(major?"#344456":"#1b2631"));}
             RectFill(new Rect(xx,0,1.5f,notesTop+notesHeight),C("#344456"));
         }
         float tempoLabelEnd=left;

@@ -1,0 +1,27 @@
+{
+  "version": "0.3.21",
+  "browser": "Codex in-app browser",
+  "testedOrigin": "http://127.0.0.1:8782/?qa=1",
+  "checks": [
+    "Free mode hides subdivision lines",
+    "wave drag updates audio offset",
+    "wave Undo restores zero and Redo restores offset",
+    "title and artist including spaces enter without playback",
+    "one Undo restores the previous artist text",
+    "Free HH and pedal placement through mouse",
+    "recovery archive contains exact note onset duration offset and metadata",
+    "Practice slider reaches 0.25 and 2.00",
+    "x1 button returns handle to visible 1.00 marker",
+    "no page warnings or errors observed"
+  ],
+  "sampleValues": {
+    "offset": -0.4464285373687744,
+    "onsetBeat": 2.333333730697632,
+    "pedalDuration": 0.91269850730896
+  },
+  "limits": [
+    "Windows native IME interaction not manually tested",
+    "single instance verification did not pass; task 16 stays open",
+    "Chrome download completion is separately unresolved"
+  ]
+}

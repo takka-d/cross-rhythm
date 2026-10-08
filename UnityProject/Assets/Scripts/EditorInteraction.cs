@@ -55,6 +55,13 @@ public sealed class EditorInteraction {
         cell=Math.Min(cell,Math.Ceiling(p.Measures[m]/p.Grid-1e-9)-1);
         return p.Starts[m]+Math.Max(0,cell)*p.Grid;
     }
+    public static double PlacementBeat(ChartProject p,double beat)=>p.SnapToGrid?CellStart(p,beat):Math.Max(0,Math.Min(p.Length,beat));
+    public static double AudioOffsetForDrag(ChartProject p,double offset,double fromBeat,double toBeat){
+        double delta=toBeat-fromBeat;
+        if(p.SnapToGrid)delta=Math.Round(delta/p.Grid,MidpointRounding.AwayFromZero)*p.Grid;
+        double target=Math.Max(0,Math.Min(p.Length,fromBeat+delta));
+        return offset+p.SecondsAtBeat(fromBeat)-p.SecondsAtBeat(target);
+    }
     public static double CellEnd(ChartProject p,double beat){double start=CellStart(p,beat);if(start>=p.Length)return p.Length;int m=p.BarAt(start);return Math.Min(p.Starts[m]+p.Measures[m],start+p.Grid);}
     public static double Follow(double view,double span,double beat,double length){if(beat>view+span*.82||beat<view)view=beat-span*.25;return Math.Max(0,Math.Min(Math.Max(0,length-span),view));}
     public static double EdgeSpeed(float x,float width){const float edge=44;return x<edge?-12*(.18+.82*Math.Min(1,(edge-x)/edge)):x>width-edge?12*(.18+.82*Math.Min(1,(x-width+edge)/edge)):0;}
@@ -66,7 +73,7 @@ public sealed class EditorInteraction {
     public void SelectLane(int row,bool additive){ContextOpen=false;if(!additive)Clear();foreach(var n in Project.Notes.Where(n=>n.Instrument==Lanes[row]))Selection.Add(n.Index);Batch=true;RefreshAnchor();}
     public void SelectAll(){Clear();foreach(var n in Project.Notes)Selection.Add(n.Index);Batch=true;RefreshAnchor();}
     void Range(ChartNote n){var anchor=Note(Anchor);if(anchor==null){Only(n);return;}double lo=Math.Min(anchor.Beat,n.Beat)-1e-9,hi=Math.Max(anchor.Beat,n.Beat)+1e-9;Selection.Clear();foreach(var item in Project.Notes.Where(v=>v.Beat>=lo&&v.Beat<=hi))Selection.Add(item.Index);Batch=true;Active=n.Index;}
-    void SetCursor(float x){Cursor=CellStart(Project,Math.Max(0,Math.Min(Project.Length,x/PPB)));Seek?.Invoke(Cursor);}
+    void SetCursor(float x){Cursor=PlacementBeat(Project,Math.Max(0,Math.Min(Project.Length,x/PPB)));Seek?.Invoke(Cursor);}
     public void Down(Vector2 point,int button,int clicks,bool shift,bool control){
         ContextOpen=false;origin=current=point;moved=pushed=false;target=-1;
         if(button==1){gesture=Gesture.Right;return;}
@@ -91,7 +98,7 @@ public sealed class EditorInteraction {
             target=hit.Index;Active=target;originals=Project.Notes.Where(n=>Selection.Contains(n.Index)).Select(n=>new Original{Index=n.Index,Lane=Array.IndexOf(Lanes,n.Instrument),Beat=n.Beat,Length=Length(n)}).ToList();gesture=Gesture.Move;Preview?.Invoke(hit);return;
         }
         if(Batch||Selection.Count>1){Clear();return;}
-        Clear();int row=(int)(point.y/RowHeight);double beat=CellStart(Project,point.x/PPB);if(row<0||row>=Lanes.Length||beat<0||beat>=Project.Length)return;
+        Clear();int row=(int)(point.y/RowHeight);double beat=PlacementBeat(Project,point.x/PPB);if(row<0||row>=Lanes.Length||beat<0||beat>=Project.Length)return;
         var duplicate=Project.Notes.FirstOrDefault(n=>n.Instrument==Lanes[row]&&Math.Abs(n.Beat-beat)<1e-6);if(duplicate!=null){Only(duplicate);return;}
         Snapshot();int bar=Project.BarAt(beat);string inst=Lanes[row];var e=new JObject{{"id","u-"+Guid.NewGuid().ToString("N")},{"measure",bar},{"beat",beat-Project.Starts[bar]},{"instrument",inst},{"velocity",DefaultVelocity},{"gridStepBeats",Project.Grid},{"confidence",1},{"source","manual"}};
         if(inst=="SN"||inst=="HHSTATE")e["durationBeats"]=Math.Min(inst=="HHSTATE"?Math.Max(Project.Grid,DefaultDuration):Project.Grid,Project.Length-beat);
@@ -107,21 +114,22 @@ public sealed class EditorInteraction {
         if(gesture==Gesture.Move){
             // Move by the gesture delta, not by the absolute pointer cell. This
             // preserves imported timing and the grab offset on mixed grids.
-            var anchor=originals.First(n=>n.Index==target);double db=Math.Floor((point.x-origin.x)/PPB/Project.Grid+.5)*Project.Grid;
+            var anchor=originals.First(n=>n.Index==target);double db=Project.SnapToGrid?Math.Floor((point.x-origin.x)/PPB/Project.Grid+.5)*Project.Grid:(point.x-origin.x)/PPB;
             int lane=(int)Math.Floor(point.y/RowHeight);int dl=lane>=0&&lane<Lanes.Length?lane-anchor.Lane:(int)Math.Floor((point.y-origin.y)/RowHeight+.5);
             MoveOriginals(originals,db,dl,true);return;
         }
-        double start=originalStart,end=originalEnd;
-        if(gesture==Gesture.ResizeLeft)start=Math.Min(CellStart(Project,point.x/PPB),end-Project.Grid);
-        if(gesture==Gesture.ResizeRight)end=Math.Max(start+Project.Grid,CellEnd(Project,point.x/PPB));
-        if(gesture==Gesture.Pedal){double pointed=CellStart(Project,point.x/PPB);start=Math.Min(originalStart,pointed);end=pointed<originalStart?CellEnd(Project,originalStart):CellEnd(Project,point.x/PPB);}
+        double start=originalStart,end=originalEnd,minLength=Project.SnapToGrid?Project.Grid:1e-6;
+        double pointedStart=PlacementBeat(Project,point.x/PPB),pointedEnd=Project.SnapToGrid?CellEnd(Project,point.x/PPB):pointedStart;
+        if(gesture==Gesture.ResizeLeft)start=Math.Min(pointedStart,end-minLength);
+        if(gesture==Gesture.ResizeRight)end=Math.Max(start+minLength,pointedEnd);
+        if(gesture==Gesture.Pedal){double pointed=pointedStart;start=Math.Min(originalStart,pointed);end=pointed<originalStart?(Project.SnapToGrid?CellEnd(Project,originalStart):originalStart):Math.Max(start+minLength,pointedEnd);}
         start=Math.Max(0,Math.Min(Project.Length-1e-9,start));end=Math.Max(start+1e-9,Math.Min(Project.Length,end));
         var note=Note(target);if(note==null||Math.Abs(note.Beat-start)<1e-9&&Math.Abs(note.Duration-(end-start))<1e-9)return;
         if(!pushed){Snapshot();pushed=true;}int m=Project.BarAt(start);note.Source["measure"]=m;note.Source["beat"]=start-Project.Starts[m];note.Source["durationBeats"]=end-start;Commit();
     }
     public void Up(Vector2 point){
         if(!Capturing)return;Move(point);
-        if(gesture==Gesture.Right&&!moved){var hit=Hit(point);if(hit==null)Clear();else if(!Selection.Contains(hit.Index))Only(hit);ContextTarget=hit?.Index??-1;ContextBeat=CellStart(Project,point.x/PPB);ContextPoint=point;ContextOpen=true;}
+        if(gesture==Gesture.Right&&!moved){var hit=Hit(point);if(hit==null)Clear();else if(!Selection.Contains(hit.Index))Only(hit);ContextTarget=hit?.Index??-1;ContextBeat=PlacementBeat(Project,point.x/PPB);ContextPoint=point;ContextOpen=true;}
         if(gesture==Gesture.Move&&groupGrab&&!moved)Clear();
         if(gesture==Gesture.Move&&moved)Dedupe();
         if(Selecting)Message=Selection.Count+" notes selected";
@@ -140,7 +148,7 @@ public sealed class EditorInteraction {
         if(!HasClipboard)return;double first=copiedBeats.Min(),span=0;
         for(int i=0;i<clipboard.Count;i++){var e=(JObject)clipboard[i];double length=(string)e["instrument"]=="SN"||(string)e["instrument"]=="HHSTATE"?(double?)e["durationBeats"]??ChartProject.EventStep(e):ChartProject.EventStep(e);span=Math.Max(span,copiedBeats[i]-first+length);}
         if(span>Project.Length+1e-9){Message="The copied range is longer than this chart";return;}
-        double anchor=CellStart(Project,Math.Max(0,Math.Min(Project.Length-span,requested)));Snapshot();Clear();
+        double anchor=PlacementBeat(Project,Math.Max(0,Math.Min(Project.Length-span,requested)));Snapshot();Clear();
         for(int i=0;i<clipboard.Count;i++){var e=(JObject)clipboard[i].DeepClone();double b=anchor+copiedBeats[i]-first;int m=Project.BarAt(b);e["measure"]=m;e["beat"]=b-Project.Starts[m];e["id"]="u-"+Guid.NewGuid().ToString("N");Selection.Add(Project.Events.Count);Project.Events.Add(e);}Commit();Dedupe();RefreshAnchor();Batch=Selection.Count>1;Cursor=anchor;Seek?.Invoke(Cursor);
     }
     void Dedupe(){

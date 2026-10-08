@@ -37,6 +37,7 @@ public sealed partial class ChartProject {
     public void SetSongInfo(string title,string artist){Chart["title"]=Manifest["title"]=title??"";Chart["artist"]=Manifest["artist"]=artist??"";Dirty=true;}
     public string AudioPath => (string)Manifest["audio"]?["path"] ?? "";
     public JArray Events => (JArray)Chart["events"];
+    public bool SnapToGrid => (bool?)Chart["editorSnapToGrid"] ?? true;
     public double Grid => 4.0 / Math.Max(1, Math.Min(1024, (double?)Chart["quantize"] ?? 16));
     public static string Hash(byte[] bytes) { using (var sha = SHA256.Create()) return BitConverter.ToString(sha.ComputeHash(bytes)); }
     public static int Strength(JToken v) { double n; return v == null || v.Type == JTokenType.Null || !double.TryParse(v.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n) ? 4 : (int)Math.Max(0, Math.Min(5, Math.Floor(n + .5))); }

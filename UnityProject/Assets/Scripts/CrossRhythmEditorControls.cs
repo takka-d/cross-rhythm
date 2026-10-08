@@ -19,14 +19,15 @@ public partial class CrossRhythmApp {
         SaveButton(new Rect(W-134,86,110,38),true);
         SaveStatusLine(new Rect(24,128,W-48,25));
         RectFill(new Rect(24,160,W-48,34),panel);
-        Text(new Rect(36,166,188,24),T("Shift + 左: 範囲選択","Shift + Left: range"),13,muted);
+        if(Button(new Rect(36,162,82,30),"Grid",Project.SnapToGrid,true,14)&&!Project.SnapToGrid){PushUndo();Project.Chart["editorSnapToGrid"]=true;QueueEditorRecovery();Project.Dirty=true;}
+        if(Button(new Rect(126,162,82,30),"Free",!Project.SnapToGrid,true,14)&&Project.SnapToGrid){PushUndo();Project.Chart["editorSnapToGrid"]=false;QueueEditorRecovery();Project.Dirty=true;}
         Text(new Rect(236,166,42,24),"Grid",13,muted);int q=(int?)Project.Chart["quantize"]??16;
         if(Button(new Rect(278,162,76,30),"1/"+q,false,true,14)){int i=Array.IndexOf(Grids,q);PushUndo();Project.Chart["quantize"]=Grids[(i+1)%Grids.Length];Edited();gridField="";}
         if(gridField=="")gridField=q.ToString();gridField=EditField("grid",new Rect(363,162,58,30),gridField);
         if(Button(new Rect(429,162,52,30),"Set",false,true,13)&&int.TryParse(gridField,out int custom)&&custom>=1&&custom<=1024){PushUndo();Project.Chart["quantize"]=custom;Edited();}
         Text(new Rect(510,166,66,24),"Zoom X",13,muted);float previousZoom=zoom;zoom=GUI.HorizontalSlider(new Rect(580,174,160,18),zoom,30f/56f,20);if(Math.Abs(zoom-previousZoom)>.00001f)editScroll.x*=zoom/previousZoom;
         Text(new Rect(763,166,W-787,24),$"Bar {editMeasure+1} / {Project.Measures.Length}   ·   {selection.Count} "+T("選択","selected"),13,muted);
-        EditorTimeline();EditorInspector();
+        EditorTimeline();EditorInspector();TrackSongInfoFocus();
         Text(new Rect(24,H-50,W-48,22),T("Shift + 左クリック/ドラッグ: 範囲選択 / Ctrl + 左: 複数選択 / 右: メニュー / 左ダブルクリック: 削除 / 矢印: 移動","Shift + Left click/drag: range · Ctrl + Left: toggle · Right: menu · Double click: delete · Arrows: move"),12,muted);
         GUI.enabled=enabled;EditorFileMenu();EditorMeterControls();EditorContextMenu();if(!draftRunning)EditorKeys();
     }
@@ -60,9 +61,9 @@ public partial class CrossRhythmApp {
             if(Button(new Rect(x,y+74,300,30),"MIDI Velocity 0: "+midiZeroMode,false,true,13))midiZeroMode=(MidiImport.ZeroMode)(((int)midiZeroMode+1)%3);
         }else if(editorPanel==1){
             Text(new Rect(x,y,cw,22),T("曲名","Title"),13,muted);
-            string next=EditField("title",new Rect(x,y+25,cw-10,30),Project.SongTitle);if(next!=Project.SongTitle){PushUndo();Project.SetSongInfo(next,Project.Artist);QueueEditorRecovery();}
+            string next=EditField("title",new Rect(x,y+25,cw-10,30),Project.SongTitle);if(next!=Project.SongTitle)SetSongInfoField("title",next);
             Text(new Rect(x,y+66,cw,22),T("アーティスト名","Artist"),13,muted);
-            string artist=EditField("artist",new Rect(x,y+91,cw-10,30),Project.Artist);if(artist!=Project.Artist){PushUndo();Project.SetSongInfo(Project.SongTitle,artist);QueueEditorRecovery();}
+            string artist=EditField("artist",new Rect(x,y+91,cw-10,30),Project.Artist);if(artist!=Project.Artist)SetSongInfoField("artist",artist);
             x+=cw+12;Text(new Rect(x,y,cw,22),"Initial BPM",13,muted);
             if(bpmField=="")bpmField=Project.BPM.ToString(System.Globalization.CultureInfo.InvariantCulture);bpmField=EditField("bpm",new Rect(x,y+25,cw-90,30),bpmField);
             if(Button(new Rect(x+cw-80,y+25,68,30),"Set",false,true,14)&&double.TryParse(bpmField,out var bpm)&&bpm>=20&&bpm<=600){PushUndo();Audio.Pause();Project.SetTempo(0,0,bpm);Edited();}

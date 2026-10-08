@@ -87,7 +87,8 @@ public partial class CrossRhythmApp {
             yield return TempoRuntimeCheck(Check,bytes);
             yield return PitchRuntimeCheck(Check);
             yield return MidiWorkflowCheck(Check);
-            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.20"},{"checks",new JArray(checks)}}.ToString());
+            yield return ArrangementRuntimeCheck(Check);
+            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.21"},{"checks",new JArray(checks)}}.ToString());
             Debug.Log("CROSS_RHYTHM_TASKS_CHECK_PASS");
         }finally{if(hadPreview)PlayerPrefs.SetInt("songPreview",originalPreview);else PlayerPrefs.DeleteKey("songPreview");PlayerPrefs.Save();allowApplicationQuit=true;}
         Application.Quit();
