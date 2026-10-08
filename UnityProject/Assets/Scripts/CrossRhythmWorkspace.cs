@@ -15,7 +15,7 @@ public partial class CrossRhythmApp {
     static ChartProject EmptyEditorProject(){var p=ChartProject.Demo();p.SetSongInfo("Untitled","");p.Chart["events"]=new JArray();p.Chart["measures"]=new JArray(4,4,4,4);p.FileName="Untitled.crproj";p.Rebuild();p.Dirty=false;return p;}
     void ActivateProject(ChartProject p){
         if(ReferenceEquals(Project,p))return;
-        RememberEditorSession();Audio.Stop();Project=p;busy=true;loaded=false;Records.Clear();judged.Clear();ResetScheduled();pendingSongAudio=null;
+        RememberEditorSession();pendingPerformance=null;stageLoadError="";Audio.Stop();Project=p;busy=true;loaded=false;Records.Clear();judged.Clear();ResetScheduled();pendingSongAudio=null;
         if(Current==Page.Songs){pendingSongAudio=p;RequestSongPreview();}else Audio.Load(p);
         editScroll=Vector2.zero;Editor.Reset();editMeasure=0;ResetEditorFields();RestoreEditorSession();
     }
@@ -24,7 +24,7 @@ public partial class CrossRhythmApp {
         copy.Rebuild();return copy;
     }
     void EditSelectedSong(){
-        if(Current!=Page.Songs||busy||selected<0||selected>=Library.Count)return;
+        if(Current!=Page.Songs||!SongActionsAvailable||selected<0||selected>=Library.Count)return;
         OpenEditorProject(CopyForEditor(Library[selected]));
     }
     void OpenEditorProject(ChartProject p,bool restoring=false,JObject metadata=null){

@@ -28,11 +28,17 @@ public partial class CrossRhythmApp {
         Text(new Rect(22,18,W*.32f,36),Project.Title,19,Color.white,true);
         Text(new Rect(W*.35f,24,175,28),$"{Project.Tempo.BPMAt(Audio.Beat):0.##} BPM · "+(pro?"PRO":"NORMAL"),13,muted);
         if(!practice){var live=RhythmScore.Calculate(Project.Notes,Records);Text(new Rect(W*.51f,16,210,40),$"Score {live.Score:0.0}",24,mint,true);if(Button(new Rect(W-178,16,100,42),"Back"))NavigateNow(Page.Songs);}
-        else{if(Button(new Rect(W-438,16,118,42),Audio.Running?"Pause":"Play",true)){if(Audio.Running)Audio.Pause();else {ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}if(Button(new Rect(W-308,16,118,42),"Auto "+(auto?"ON":"OFF"))){auto=!auto;ResetScheduled();}if(Button(new Rect(W-178,16,100,42),"Back"))NavigateNow(Page.Songs);}
+        else{if(Button(new Rect(W-438,16,118,42),Audio.Running?"Pause":"Play",true,loaded&&!busy)){if(Audio.Running)Audio.Pause();else {ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}if(Button(new Rect(W-308,16,118,42),"Auto "+(auto?"ON":"OFF"))){auto=!auto;ResetScheduled();}if(Button(new Rect(W-178,16,100,42),"Back"))NavigateNow(Page.Songs);}
         string revision=Project.Events.Count+":"+Project.Measures.Length+":"+Project.Grid;
         if(gridProject!=Project||gridRevision!=revision){stageGrids.Clear();gridProject=Project;gridRevision=revision;}
         Rect area=new Rect(8,74,W-16,H-74-(practice?124:8));RoundFill(area,C("#090d13"));RoundBorder(area,line);
         ReferencePlayfield(area,b);
+        if(pendingPerformance!=null||!string.IsNullOrEmpty(stageLoadError)){
+            var wait=new Rect(W/2-260,H/2-70,520,140);RectFill(wait,panel);Border(wait,mint);
+            Text(new Rect(wait.x+22,wait.y+18,476,36),pendingPerformance!=null?T("音源を準備中…","Preparing audio…"):T("音源を読み込めませんでした","Audio could not load"),22,mint);
+            if(pendingPerformance!=null)Text(new Rect(wait.x+22,wait.y+66,476,28),T("準備が終わるとカウントを開始します。Backで戻れます。","Count-in starts when ready. Back returns to Songs."),14,muted);
+            else {FittedText(new Rect(wait.x+22,wait.y+57,476,25),stageLoadError,14,muted);if(Button(new Rect(wait.x+180,wait.y+91,160,34),"Retry",true))Begin(practice);}
+        }
         if(practice){PracticeControls();RectFill(new Rect(12,H-67,W-24,53),panel);Text(new Rect(28,H-56,180,28),$"{Project.SecondsAtBeat(Math.Max(0,b)):0.0} / {Project.DurationSeconds:0.0}s",16,muted);float next=GUI.HorizontalSlider(new Rect(230,H-48,W-550,20),(float)b,(float)CountIn.Start(Project),(float)Project.Length);if(Math.Abs(next-b)>.01)Seek(next);Text(new Rect(W-295,H-56,270,30),"Wheel: ±4 beats · Space",14,muted);if(Event.current.type==EventType.ScrollWheel){Seek(b+Event.current.delta.y*4);Event.current.Use();}}
     }
     void DrawPedalRanges(int bar,double start,double length,double b,float y,float rh,float left,float width,float z,float alpha){

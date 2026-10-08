@@ -25,6 +25,18 @@ public partial class CrossRhythmApp {
             Check(Audio.Project==Project&&Audio.Song!=null&&!Audio.Backing.isPlaying,"obsolete audio cannot start; preview remains OFF after decode");
             SetSongPreview(true);yield return new WaitForSeconds(.35f);Check(Audio.Backing.isPlaying&&!Audio.Running,"preview ON plays only the focused song");
             SetSongPreview(false);Check(!Audio.Backing.isPlaying&&PlayerPrefs.GetInt("songPreview",-1)==0,"preview OFF immediately stops playback and persists");
+            FocusSong(1);Check(busy&&SongActionsAvailable,"Songs actions remain available before preview audio loads");
+            Begin(false);Check(Current==Page.Play&&ReferenceEquals(pendingPerformance,Project)&&!Audio.Running,"Start immediately enters Play and waits without advancing chart");
+            yield return Ready();Check(pendingPerformance==null&&Audio.Running&&Audio.AnchorBeat==CountIn.Start(Project),"queued Start begins count-in once selected audio is ready");
+            NavigateNow(Page.Songs);FocusSong(2);Begin(true);
+            Check(Current==Page.Practice&&ReferenceEquals(pendingPerformance,Project),"Practice accepts action during background audio load");
+            NavigateNow(Page.Songs);yield return Ready();Check(Current==Page.Songs&&!Audio.Running&&pendingPerformance==null,"Back cancels queued performance; late audio does not launch it");
+            FocusSong(1);Check(busy,"Edit test begins with audio pending");EditSelectedSong();
+            Check(Current==Page.Edit&&Project.Title=="Preview A"&&!ReferenceEquals(Project,Library[1]),"Edit opens selected chart during preview loading and keeps independent data");
+            yield return Ready();Check(Audio.Project==Project,"Edit receives its own audio after old preview load is cancelled");
+            Begin(true);Audio.Pause();pendingPracticeSpeed=.37;UpdatePracticeSpeed();
+            Check(Math.Abs(practiceSpeed-.37)<1e-8&&Math.Abs(Audio.Rate-.37)<1e-8&&!Audio.Running,"released speed slider accepts hundredths without starting paused playback");
+            ChangePractice(1,pro);NavigateNow(Page.Songs);
             var p=EmptyEditorProject();string path=Path.Combine(root,"save-check.crproj");p.SaveNative(path,false);OpenEditorProject(p);yield return Ready();
             p.SetSongInfo("Unsaved title","Test artist");QueueEditorRecovery();Navigate(Page.Songs);
             Check(discardPrompt&&Current==Page.Edit&&p.Dirty,"navigation opens unsaved prompt and stays in Edit");
@@ -75,7 +87,7 @@ public partial class CrossRhythmApp {
             yield return TempoRuntimeCheck(Check,bytes);
             yield return PitchRuntimeCheck(Check);
             yield return MidiWorkflowCheck(Check);
-            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.19"},{"checks",new JArray(checks)}}.ToString());
+            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.20"},{"checks",new JArray(checks)}}.ToString());
             Debug.Log("CROSS_RHYTHM_TASKS_CHECK_PASS");
         }finally{if(hadPreview)PlayerPrefs.SetInt("songPreview",originalPreview);else PlayerPrefs.DeleteKey("songPreview");PlayerPrefs.Save();allowApplicationQuit=true;}
         Application.Quit();

@@ -63,9 +63,9 @@ public partial class CrossRhythmApp {
         var map=EditingBindings;var keys=bindingPro?ControlBindings.Pro:ControlBindings.Normal;string[] labels=bindingPro?new[]{"SN  1","SN  2","TOM  1","TOM  2","HH  1","HH  2","CYM  1","CYM  2","BD  1","BD  2","PEDAL  1","PEDAL  2"}:new[]{"Hands  1","Hands  2","Feet  1","Feet  2"};
         for(int i=0;i<keys.Length;i++){float y=r.y+132+i*34;Text(new Rect(r.x+24,y,175,30),labels[i],16);if(Button(new Rect(r.x+210,y,226,30),ControlBindings.KeyName(map.Keys[i]),bindingRow==i&&!bindingPad,true,15))Capture(i,false);if(Button(new Rect(r.x+456,y,576,30),PadGroupName(map.Pads[i]),bindingRow==i&&bindingPad,true,15))Capture(i,true);}
         Text(new Rect(r.x+24,r.y+548,990,28),bindingRow>=0?T("割り当てるキー / ボタンを押す。Escでキャンセル。","Press a key / button to assign. Esc cancels."):bindingNotice,17,mint);
-        if(Button(new Rect(r.x+24,r.y+590,250,40),"Default: A →",nintendo,true,16)){nintendo=true;normalBindings=ControlBindings.Defaults(false,true);proBindings=ControlBindings.Defaults(true,true);SaveBindings();bindingRow=-1;}
-        if(Button(new Rect(r.x+292,r.y+590,290,40),"Default: A ↓",!nintendo,true,16)){nintendo=false;normalBindings=ControlBindings.Defaults(false,false);proBindings=ControlBindings.Defaults(true,false);SaveBindings();bindingRow=-1;}
-        Text(new Rect(r.x+606,r.y+596,424,28),T("Aが右 / 下にあるボタン配置","A button on the right / bottom"),14,muted);
+        if(Button(new Rect(r.x+24,r.y+590,306,40),T("初期化: Aボタンが右","Reset: A button on right"),nintendo,true,16)){nintendo=true;normalBindings=ControlBindings.Defaults(false,true);proBindings=ControlBindings.Defaults(true,true);SaveBindings();bindingRow=-1;}
+        if(Button(new Rect(r.x+348,r.y+590,354,40),T("初期化: A / ×ボタンが下","Reset: A / × button on bottom"),!nintendo,true,16)){nintendo=false;normalBindings=ControlBindings.Defaults(false,false);proBindings=ControlBindings.Defaults(true,false);SaveBindings();bindingRow=-1;}
+        Text(new Rect(r.x+720,r.y+596,312,28),T("キーとボタンの割り当てを初期化","Restore default keys and buttons"),14,muted);
         Text(new Rect(r.x+24,r.y+639,990,23),T("重複する割り当ては入れ替えます。設定は自動保存。","Conflicting bindings are swapped. Changes save automatically."),13,muted);GUI.enabled=previous;
     }
     void Capture(int row,bool pad){bindingRow=row;bindingPad=pad;captureAfter=Time.unscaledTimeAsDouble+.15;bindingNotice="";}

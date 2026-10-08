@@ -48,7 +48,7 @@ public partial class CrossRhythmApp : MonoBehaviour {
     void Awake(){
         gameObject.name="CrossRhythm";Application.targetFrameRate=120;Application.runInBackground=false;
         font=Resources.Load<Font>("Fonts/NotoSansJP");
-        uiFeedback=gameObject.AddComponent<UiFeedback>();Audio=gameObject.AddComponent<RhythmAudio>();Audio.OnReady=error=>{if(Audio.Project!=Project)return;busy=false;loaded=string.IsNullOrEmpty(error);if(!loaded)status=error;else if(!status.StartsWith("読込:")&&!status.StartsWith("Opened:"))status=T("読込完了","Ready");};
+        uiFeedback=gameObject.AddComponent<UiFeedback>();Audio=gameObject.AddComponent<RhythmAudio>();Audio.OnReady=ProjectAudioReady;
         english=PlayerPrefs.GetInt("language",0)==1;pro=PlayerPrefs.GetInt("pro",0)==1;inputOffset=PlayerPrefs.GetFloat("offset",0);projectPath=PlayerPrefs.GetString("projects","");songPreviewEnabled=PlayerPrefs.GetInt("songPreview",0)==1;
         Application.wantsToQuit+=ConfirmApplicationQuit;
         try{lastSource=JObject.Parse(PlayerPrefs.GetString("projectSource","{}"));if(!lastSource.HasValues)lastSource=null;}catch{lastSource=null;}
@@ -96,8 +96,17 @@ public partial class CrossRhythmApp : MonoBehaviour {
     public void OnImportChunk(string data){byte[] b=Convert.FromBase64String(data);incoming.Write(b,0,b.Length);}
     public void OnImportEnd(string _){try{if(incoming.Length!=expectedBytes)throw new Exception("Incomplete project transfer");byte[] bytes=incoming.ToArray();incoming.Dispose();incoming=null;if(incomingKind=="audio"){SetAudio(bytes,incomingName);}else if(incomingKind=="midi"||incomingKind=="midi-drop"){if(!ReferenceEquals(Project,incomingMidiProject)||!CanImportMidi){status=T("Editで読込をやり直してください","Import again in Edit");return;}ImportMidi(bytes,incomingName);}else{if(incomingSource!=null)projectOrigins[incomingToken]=incomingSource;if(incomingKind=="editor"||incomingKind=="editor-restore"){var p=ChartProject.Read(bytes,incomingName,incomingToken);OpenEditorProject(p,incomingKind=="editor-restore",incomingSource?["session"] as JObject);}else AddProject(bytes,incomingName,incomingToken);}}catch(Exception e){status=e.Message;busy=false;if(importBatch)importErrors.Add(incomingName+": "+e.Message);}}
     void Navigate(Page page){if(MidiPromptOpen||page==Current)return;if(Current==Page.Edit&&editorProject.Dirty){AskBeforeLeaving(()=>NavigateNow(page));return;}NavigateNow(page);}
-    void NavigateNow(Page page){if(draftRunning||MidiPromptOpen)return;editorFileOpen=false;interaction?.Reset();Audio.Pause();Audio.Rate=1;if(pendingSongAudio!=null){var p=pendingSongAudio;pendingSongAudio=null;Audio.Load(p);}ReleaseInputs();closed=false;if(ReferenceEquals(Project,editorProject)){RememberEditorSession();QueueEditorRecovery();PersistEditorSession();}Current=page;if(page==Page.Edit)ActivateProject(editorProject);else if(page==Page.Songs)ActivateProject(Library[Mathf.Clamp(selected,0,Library.Count-1)]);if(page==Page.Edit&&Audio.AnchorBeat<0)Audio.AnchorBeat=0;ResetMenuFocus();if(page==Page.Songs)RequestSongPreview();GUI.FocusControl(null);}
-    void Begin(bool practice){if(!loaded||busy)return;Audio.Rate=practice?practiceSpeed:1;Current=practice?Page.Practice:Page.Play;stageGrids.Clear();Records.Clear();judged.Clear();ResetScheduled();stageEffects.Clear();ReleaseInputs();heldPedal.Clear();pedalStart=null;closed=false;auto=false;lastClick=-999;lastJudge="";Audio.Play(CountIn.Start(Project));}
+    void NavigateNow(Page page){if(draftRunning||MidiPromptOpen)return;editorFileOpen=false;interaction?.Reset();pendingPerformance=null;pendingPracticeSpeed=null;stageLoadError="";previewRequested=false;Audio.Pause();Audio.Rate=1;ReleaseInputs();closed=false;if(ReferenceEquals(Project,editorProject)){RememberEditorSession();QueueEditorRecovery();PersistEditorSession();}Current=page;if(page==Page.Edit)ActivateProject(editorProject);else if(page==Page.Songs)ActivateProject(Library[Mathf.Clamp(selected,0,Library.Count-1)]);if(page==Page.Edit&&Audio.AnchorBeat<0)Audio.AnchorBeat=0;ResetMenuFocus();if(page==Page.Songs)RequestSongPreview();GUI.FocusControl(null);}
+    void Begin(bool practice){
+        if(Project==null||importBatch||incoming!=null)return;
+        bool ready=loaded&&!busy&&ReferenceEquals(Audio.Project,Project);
+        Current=practice?Page.Practice:Page.Play;previewRequested=false;stageLoadError="";pendingPracticeSpeed=null;
+        stageGrids.Clear();Records.Clear();judged.Clear();ResetScheduled();stageEffects.Clear();ReleaseInputs();heldPedal.Clear();pedalStart=null;closed=false;auto=false;lastClick=-999;lastJudge="";
+        Audio.Stop();Audio.AnchorBeat=CountIn.Start(Project);
+        if(ready){StartPreparedPerformance();return;}
+        pendingPerformance=Project;
+        if(pendingSongAudio!=null||!ReferenceEquals(Audio.Project,Project)||!busy){pendingSongAudio=null;busy=true;loaded=false;Audio.Load(Project);}
+    }
     void Seek(double beat){beat=Math.Max(CountIn.Start(Project),Math.Min(Project.Length,beat));Audio.Seek(beat);stageEffects.Clear();Records.Clear();judged.Clear();ResetScheduled();heldPedal.Clear();pedalStart=null;ReleaseInputs();closed=false;lastClick=Math.Floor(beat)-1;}
     bool Matches(ChartNote n,Key key){
         if(n.Pedal)return false;
@@ -122,7 +131,7 @@ public partial class CrossRhythmApp : MonoBehaviour {
     void Update(){
         if(Project==null)return;
         UpdateMidiDrop();
-        UpdateSongPreview();UpdateEditorRecovery();UpdateUnsavedBrowserGuard();
+        UpdateSongPreview();UpdatePracticeSpeed();UpdateEditorRecovery();UpdateUnsavedBrowserGuard();
         UpdateDisplayKeys();
         EditorFrame();
         if(Current==Page.Practice&&Keyboard.current!=null&&Keyboard.current.spaceKey.wasPressedThisFrame&&loaded&&!busy&&!discardPrompt&&!showMeterPanel){if(Audio.Running)Audio.Pause();else {ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}

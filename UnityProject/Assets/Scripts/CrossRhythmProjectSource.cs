@@ -45,7 +45,7 @@ public partial class CrossRhythmApp {
     bool HasExternalProjects=>Library.Exists(p=>!string.IsNullOrEmpty(p.FilePath));
     void ProjectButton(Rect r,bool folder,bool editor=false,bool primary=false,int fontSize=16){
         if(bindingsOpen)return;
-        string caption=folder?"Open Folder":"Open Project";bool enabled=GUI.enabled&&!busy&&!discardPrompt&&!importBatch;
+        string caption=folder?"Open Folder":"Open Project";bool enabled=GUI.enabled&&(!busy||Current==Page.Songs||Current==Page.Config)&&!discardPrompt&&!importBatch&&incoming==null;
 #if UNITY_WEBGL && !UNITY_EDITOR
         Button(r,"",primary,enabled,fontSize,"file:"+(folder?1:editor?2:0));
         if(Event.current.type==EventType.Repaint)PlatformFiles.CRProjectButton(fileButtonCount++,r.x/W,r.y/H,r.width/W,r.height/H,folder?1:editor?2:0,english?1:0,enabled?1:0,primary?1:0,fontSize*scale);
