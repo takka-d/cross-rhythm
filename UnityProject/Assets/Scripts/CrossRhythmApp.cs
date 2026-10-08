@@ -127,7 +127,7 @@ public partial class CrossRhythmApp : MonoBehaviour {
         EditorFrame();
         if(Current==Page.Practice&&Keyboard.current!=null&&Keyboard.current.spaceKey.wasPressedThisFrame&&loaded&&!busy&&!discardPrompt&&!showMeterPanel){if(Audio.Running)Audio.Pause();else {ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}
         if(Current!=Page.Play&&Current!=Page.Practice&&Current!=Page.Edit)return;
-        if(!Audio.Running)return;
+        if(!Audio.Running||Audio.Preparing)return;
         double b=Audio.Beat;
         bool preview=Current==Page.Edit||auto;
         if(preview){

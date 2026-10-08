@@ -23,12 +23,12 @@ public partial class CrossRhythmApp {
             Check(Records.Count==Project.Notes.Count,"Play judges each tempo fixture note");i=0;foreach(var record in Records)Check(Math.Abs(record.Ms-(i++%3-1)*80)<.00001,"Play timing error uses seconds across tempo changes");
             Begin(true);Audio.Stop();
             foreach(double rate in new[]{.25,1,2}){
-                ChangePractice(rate,false);Seek(4.45);Audio.Play(4.45);
+                ChangePractice(rate,false);Seek(4.45);Audio.Play(4.45);while(Audio.Preparing)yield return null;
                 foreach(var n in Project.Notes)Check(Math.Abs(Audio.BeatAt(Audio.DSPAt(n.Beat))-n.Beat)<1e-8,"tempo DSP inverse at speed "+rate);
                 double onset=Audio.DSPAt(4.5);yield return new WaitForSeconds(.8f);
                 Check(Audio.Beat>4.5&&AudioSettings.dspTime>onset,"live Practice passes tempo boundary at speed "+rate);
-                double sample=Audio.Backing.timeSamples/(double)Audio.Song.frequency,expected=Project.Offset+Project.SecondsAtBeat(Audio.Beat);
-                Check(Audio.Backing.isPlaying&&Math.Abs(sample-expected)<.10,"backing sample position follows tempo clock at speed "+rate);
+                double sample=Audio.BackingTimelineSeconds,expected=Project.Offset+Project.SecondsAtBeat(Audio.Beat);
+                Check(Audio.BackingIsPlaying&&Math.Abs(sample-expected)<.10,"backing sample position follows tempo clock at speed "+rate);
                 Audio.Pause();double beat=Audio.Beat;yield return new WaitForSeconds(.1f);Check(Audio.Beat==beat,"pause holds tempo position");
             }
             ChangePractice(1,false);NavigateNow(Page.Edit);while(busy||!loaded)yield return null;OpenEditorProject(saved);while(busy||!loaded)yield return null;editorPanel=3;Audio.AnchorBeat=0;SelectTempoPosition(0);

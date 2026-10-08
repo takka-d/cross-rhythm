@@ -15,7 +15,7 @@ namespace CrossRhythm {
 public static class CrossRhythmBuild {
     static string Arg(string name,string fallback=""){var a=Environment.GetCommandLineArgs();int i=Array.IndexOf(a,name);return i>=0&&i+1<a.Length?a[i+1]:fallback;}
     public static void Prepare(){
-        PlayerSettings.companyName="TakKa";PlayerSettings.productName="Cross Rhythm";PlayerSettings.bundleVersion="0.3.18";PlayerSettings.defaultScreenWidth=1440;PlayerSettings.defaultScreenHeight=900;PlayerSettings.fullScreenMode=FullScreenMode.Windowed;PlayerSettings.resizableWindow=true;PlayerSettings.runInBackground=false;PlayerSettings.colorSpace=ColorSpace.Gamma;
+        PlayerSettings.companyName="TakKa";PlayerSettings.productName="Cross Rhythm";PlayerSettings.bundleVersion="0.3.19";PlayerSettings.defaultScreenWidth=1440;PlayerSettings.defaultScreenHeight=900;PlayerSettings.fullScreenMode=FullScreenMode.Windowed;PlayerSettings.resizableWindow=true;PlayerSettings.runInBackground=false;PlayerSettings.colorSpace=ColorSpace.Gamma;
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone,ScriptingImplementation.Mono2x);PlayerSettings.SetApiCompatibilityLevel(NamedBuildTarget.Standalone,ApiCompatibilityLevel.NET_Standard);
         var settings=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset")[0]);var input=settings.FindProperty("activeInputHandler");if(input!=null){input.intValue=2;settings.ApplyModifiedPropertiesWithoutUndo();}
         Directory.CreateDirectory("Assets/Scenes");var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);var camera=new GameObject("Camera").AddComponent<Camera>();camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.027f,.045f,.063f);new GameObject("AudioListener").AddComponent<AudioListener>();EditorSceneManager.SaveScene(scene,"Assets/Scenes/CrossRhythm.unity");EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene("Assets/Scenes/CrossRhythm.unity",true)};
@@ -26,6 +26,12 @@ public static class CrossRhythmBuild {
         if(samples!="")throw new Exception("sampleSource conversion requires a Windows Unity Editor");
 #endif
         AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+        var appIcon=AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Branding/CrossRhythmIcon.png");
+        if(appIcon==null)throw new Exception("Application icon missing");
+        foreach(var target in new[]{NamedBuildTarget.Unknown,NamedBuildTarget.Standalone}){
+            var sizes=PlayerSettings.GetIconSizes(target,IconKind.Any);
+            if(sizes.Length>0)PlayerSettings.SetIcons(target,sizes.Select(_=>appIcon).ToArray(),IconKind.Any);
+        }
         foreach(string path in Directory.GetFiles("Assets/Resources/NoteGlyphs","*.png")){var importer=AssetImporter.GetAtPath(path) as TextureImporter;importer.textureType=TextureImporterType.Default;importer.textureCompression=TextureImporterCompression.Uncompressed;importer.npotScale=TextureImporterNPOTScale.None;importer.mipmapEnabled=false;importer.alphaIsTransparency=true;importer.filterMode=FilterMode.Bilinear;importer.maxTextureSize=256;importer.SaveAndReimport();}
         foreach(string path in Directory.GetFiles("Assets/Resources/Stage175","*.png")){var importer=AssetImporter.GetAtPath(path) as TextureImporter;importer.textureType=TextureImporterType.Default;importer.textureCompression=TextureImporterCompression.Uncompressed;importer.npotScale=TextureImporterNPOTScale.None;importer.mipmapEnabled=false;importer.alphaIsTransparency=true;importer.filterMode=FilterMode.Bilinear;importer.maxTextureSize=4096;importer.SaveAndReimport();}
         foreach(string path in Directory.GetFiles("Assets/Resources/Drums","*.wav")){var importer=AssetImporter.GetAtPath(path) as AudioImporter;var sample=importer.defaultSampleSettings;sample.loadType=AudioClipLoadType.DecompressOnLoad;sample.compressionFormat=AudioCompressionFormat.Vorbis;sample.quality=.85f;sample.preloadAudioData=true;importer.defaultSampleSettings=sample;importer.SaveAndReimport();}
@@ -36,7 +42,7 @@ public static class CrossRhythmBuild {
     public static void Web(){Prepare();Tests();PlayerSettings.WebGL.compressionFormat=WebGLCompressionFormat.Disabled;PlayerSettings.WebGL.template="PROJECT:CrossRhythm";PlayerSettings.WebGL.initialMemorySize=256;PlayerSettings.WebGL.maximumMemorySize=2048;PlayerSettings.SetScriptingBackend(NamedBuildTarget.WebGL,ScriptingImplementation.IL2CPP);string output=Arg("-buildOutput",Path.GetFullPath("../CrossRhythm-Web"));Directory.CreateDirectory(output);var report=BuildPipeline.BuildPlayer(EditorBuildSettings.scenes,output,BuildTarget.WebGL,BuildOptions.None);if(report.summary.result!=BuildResult.Succeeded)throw new Exception("Web build failed: "+report.summary.result);Debug.Log("CROSS_RHYTHM_WEB_BUILD_PASS "+output);}
     static void Check(bool ok,string message){if(!ok)throw new Exception("TEST FAILED: "+message);Debug.Log("PASS "+message);}
     public static void Tests(){
-        MidiOverlapTests.Run();
+        MidiOverlapTests.Run();PitchStretchTests.Run();
         TempoTests.Run();
         TupletTests.Run();
         CountInTests.Run();

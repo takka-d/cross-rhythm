@@ -20,10 +20,10 @@ public partial class CrossRhythmApp {
         var restored=ChartProject.Read(Project.Write(),"qa.crproj");Check(JToken.DeepEquals(restored.Chart,Project.Chart),"draft saves and reloads losslessly");
         foreach(double rate in new[]{.25,2.0}){
             Begin(true);Seek(1);ChangePractice(rate,rate==2);auto=true;
-            yield return new WaitForSeconds(.3f);double startBeat=Audio.Beat,startDSP=AudioSettings.dspTime;
+            while(Audio.Preparing)yield return null;yield return new WaitForSeconds(.3f);double startBeat=Audio.Beat,startDSP=AudioSettings.dspTime;
             yield return new WaitForSeconds(.5f);double dt=AudioSettings.dspTime-startDSP;
             Check(Math.Abs((Audio.Beat-startBeat)-dt*Project.BPM/60*rate)<.003,"live DSP clock ×"+rate);
-            Check(Audio.Backing.isPlaying&&Math.Abs(Audio.Backing.pitch-rate)<.001,"backing audio playing ×"+rate);
+            Check(Audio.BackingIsPlaying&&Math.Abs(Audio.Backing.pitch-1)<.001,"backing audio playing ×"+rate);
             Check(pro==(rate==2)&&Records.Count==0,"practice mode switched without score record");
             Audio.Pause();double stopped=Audio.Beat;ChangePractice(1,!pro);Check(!Audio.Running&&Math.Abs(stopped-Audio.Beat)<.00001,"paused mode/rate switch keeps position");
         }

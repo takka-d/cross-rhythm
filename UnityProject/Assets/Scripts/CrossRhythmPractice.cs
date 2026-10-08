@@ -5,6 +5,7 @@ public partial class CrossRhythmApp {
     double practiceSpeed=1;
     void ChangePractice(double speed,bool nextPro){
         speed=Math.Round(Math.Max(.25,Math.Min(2,speed)),2);
+        if(Math.Abs(speed-practiceSpeed)<1e-8&&Math.Abs(Audio.Rate-speed)<1e-8){pro=nextPro;ReleaseInputs();SetPedal(false,Audio.Beat);PlayerPrefs.SetInt("pro",pro?1:0);PlayerPrefs.Save();return;}
         double beat=Audio.Beat;bool running=Audio.Running;
         Audio.Pause();pro=nextPro;practiceSpeed=speed;Audio.Rate=speed;
         Seek(beat);if(running)Audio.Play(beat);
@@ -18,7 +19,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(390,y+6,76,32),"−0.05",false,practiceSpeed>.25,14))ChangePractice(practiceSpeed-.05,pro);
         if(Button(new Rect(476,y+6,68,32),"×1",false,true,14))ChangePractice(1,pro);
         if(Button(new Rect(554,y+6,76,32),"+0.05",false,practiceSpeed<2,14))ChangePractice(practiceSpeed+.05,pro);
-        Text(new Rect(650,y+13,W-672,24),T("原曲の音程も速度に応じて変化します","Music pitch changes with speed"),12,muted);
+        Text(new Rect(650,y+13,W-672,24),Audio.Preparing?T("音源を準備中…","Preparing audio…"):!string.IsNullOrEmpty(Audio.PlaybackError)?T("音源の準備に失敗しました。再生し直してください","Audio preparation failed. Press Play to retry."):T("音程を維持","Pitch preserved"),12,muted);
     }
 }
 }

@@ -39,7 +39,7 @@ public partial class CrossRhythmApp {
         }
         if(bindingsOpen)return;
         if(pad&&!Audio.Running&&Current!=Page.Play&&Current!=Page.Edit){foreach(var c in changes)if(c.down&&!c.control.isPressed){var path=PadPath(c.control);KeyCode key=path=="dpad/up"?KeyCode.UpArrow:path=="dpad/down"?KeyCode.DownArrow:path=="dpad/left"?KeyCode.LeftArrow:path=="dpad/right"?KeyCode.RightArrow:path==(nintendo?"buttonEast":"buttonSouth")?KeyCode.Return:path==(nintendo?"buttonSouth":"buttonEast")?KeyCode.Escape:KeyCode.None;if(key!=KeyCode.None)padMenu.Enqueue(key);}return;}
-        if(!Audio.Running||(Current!=Page.Play&&Current!=Page.Practice))return;
+        if(!Audio.Running||Audio.Preparing||(Current!=Page.Play&&Current!=Page.Practice))return;
         double dsp=AudioSettings.dspTime+(evt.time-InputState.currentTime),beat=Audio.BeatAt(dsp-inputOffset/1000);
         // Resolve all releases and foot presses before hand strikes from the same device report.
         foreach(var c in changes)if(!c.down)physicalHeld.Remove(c.control);
@@ -63,8 +63,9 @@ public partial class CrossRhythmApp {
         var map=EditingBindings;var keys=bindingPro?ControlBindings.Pro:ControlBindings.Normal;string[] labels=bindingPro?new[]{"SN  1","SN  2","TOM  1","TOM  2","HH  1","HH  2","CYM  1","CYM  2","BD  1","BD  2","PEDAL  1","PEDAL  2"}:new[]{"Hands  1","Hands  2","Feet  1","Feet  2"};
         for(int i=0;i<keys.Length;i++){float y=r.y+132+i*34;Text(new Rect(r.x+24,y,175,30),labels[i],16);if(Button(new Rect(r.x+210,y,226,30),ControlBindings.KeyName(map.Keys[i]),bindingRow==i&&!bindingPad,true,15))Capture(i,false);if(Button(new Rect(r.x+456,y,576,30),PadGroupName(map.Pads[i]),bindingRow==i&&bindingPad,true,15))Capture(i,true);}
         Text(new Rect(r.x+24,r.y+548,990,28),bindingRow>=0?T("割り当てるキー / ボタンを押す。Escでキャンセル。","Press a key / button to assign. Esc cancels."):bindingNotice,17,mint);
-        if(Button(new Rect(r.x+24,r.y+590,250,40),"Default: Nintendo",nintendo,true,16)){nintendo=true;normalBindings=ControlBindings.Defaults(false,true);proBindings=ControlBindings.Defaults(true,true);SaveBindings();bindingRow=-1;}
-        if(Button(new Rect(r.x+292,r.y+590,290,40),"Default: Xbox / PlayStation",!nintendo,true,16)){nintendo=false;normalBindings=ControlBindings.Defaults(false,false);proBindings=ControlBindings.Defaults(true,false);SaveBindings();bindingRow=-1;}
+        if(Button(new Rect(r.x+24,r.y+590,250,40),"Default: A →",nintendo,true,16)){nintendo=true;normalBindings=ControlBindings.Defaults(false,true);proBindings=ControlBindings.Defaults(true,true);SaveBindings();bindingRow=-1;}
+        if(Button(new Rect(r.x+292,r.y+590,290,40),"Default: A ↓",!nintendo,true,16)){nintendo=false;normalBindings=ControlBindings.Defaults(false,false);proBindings=ControlBindings.Defaults(true,false);SaveBindings();bindingRow=-1;}
+        Text(new Rect(r.x+606,r.y+596,424,28),T("Aが右 / 下にあるボタン配置","A button on the right / bottom"),14,muted);
         Text(new Rect(r.x+24,r.y+639,990,23),T("重複する割り当ては入れ替えます。設定は自動保存。","Conflicting bindings are swapped. Changes save automatically."),13,muted);GUI.enabled=previous;
     }
     void Capture(int row,bool pad){bindingRow=row;bindingPad=pad;captureAfter=Time.unscaledTimeAsDouble+.15;bindingNotice="";}

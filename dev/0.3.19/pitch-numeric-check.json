@@ -1,0 +1,114 @@
+[
+  {
+    "rate": 0.25,
+    "outputFrames": 529200,
+    "pitchHz": [
+      441.0,
+      659.0
+    ],
+    "pulsePeakErrorsMs": [
+      8.027,
+      -1.315,
+      -6.032,
+      -12.789,
+      4.853
+    ],
+    "processingSeconds": 0.428
+  },
+  {
+    "rate": 0.55,
+    "outputFrames": 240546,
+    "pitchHz": [
+      440.0,
+      659.0
+    ],
+    "pulsePeakErrorsMs": [
+      -0.132,
+      -0.128,
+      0.103,
+      -0.12,
+      -0.115
+    ],
+    "processingSeconds": 0.157
+  },
+  {
+    "rate": 0.95,
+    "outputFrames": 139264,
+    "pitchHz": [
+      440.0,
+      659.0
+    ],
+    "pulsePeakErrorsMs": [
+      0.203,
+      0.27,
+      -0.298,
+      0.222,
+      0.289
+    ],
+    "processingSeconds": 0.092
+  },
+  {
+    "rate": 1,
+    "outputFrames": 132300,
+    "pitchHz": [
+      440.0,
+      659.0
+    ],
+    "pulsePeakErrorsMs": [
+      0.136,
+      0.136,
+      0.136,
+      0.136,
+      0.136
+    ],
+    "processingSeconds": 0.075
+  },
+  {
+    "rate": 1.25,
+    "outputFrames": 105840,
+    "pitchHz": [
+      440.0,
+      659.0
+    ],
+    "pulsePeakErrorsMs": [
+      0.363,
+      0.408,
+      0.317,
+      0.544,
+      0.272
+    ],
+    "processingSeconds": 0.072
+  },
+  {
+    "rate": 1.7,
+    "outputFrames": 77824,
+    "pitchHz": [
+      440.0,
+      659.0
+    ],
+    "pulsePeakErrorsMs": [
+      0.472,
+      0.128,
+      0.237,
+      0.483,
+      0.139
+    ],
+    "processingSeconds": 0.053
+  },
+  {
+    "rate": 2,
+    "outputFrames": 66150,
+    "pitchHz": [
+      440.0,
+      659.0
+    ],
+    "pulsePeakErrorsMs": [
+      0.045,
+      0.045,
+      0.045,
+      0.045,
+      0.045
+    ],
+    "processingSeconds": 0.046
+  }
+]

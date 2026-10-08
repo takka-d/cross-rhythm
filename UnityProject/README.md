@@ -1,4 +1,4 @@
-# Cross Rhythm 0.3.18 development
+# Cross Rhythm 0.3.19 development
 
 Unity 6000.3.25f1. Windows and WebGL use the same Assets/Scripts source.
 Run `./Build.ps1 -Target Both` from PowerShell with the licensed Unity Editor
@@ -7,7 +7,7 @@ Tests run before BuildPipeline.BuildPlayer. No license activation workaround,
 DLL swap or player version-byte replacement is part of this build.
 
 The production root remains 0.3.12. Verified development builds are published
-under `/dev/0.3.18/`. The WordPress article remains a draft.
+under `/dev/0.3.19/`. The WordPress article remains a draft.
 
 Changes: common folder row in Songs/Config; Songs > Edit opens an independent
 editable copy; File in Edit header; Back in Play/Practice; Practice speed
@@ -49,7 +49,7 @@ beat: zero-based local quarter beat, bpm: 20..600}]. The existing bpm is the
 initial tempo; charts without tempoChanges retain constant-tempo behavior.
 All playback, hit judgment, waveform, duration/difficulty and audio analysis
 use the same integrated beat/second map. Save/reload and Undo/Redo retain it.
-Practice pitch preservation remains a separate pending task.
+Practice pitch preservation is implemented for Windows in 0.3.19 below; Web verification is pending.
 
 0.3.18: Drop one .mid/.midi file (up to 32 MB) onto Edit in Windows or Web.
 The existing Import MIDI command uses the same overlap review.
@@ -59,3 +59,28 @@ different instruments are preserved, without quantization. Hi-hat pedal
 ranges are derived after the choices, so open/closed state stays consistent.
 Cancel preserves the chart; Import is one Undo step. Additional drops and
 background edits are blocked while reviewing or loading.
+
+0.3.19 RELEASE SCOPE: Windows development build only. The Web source is under
+repair and has not passed its full audio regression; do not deploy it yet.
+0.3.18 remains the current public Web development build.
+
+0.3.19: Practice preserves musical pitch across speeds 0.25 to 2.00.
+Windows and Web use the same Signalsmith Stretch processor. Only a bounded
+six-second playback buffer is prepared, instead of expanding the entire song.
+The chart waits while preparing initial audio; processor latency is removed.
+Seeking and speed changes restart from the same source position. Switching
+Normal/Pro at the same speed keeps the current audio running.
+Extreme speed changes may alter timbre/transients. Audio device latency is
+separate from the synchronized source/beat clock.
+
+Audio processor dependencies: Signalsmith Stretch 1.3.2 and Signalsmith Linear
+0.6.4, both MIT; licenses and pinned revisions are in ThirdParty and
+THIRD-PARTY-NOTICES.txt. Rebuild the Windows x64 DLL with
+Tools/AudioStretch/Build-Windows.ps1 using Visual Studio C++ build tools.
+WebGL compiles the same bridge and headers directly with Unity.
+
+The application icon is an original crossed-drumsticks design, used by the
+Windows player and the Web favicon. Vector source: Branding/cross-rhythm-icon.svg.
+Config preset names now describe A-button positions (right or bottom); mappings
+and saved controller preferences are unchanged. Connected device names remain
+as supplied by the operating system/browser to identify actual hardware.

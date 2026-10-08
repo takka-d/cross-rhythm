@@ -12,7 +12,7 @@ using Newtonsoft.Json.Linq;
 using NAudio.Wave;
 #endif
 namespace CrossRhythm {
-public sealed class RhythmAudio : MonoBehaviour {
+public sealed partial class RhythmAudio : MonoBehaviour {
     public AudioSource Backing;
     public AudioClip Song;
     public AudioWaveform Waveform;
@@ -34,11 +34,11 @@ public sealed class RhythmAudio : MonoBehaviour {
     int loadGeneration;
     CancellationTokenSource decodeCancellation;
     sealed class DecodedSong {public float[] PCM;public int Channels,Rate;public AudioWaveform Waveform;}
-    void OnDestroy(){decodeCancellation?.Cancel();decodeCancellation?.Dispose();}
+    void OnDestroy(){StopStretch();ReleaseSongPCM();decodeCancellation?.Cancel();decodeCancellation?.Dispose();}
     double ChartSeconds(double beat)=>Project!=null?Project.SecondsAtBeat(beat):beat*60/BPM;
     double ChartBeat(double seconds)=>Project!=null?Project.BeatAtSeconds(seconds):seconds*BPM/60;
-    public double Beat => BeatAt(AudioSettings.dspTime);
-    public double BeatAt(double dsp)=>Running?ChartBeat(ChartSeconds(AnchorBeat)+(dsp-AnchorDSP)*Rate):AnchorBeat;
+    public double Beat => BeatAt(Math.Max(AudioSettings.dspTime,AnchorDSP));
+    public double BeatAt(double dsp)=>Running&&!Preparing?ChartBeat(ChartSeconds(AnchorBeat)+(dsp-AnchorDSP)*Rate):AnchorBeat;
     public double DSPAt(double beat)=>AnchorDSP+(ChartSeconds(beat)-ChartSeconds(AnchorBeat))/Rate;
     public static readonly string[] SampleKeys={"BD","SN","SN_RIM","SIDE","SN_BUZZ","HH","OHH","HH_PEDAL","HT","FT","TOM_RIM","RD","CUP","RIDE_CRASH","CR","SPLASH","CHINA"};
     static readonly float[] SampleGains={.78f,1.141123f,1.172821f,1.109425f,1.077727f,.54f,.57f,.58f,.70f,.72f,.74f,.50f,.54f,.168936f,1.505649f,.56f,.56f};
@@ -47,16 +47,16 @@ public sealed class RhythmAudio : MonoBehaviour {
         for(int i=0;i<32;i++){var go=new GameObject("OpenHat"+i);go.transform.SetParent(transform);var envelope=go.AddComponent<HiHatEnvelope>();envelope.Source=go.AddComponent<AudioSource>();envelope.Source.playOnAwake=false;envelope.Clear();hatVoices.Add(envelope);}
 #endif
     }
-    public void Stop(){Running=false;Backing.Stop();foreach(var s in voices)s.Stop();openHats.Clear();voiceStarts.Clear();StopHats();}
+    public void Stop(){Running=false;StopStretch();Backing.Stop();foreach(var s in voices)s.Stop();openHats.Clear();voiceStarts.Clear();StopHats();}
     public void Pause(){double b=Beat;Stop();AnchorBeat=b;}
     public void Seek(double beat){bool play=Running;Stop();AnchorBeat=beat;if(play)Play(beat);}
-    public void Play(double beat){Stop();AnchorBeat=beat;AnchorDSP=AudioSettings.dspTime+.08;Running=true;if(Song!=null){Backing.clip=Song;Backing.pitch=(float)Rate;Backing.volume=BackingGain;double sec=Offset+ChartSeconds(beat);double wait=Math.Max(0,-sec)/Rate;if(sec<Song.length){Backing.timeSamples=(int)Math.Max(0,Math.Min(Song.samples-1,Math.Round(Math.Max(0,sec)*Song.frequency)));Backing.PlayScheduled(AnchorDSP+wait);}}}
+    public void Play(double beat){Stop();PlaybackError="";Rate=Math.Max(.25,Math.Min(2,Rate));AnchorBeat=beat;AnchorDSP=AudioSettings.dspTime+.08;Running=true;if(Song!=null){double sec=Offset+ChartSeconds(beat);if(sec>=Song.length)return;if(Math.Abs(Rate-1)>1e-8){Preparing=true;stretchWork=StartCoroutine(StreamPitch(beat,Rate,playGeneration));return;}Backing.clip=Song;Backing.pitch=1;Backing.volume=BackingGain;double wait=Math.Max(0,-sec);Backing.timeSamples=(int)Math.Max(0,Math.Min(Song.samples-1,Math.Round(Math.Max(0,sec)*Song.frequency)));Backing.PlayScheduled(AnchorDSP+wait);}}
     public void Preview(){Stop();Rate=1;Backing.pitch=1;if(Song==null)return;Backing.clip=Song;Backing.volume=BackingGain;Backing.timeSamples=(int)Math.Min(Song.samples-1,Math.Max(0,Offset)*Song.frequency);Backing.Play();}
-    void Update(){if(Backing!=null)Backing.volume=BackingGain;}
+    void Update(){if(Backing!=null)Backing.volume=BackingGain;UpdateStretch();}
     public void Load(ChartProject p){
         decodeCancellation?.Cancel();decodeCancellation?.Dispose();decodeCancellation=new CancellationTokenSource();
         Stop();Rate=1;Backing.pitch=1;foreach(var c in gainClips.Values)Destroy(c);gainClips.Clear();gainScales.Clear();loadGeneration++;Project=p;BPM=p.BPM;Offset=p.Offset;AnchorBeat=CountIn.Start(p);
-        if(Song!=null)Destroy(Song);Song=null;Waveform=null;
+        ReleaseSongPCM();if(Song!=null)Destroy(Song);Song=null;Waveform=null;
         BackingGain=PlayerPrefs.GetFloat("musicVolume",(float?)p.Chart["mix"]?["backing"]??.7f);DrumGain=PlayerPrefs.GetFloat("drumsVolume",(float?)p.Chart["mix"]?["drums"]??.8f);
         StartCoroutine(FinishLoad(p,loadGeneration));
     }
@@ -114,9 +114,15 @@ public sealed class RhythmAudio : MonoBehaviour {
 #endif
     }
 #if UNITY_WEBGL && !UNITY_EDITOR
+    int webSongPCM;
     [DllImport("__Internal")]static extern void CRDecodeAudio(byte[] bytes,int length,string target,int generation);
     [DllImport("__Internal")]static extern void CRFree(int pointer);
 #endif
+    void ReleaseSongPCM(){
+#if UNITY_WEBGL && !UNITY_EDITOR
+        if(webSongPCM!=0){CRFree(webSongPCM);webSongPCM=0;}
+#endif
+    }
     public void OnAudioDecoded(string json){
 #if UNITY_WEBGL && !UNITY_EDITOR
         StartCoroutine(ReceiveWebAudio(JObject.Parse(json)));
@@ -127,18 +133,24 @@ public sealed class RhythmAudio : MonoBehaviour {
         int ptr=(int)o["pointer"],generation=(int)o["generation"],count=(int)o["count"],ch=(int)o["channels"],rate=(int)o["rate"];AudioClip candidate=null;
         try{
             if(generation!=loadGeneration)yield break;
-            string error=null;AudioWaveform waveform=null;
-            try{candidate=AudioClip.Create("Backing",count/ch,ch,rate,false);waveform=new AudioWaveform(count/ch,rate);}catch(Exception e){error=e.Message;}
+            string error=null;AudioWaveform waveform=null;float[] completePCM=null;
+            try{candidate=AudioClip.Create("Backing",count/ch,ch,rate,false);waveform=new AudioWaveform(count/ch,rate);completePCM=new float[count];}catch(Exception e){error=e.Message;}
             if(error!=null){OnReady?.Invoke(error);yield break;}
             for(int at=0;at<count;){
                 if(generation!=loadGeneration)yield break;
                 int size=Math.Min(32768*ch,count-at);var chunk=new float[size];
-                try{Marshal.Copy(new IntPtr(ptr+at*4),chunk,0,size);candidate.SetData(chunk,at/ch);waveform.Append(chunk,ch,at/ch);}catch(Exception e){error=e.Message;}
+                try{Marshal.Copy(new IntPtr(ptr+at*4),chunk,0,size);Array.Copy(chunk,0,completePCM,at,size);waveform.Append(chunk,ch,at/ch);}catch(Exception e){error=e.Message;}
                 if(error!=null){OnReady?.Invoke(error);yield break;}at+=size;yield return null;
             }
             if(generation!=loadGeneration)yield break;
+            // Web supports whole-clip SetData only; offsetSamples is ignored.
+            try{if(!candidate.SetData(completePCM,0))throw new Exception("Cannot prepare source audio");completePCM=null;}catch(Exception e){error=e.Message;}
+            if(error!=null){OnReady?.Invoke(error);yield break;}
+            // Keep the decoded interleaved PCM for bounded reads during stretching.
+            // AudioClip.GetData on Web can copy the whole backing buffer for each small read.
+            ReleaseSongPCM();webSongPCM=ptr;ptr=0;
             Song=candidate;candidate=null;Waveform=waveform;OnReady?.Invoke("");
-        }finally{if(candidate!=null)Destroy(candidate);CRFree(ptr);}
+        }finally{if(candidate!=null)Destroy(candidate);if(ptr!=0)CRFree(ptr);}
     }
 #endif
     public void OnAudioError(string msg){try{var o=JObject.Parse(msg);if((int)o["generation"]==loadGeneration)OnReady?.Invoke((string)o["error"]);}catch{OnReady?.Invoke(msg);}}

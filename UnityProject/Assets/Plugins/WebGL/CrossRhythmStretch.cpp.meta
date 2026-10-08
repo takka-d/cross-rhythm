@@ -1,0 +1,35 @@
+fileFormatVersion: 2
+guid: e46538960b2f4c3ca99380437290ff4e
+PluginImporter:
+  serializedVersion: 2
+  isPreloaded: 0
+  isOverridable: 0
+  isExplicitlyReferenced: 0
+  validateReferences: 1
+  platformData:
+  - first:
+      Any: 
+    second:
+      enabled: 0
+      settings: {}
+  - first:
+      Editor: Editor
+    second:
+      enabled: 0
+      settings:
+        CPU: x86_64
+        OS: Windows
+  - first:
+      Standalone: Win64
+    second:
+      enabled: 0
+      settings:
+        CPU: x86_64
+  - first:
+      WebGL: WebGL
+    second:
+      enabled: 1
+      settings: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
