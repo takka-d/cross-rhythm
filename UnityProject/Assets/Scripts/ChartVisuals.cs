@@ -27,6 +27,13 @@ public static class ChartVisuals {
         return new Rect(x,Mathf.Round(row*rh+rh/2-rawH/2)+.5f,w,h);
     }
     public static double DisplayStep(ChartProject p,int bar)=>bar<0?.25:p.Notes.Where(n=>n.Measure==bar).Select(n=>n.Step).Append(.25).Min();
+    public static void EditGridPoints(ChartProject p,int bar,SortedSet<double> points){
+        points.Clear();
+        foreach(double step in new[]{1.0,p.Grid})for(int i=0;i*step<p.Measures[bar]-1e-8;i++)points.Add(i*step);
+        // Imported and mixed-grid onsets remain visible even when the placement
+        // grid differs. Guides use their actual timing, including MIDI tick rounding.
+        foreach(var n in p.Notes)if(n.Measure==bar)points.Add(n.Local);
+    }
     public static double[] GridPoints(ChartProject p,int bar){
         double length=bar<0?CountIn.Length(p):p.Measures[bar];var notes=p.Notes.Where(n=>n.Measure==bar).ToArray();var points=new SortedSet<double>{0,length};
         foreach(double step in notes.Select(n=>n.Step).Concat(new[]{.25,1}).Distinct())for(int i=0;i*step<length-1e-8;i++)points.Add(Math.Round(i*step,9));

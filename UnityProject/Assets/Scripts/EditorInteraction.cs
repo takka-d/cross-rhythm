@@ -48,7 +48,12 @@ public sealed class EditorInteraction {
     public static double CellStart(ChartProject p,double beat){
         if(beat>=p.Length-1e-9)return p.Length;
         int m=Math.Max(0,p.BarAt(Math.Max(0,beat)));
-        return p.Starts[m]+Math.Max(0,Math.Floor((beat-p.Starts[m]+1e-9)/p.Grid))*p.Grid;
+        // Pointer positions arrive as floats. A drawn tuplet line can round just
+        // below its double-precision beat; keep it in the intended cell.
+        double tolerance=Math.Min(p.Grid*.001,Math.Max(1e-9,Math.Abs(beat)*1.2e-7));
+        double cell=Math.Floor((beat-p.Starts[m]+tolerance)/p.Grid);
+        cell=Math.Min(cell,Math.Ceiling(p.Measures[m]/p.Grid-1e-9)-1);
+        return p.Starts[m]+Math.Max(0,cell)*p.Grid;
     }
     public static double CellEnd(ChartProject p,double beat){double start=CellStart(p,beat);if(start>=p.Length)return p.Length;int m=p.BarAt(start);return Math.Min(p.Starts[m]+p.Measures[m],start+p.Grid);}
     public static double Follow(double view,double span,double beat,double length){if(beat>view+span*.82||beat<view)view=beat-span*.25;return Math.Max(0,Math.Min(Math.Max(0,length-span),view));}
@@ -100,7 +105,9 @@ public sealed class EditorInteraction {
         if(gesture==Gesture.Right||gesture==Gesture.Range){if(Vector2.Distance(origin,point)>=5)moved=true;if(moved){Selection.Clear();foreach(var n in Project.Notes)if(NoteRect(n).Overlaps(SelectionBox,true))Selection.Add(n.Index);Batch=true;RefreshAnchor();}return;}
         if(!moved&&Vector2.Distance(origin,point)<5)return;moved=true;
         if(gesture==Gesture.Move){
-            var anchor=originals.First(n=>n.Index==target);double db=groupGrab?Math.Floor((point.x-origin.x)/PPB/Project.Grid+.5)*Project.Grid:CellStart(Project,point.x/PPB)-anchor.Beat;
+            // Move by the gesture delta, not by the absolute pointer cell. This
+            // preserves imported timing and the grab offset on mixed grids.
+            var anchor=originals.First(n=>n.Index==target);double db=Math.Floor((point.x-origin.x)/PPB/Project.Grid+.5)*Project.Grid;
             int lane=(int)Math.Floor(point.y/RowHeight);int dl=lane>=0&&lane<Lanes.Length?lane-anchor.Lane:(int)Math.Floor((point.y-origin.y)/RowHeight+.5);
             MoveOriginals(originals,db,dl,true);return;
         }

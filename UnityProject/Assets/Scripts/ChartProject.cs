@@ -87,7 +87,7 @@ public sealed class ChartProject {
         Notes=Notes.OrderBy(n=>n.Beat).ThenBy(n=>n.Index).ToList();
         PlayableNoteCount=Notes.Count(n=>!n.Pedal);
     }
-    public static double EventStep(JObject e){double explicitStep=(double?)e["gridStepBeats"]??0;if(explicitStep>=1.0/256&&explicitStep<=4)return explicitStep;double b=(double?)e["beat"]??0;if(Math.Abs(b-Math.Round(b*4)/4)<=.00051)return .25;foreach(int n in new[]{8,3,6,12,5,10,7,14,9,11,13,15,16,18,20,21,22,24,26,28,30,32,64})if(Math.Abs(b-Math.Round(b*n)/n)<=.00051)return 1.0/n;return .25;}
+    public static double EventStep(JObject e,double tolerance=.00051){double explicitStep=(double?)e["gridStepBeats"]??0;if(explicitStep>=1.0/256&&explicitStep<=4)return explicitStep;double b=(double?)e["beat"]??0;if(Math.Abs(b-Math.Round(b*4)/4)<=tolerance)return .25;foreach(int n in new[]{8,3,6,12,5,10,7,14,9,11,13,15,16,18,20,21,22,24,26,28,30,32,64})if(Math.Abs(b-Math.Round(b*n)/n)<=tolerance)return 1.0/n;return .25;}
     public bool ClosedAt(double beat)=>Pedals.Any(p=>beat>=p.Start-1e-8&&beat<p.End-1e-8);
     public int BarAt(double beat){if(beat<0)return CountIn.BarAt(this,beat);int i=Array.BinarySearch(Starts,beat);return i>=0?i:Math.Max(0,Math.Min(Starts.Length-1,~i-1));}
     public double SnapBeat(double beat){

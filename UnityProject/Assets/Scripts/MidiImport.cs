@@ -15,7 +15,7 @@ public static class MidiImport {
         public void Skip(int n){if(n<0||n>End-At)throw new InvalidDataException("Truncated MIDI chunk");At+=n;}
         public void Chunk(string name){foreach(char c in name)if(Byte()!=c)throw new InvalidDataException("Missing "+name);}
     }
-    sealed class Note {public int Track,Channel,Pitch,Velocity;public long Tick;public string Instrument,Type,Hat;public double Beat;}
+    sealed class Note {public int Track,Channel,Pitch,Velocity;public long Tick;public string Instrument,Type,Hat;public double Beat,Step;}
     sealed class Meter {public long Tick;public int N,D;}
     public sealed class Result {public JObject Chart;public int Hits,ZeroKept,ZeroDropped,TempoChanges;}
     public static int Strength(int v)=>v<=12?0:v<=37?1:v<=62?2:v<=87?3:v<=113?4:5;
@@ -79,7 +79,25 @@ public static class MidiImport {
         }
         var chart=(JObject)source.Chart.DeepClone();chart["title"]=source.Title=="Untitled"?Path.GetFileNameWithoutExtension(name):source.Title;chart["bpm"]=bpm;chart["measures"]=bars;chart["timeSignatures"]=signatures;chart["events"]=new JArray();chart["velocityScaleVersion"]=4;
         var p=new ChartProject{Chart=chart,Manifest=source.Manifest};p.Rebuild();int id=0;
-        Action<Note,double> add=(n,duration)=>{int bar=p.BarAt(n.Beat);var e=new JObject{{"id","midi-"+id++},{"measure",bar},{"beat",n.Beat-p.Starts[bar]},{"instrument",n.Instrument},{"velocity",Strength(n.Velocity)},{"source","midi"}};if(n.Type!=null)e["articulation"]=n.Type;if(duration>0)e["durationBeats"]=duration;e["gridStepBeats"]=ChartProject.EventStep(e);p.Events.Add(e);};
+        // MIDI ticks are discrete. Infer display cells within half a tick, but
+        // never quantize the imported onset itself. Neighbouring hits give the
+        // downbeat of a tuplet run the same width as the rest of that run.
+        double tolerance=Math.Max(.00051,.500001/ppq);
+        foreach(var lane in hits.GroupBy(n=>n.Instrument)){
+            var sequence=lane.GroupBy(n=>n.Tick).Select(g=>g.First()).ToArray();
+            for(int i=0;i<sequence.Length;i++){
+                var n=sequence[i];double local=n.Beat-p.Starts[p.BarAt(n.Beat)];
+                n.Step=ChartProject.EventStep(new JObject{{"beat",local}},tolerance);
+                foreach(int j in new[]{i-1,i+1})if(j>=0&&j<sequence.Length){
+                    double gap=Math.Abs(n.Beat-sequence[j].Beat);
+                    if(gap<=0||gap>1)continue;
+                    double step=ChartProject.EventStep(new JObject{{"beat",gap}},Math.Max(.00051,1.000001/ppq));
+                    if(step<n.Step&&Math.Abs(local-Math.Round(local/step)*step)<=tolerance)n.Step=step;
+                }
+            }
+            var steps=sequence.ToDictionary(n=>n.Tick,n=>n.Step);foreach(var n in lane)n.Step=steps[n.Tick];
+        }
+        Action<Note,double> add=(n,duration)=>{int bar=p.BarAt(n.Beat);var e=new JObject{{"id","midi-"+id++},{"measure",bar},{"beat",n.Beat-p.Starts[bar]},{"instrument",n.Instrument},{"velocity",Strength(n.Velocity)},{"source","midi"}};if(n.Type!=null)e["articulation"]=n.Type;if(duration>0)e["durationBeats"]=duration;e["gridStepBeats"]=n.Step>0?n.Step:ChartProject.EventStep(e,tolerance);p.Events.Add(e);};
         foreach(var n in hits.Where(n=>n.Instrument!="HHSTATE"))add(n,0);
         var hats=hits.Where(n=>n.Hat!=null).ToArray();var ranges=new List<Tuple<Note,double>>();
         for(int i=0;i<hats.Length;i++){var n=hats[i];if(n.Hat=="open")continue;double end=i+1<hats.Length&&hats[i+1].Beat>n.Beat+1e-8?hats[i+1].Beat:n.Beat+source.Grid;

@@ -1,4 +1,4 @@
-# Cross Rhythm 0.3.15 development
+# Cross Rhythm 0.3.16 development
 
 Unity 6000.3.25f1. Windows and WebGL use the same Assets/Scripts source.
 Run `./Build.ps1 -Target Both` from PowerShell with the licensed Unity Editor
@@ -7,7 +7,7 @@ Tests run before BuildPipeline.BuildPlayer. No license activation workaround,
 DLL swap or player version-byte replacement is part of this build.
 
 The production root remains 0.3.12. Verified development builds are published
-under `/dev/0.3.15/`. The WordPress article remains a draft.
+under `/dev/0.3.16/`. The WordPress article remains a draft.
 
 Changes: common folder row in Songs/Config; Songs > Edit opens an independent
 editable copy; File in Edit header; Back in Play/Practice; Practice speed
@@ -32,3 +32,8 @@ New Project uses the unsaved confirmation. Cancel keeps edits; Leave clears
 the editor and its recovery draft; Save & Continue requires a verified save.
 Count-in keeps four visual beats in 4/4, with six audible cues over two bars.
 Other meters use two bars of the initial meter, counting each denominator beat.
+
+0.3.16: Tuplet grid-line clicks tolerate float pointer rounding.
+Dragging preserves the onset phase and relative timing. MIDI display cells
+respect PPQ precision; onset times stay unchanged. The Edit grid also shows
+actual imported onsets. Covers 3/5/7/9/11/13 divisions, mixed grids and 7/8.

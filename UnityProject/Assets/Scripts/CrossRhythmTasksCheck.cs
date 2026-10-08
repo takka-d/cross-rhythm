@@ -54,7 +54,25 @@ public partial class CrossRhythmApp {
             NavigateNow(Page.Songs);yield return Ready();Begin(false);Check(Current==Page.Play&&Audio.AnchorBeat==-8,"Play starts one eight-beat count-in");Audio.Stop();Begin(true);Check(Current==Page.Practice&&Audio.AnchorBeat==-8,"Practice uses the same count-in");
             Audio.Stop();var odd=EmptyEditorProject();odd.SetMeter(0,7,8);Library.Add(odd);NavigateNow(Page.Songs);FocusSong(Library.Count-1);yield return Ready();Begin(true);
             Check(Audio.AnchorBeat==-7&&Project.BarAt(-6.9)==-2&&Math.Abs(ReferencePosition(-3.5)+1)<1e-9,"7/8 count-in clock and displayed bars match");Seek(-100);Check(Audio.AnchorBeat==-7,"practice seek begins at the meter-specific count-in");Audio.Stop();
-            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.15"},{"checks",new JArray(checks)}}.ToString());
+            int midiAt=Array.IndexOf(args,"--tuplet-midi");Check(midiAt>=0&&midiAt+1<args.Length,"tuplet MIDI fixture supplied");
+            OpenEditorProject(EmptyEditorProject());yield return Ready();ImportMidi(File.ReadAllBytes(args[midiAt+1]),"Tuplet Check.mid");
+            Check(Project.Notes.Count==14&&Project.Grid==.25,"app imports seven-tuples without replacing the placement grid");
+            var importedChart=(JObject)Project.Chart.DeepClone();var note=Project.Notes[1];double onset=note.Beat;var point=Editor.NoteRect(note).center;
+            Editor.Down(point,0,1,false,false);Editor.Up(point+new Vector2(0,Editor.RowHeight*3));
+            Check(Project.Notes.Any(n=>n.Id==note.Id&&n.Beat==onset&&n.Instrument=="HT"),"app vertical drag keeps imported tuplet tick");
+            Restore(false);Check(JToken.DeepEquals(Project.Chart,importedChart),"Undo restores complete MIDI chart after drag");
+            var file=Path.Combine(root,"Tuplet Check.crproj");Project.SaveNative(file,false);var saved=ChartProject.Read(File.ReadAllBytes(file),Path.GetFileName(file));
+            Check(JToken.DeepEquals(saved.Chart,importedChart),"saved MIDI project reopens with exact notes and grid metadata");
+            Library.Add(saved);NavigateNow(Page.Songs);FocusSong(Library.Count-1);yield return Ready();bool oldPro=pro;pro=false;
+            try{
+                Begin(false);Audio.Stop();Audio.AnchorBeat=0;
+                foreach(var n in Project.Notes)HandleKey(UnityEngine.InputSystem.Key.Digit9,n.Beat);
+                Check(Records.Count==14&&Records.All(r=>r.Judge=="JUST"&&Math.Abs(r.Ms)<1e-9),"Play judges all imported tuplet onsets at zero error");
+                Begin(true);
+                foreach(var n in Project.Notes)Check(Math.Abs(Audio.BeatAt(Audio.DSPAt(n.Beat))-n.Beat)<1e-8,"Practice audio clock preserves tuplet onset "+n.Index);
+                Audio.Stop();
+            }finally{pro=oldPro;}
+            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.16"},{"checks",new JArray(checks)}}.ToString());
             Debug.Log("CROSS_RHYTHM_TASKS_CHECK_PASS");
         }finally{if(hadPreview)PlayerPrefs.SetInt("songPreview",originalPreview);else PlayerPrefs.DeleteKey("songPreview");PlayerPrefs.Save();allowApplicationQuit=true;}
         Application.Quit();

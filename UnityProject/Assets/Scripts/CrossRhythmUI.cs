@@ -74,7 +74,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(x,553,290,64),"Songs",true))Navigate(Page.Songs);
         if(Button(new Rect(x+308,553,180,64),"Edit"))Navigate(Page.Edit);
         if(Button(new Rect(x+506,553,180,64),"Config"))Navigate(Page.Config);
-        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.15",14,muted);
+        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.16",14,muted);
         for(int i=0;i<7;i++){float h=35+i%3*15;RectFill(new Rect(W-260+i*22,240+i*16,7,h),new Color(mint.r,mint.g,mint.b,.18f+i*.04f));}
     }
     void FittedText(Rect r,string value,int size,Color color,bool bold=false){
