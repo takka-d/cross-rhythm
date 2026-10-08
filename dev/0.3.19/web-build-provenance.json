@@ -1,0 +1,39 @@
+{
+  "version": "0.3.19",
+  "unity": "6000.3.25f1",
+  "platform": "WebGL",
+  "baseCommit": "c4f827488a9e5582661e5f670a3ebf4667fc30fe",
+  "method": "Unity BuildPipeline.BuildPlayer; robots meta added only during packaging",
+  "sourceSHA256": {
+    "Assets/Scripts/RhythmAudio.cs": "46c5b925a8d061e097d1c718f2bb5c68344eafc2704464918cacf54db430911d",
+    "Assets/Scripts/RhythmAudioStretch.cs": "00cfeb579de317bc535623c82b94077d805242966a01206c4158795451471a81",
+    "Assets/Scripts/CrossRhythmBindings.cs": "12b6040337c34078aad68e180dfa6833ad1d5c307e6029af8a5bb1dbc104352e",
+    "Assets/Scripts/CrossRhythmPlaybackProbe.cs": "931ba3a72a52d34f664805e0b59adcb8a042299d801c7b23e8733fdb4cfa2f2f",
+    "Assets/Plugins/WebGL/CrossRhythmStretchAudio.jslib": "8f9bffc0c1214273c4170fd669608cdf6fe56aac894a0d68fbb6e92b0758c476"
+  },
+  "webFilesSHA256": {
+    "Build/Web.data": "e003ec8fb75618cdb994e0779cab3e2bf7e5285c0c00fdfac8ec1e56b7929f09",
+    "Build/Web.framework.js": "c06e45e533f0bc98dc9303430ac81746723c6df19f4c55d7bd55ccdb8b5b3e23",
+    "Build/Web.loader.js": "7108d7c49476418f63dfcdcb0d10b2fa3e082be3be9b0e4d4a32b41f5e1eecd3",
+    "Build/Web.wasm": "93ed473407b0efdc3dfe88abae0b36bb000aac9b16701a4b9b1d566144a55246",
+    "editor-input.js": "4e21baa32313d559340a3053befc431f43b830e7731bdf010921984774e5e88d",
+    "fullscreen.js": "67ab52ea8db5011b500b9300eed7912d7dc58672966407da8fa5e90944baf549",
+    "icon-192.png": "44a1665f45861be6181198726d5ea39ada5fb170c0510566cc6626b875852432",
+    "icon-32.png": "9584a3e9018e2e97abc09a79042aa323a291786dd0a5eda49eebfb372329a415",
+    "icon-512.png": "4902d44097852f46ad058b4ef8b7116c8ea5a3b55d860d859dc3ca7a5a68fc56",
+    "icon.svg": "9b4bf754d2218e6b0e8c4b38b90f11e0329faaf10f4038ea208b6f4e052d7e59",
+    "index.html": "73206f5bf79aa07723159180b8609fbb27e4aa630027d1b3949bcacee1a70756",
+    "midi-drop.js": "bd6895ce28d830b804455f629ca03f18781ec977d472dd0c9ad3ee476e48cb7f",
+    "project-picker.js": "cafe20e99ca602ea074f52f97f17bad83fc13bc9cea311760ef7bc400bdc58f3",
+    "THIRD-PARTY-NOTICES.txt": "647658bc3787c9634ecfcf809f7e9a29cbd2b640cb64748d04112ed45acef42a",
+    "ThirdParty/NAudio-LICENSE.txt": "303e01786b271eb464b3f43d18a375f2f17d37bc708a37c2fdf45b289fb5bfaa",
+    "ThirdParty/Noto-LICENSE.txt": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+    "ThirdParty/Salamander-README.md": "99cc47377bf28de010d1fe5074a51a7dd8296745bf461af734fadb46689cbd13",
+    "ThirdParty/Signalsmith-Linear-LICENSE.txt": "a91f5703b0f5fa22e8c14a8bd854559a7c512bbe58656ea8bdcd4964e923ab2f",
+    "ThirdParty/Signalsmith-Stretch-LICENSE.txt": "16bf62d475af149d96a24853e77c9e0d939259a9d55b23b41da7f9939db85085",
+    "ThirdParty/Virtuosity-LICENSE.txt": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+    "ThirdParty/Virtuosity-README.md": "53e3b1fecbbc9b71db173543b6204251b9f2363dac036aaaa7db3da7091b781a"
+  },
+  "verification": "web-verification.json",
+  "windowsUnchangedSHA256": "f0dd1ab54b0459591756559257617a699560835ef01b86caa2ceacfe4a09c34e"
+}

@@ -40,7 +40,7 @@ public partial class CrossRhythmApp {
         if(bindingsOpen)return;
         if(pad&&!Audio.Running&&Current!=Page.Play&&Current!=Page.Edit){foreach(var c in changes)if(c.down&&!c.control.isPressed){var path=PadPath(c.control);KeyCode key=path=="dpad/up"?KeyCode.UpArrow:path=="dpad/down"?KeyCode.DownArrow:path=="dpad/left"?KeyCode.LeftArrow:path=="dpad/right"?KeyCode.RightArrow:path==(nintendo?"buttonEast":"buttonSouth")?KeyCode.Return:path==(nintendo?"buttonSouth":"buttonEast")?KeyCode.Escape:KeyCode.None;if(key!=KeyCode.None)padMenu.Enqueue(key);}return;}
         if(!Audio.Running||Audio.Preparing||(Current!=Page.Play&&Current!=Page.Practice))return;
-        double dsp=AudioSettings.dspTime+(evt.time-InputState.currentTime),beat=Audio.BeatAt(dsp-inputOffset/1000);
+        double dsp=RhythmAudio.Clock+(evt.time-InputState.currentTime),beat=Audio.BeatAt(dsp-inputOffset/1000);
         // Resolve all releases and foot presses before hand strikes from the same device report.
         foreach(var c in changes)if(!c.down)physicalHeld.Remove(c.control);
         RefreshHeld(beat);

@@ -16,8 +16,9 @@ public sealed partial class RhythmAudio {
     public double MaxSegmentPreparationSeconds {get;private set;}
     internal AudioClip PreparedPracticeClip=>stretchSegments.Count==0?null:stretchSegments[0].Clip;
 #if UNITY_WEBGL && !UNITY_EDITOR
+    [System.Runtime.InteropServices.DllImport("__Internal")]static extern double CRStretchAudioClock();
     [System.Runtime.InteropServices.DllImport("__Internal")]static extern void CRStretchAudioStop();
-    [System.Runtime.InteropServices.DllImport("__Internal")]static extern int CRStretchAudioSchedule(float[] pcm,int frames,int channels,int sampleRate,double outputOffset,double delay,double sourceSecond,double rate,float gain);
+    [System.Runtime.InteropServices.DllImport("__Internal")]static extern int CRStretchAudioSchedule(float[] pcm,int frames,int channels,int sampleRate,double outputOffset,double startTime,double sourceSecond,double rate,float gain);
     [System.Runtime.InteropServices.DllImport("__Internal")]static extern double CRStretchAudioPosition();
     [System.Runtime.InteropServices.DllImport("__Internal")]static extern int CRStretchAudioPlaying();
     [System.Runtime.InteropServices.DllImport("__Internal")]static extern void CRStretchAudioGain(float gain);
@@ -26,12 +27,29 @@ public sealed partial class RhythmAudio {
     // Unity marks a scheduled source as playing even before its audible start.
     public bool BackingIsPlaying=>Backing.isPlaying||stretchSegments.Exists(s=>AudioSettings.dspTime>=s.Start&&AudioSettings.dspTime<s.End&&s.Source.isPlaying);
 #endif
+    // Web must share the audio context's clock with scheduled buffers, including at 1x.
+    public static double Clock {
+        get {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return CRStretchAudioClock();
+#else
+            return AudioSettings.dspTime;
+#endif
+        }
+    }
+    static double ToUnityDSP(double when){
+#if UNITY_WEBGL && !UNITY_EDITOR
+        return AudioSettings.dspTime+Math.Max(0,when-Clock);
+#else
+        return when;
+#endif
+    }
     public double BackingTimelineSeconds {
         get {
 #if UNITY_WEBGL && !UNITY_EDITOR
             if(stretchSegments.Count>0)return CRStretchAudioPosition();
 #endif
-            foreach(var segment in stretchSegments)if(AudioSettings.dspTime>=segment.Start&&AudioSettings.dspTime<segment.End)
+            foreach(var segment in stretchSegments)if(Clock>=segment.Start&&Clock<segment.End)
             return segment.SongStart+segment.Source.timeSamples/(double)segment.Clip.frequency*segment.Rate;
             return Song==null?0:Backing.timeSamples/(double)Song.frequency;}
     }
@@ -73,9 +91,13 @@ public sealed partial class RhythmAudio {
         long start=(long)Math.Round(Math.Max(0,sourceSecond)*sr);
         long length=(long)Math.Ceiling((song.samples-start)/rate);
         string error=null;int inputLatency=0,skip=0;
+        bool passThrough=false;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        passThrough=Math.Abs(rate-1)<1e-8;
+#endif
         try{
-            stretchProcessor=new PitchStretch(ch,sr);inputLatency=stretchProcessor.InputLatency;skip=stretchProcessor.OutputLatency;
-            stretchProcessor.Seek(ReadSongFrames(song,start,inputLatency),rate);
+            if(!passThrough){stretchProcessor=new PitchStretch(ch,sr);inputLatency=stretchProcessor.InputLatency;skip=stretchProcessor.OutputLatency;
+                stretchProcessor.Seek(ReadSongFrames(song,start,inputLatency),rate);}
             while(stretchSources.Count<3){var source=gameObject.AddComponent<AudioSource>();source.playOnAwake=false;source.priority=0;stretchSources.Add(source);}
         }catch(Exception e){error=e.Message;}
         if(error!=null){StretchFailure(error);yield break;}
@@ -85,7 +107,7 @@ public sealed partial class RhythmAudio {
         while(emitted<length&&generation==playGeneration){
             int slot=index%3;
             var previous=stretchSegments.Find(s=>s.Source==stretchSources[slot]);
-            while(previous!=null&&AudioSettings.dspTime<previous.End+.02){if(generation!=playGeneration)yield break;yield return null;}
+            while(previous!=null&&Clock<previous.End+.02){if(generation!=playGeneration)yield break;yield return null;}
             if(previous!=null){previous.Source.clip=null;if(previous.Clip!=null)Destroy(previous.Clip);stretchSegments.Remove(previous);}
             double prepareStart=Time.realtimeSinceStartupAsDouble;
             int frames=(int)Math.Min(sr*2L,length-emitted),filled=0;var pcm=new float[frames*ch];
@@ -97,7 +119,7 @@ public sealed partial class RhythmAudio {
                 int inFrames=(int)(nextInput-inputAt);inputs.TryGetValue(inFrames,out var input);
                 try{
                     input=ReadSongFrames(song,start+inputLatency+inputAt,inFrames,input);inputs[inFrames]=input;
-                    stretchProcessor.Process(input,inFrames,output,n);
+                    if(passThrough)Array.Copy(input,output,n*ch);else stretchProcessor.Process(input,inFrames,output,n);
                 }catch(Exception e){error=e.Message;}
                 if(error!=null){StretchFailure(error);yield break;}
                 processed+=n;int discard=Math.Min(skip,n);skip-=discard;
@@ -112,12 +134,12 @@ public sealed partial class RhythmAudio {
             if(error!=null){StretchFailure(error);yield break;}
 #endif
             SegmentsPrepared++;MaxSegmentPreparationSeconds=Math.Max(MaxSegmentPreparationSeconds,Time.realtimeSinceStartupAsDouble-prepareStart);
-            if(index==0){AnchorDSP=AudioSettings.dspTime+.15;firstDSP=AnchorDSP+Math.Max(0,-sourceSecond)/rate;Preparing=false;}
+            if(index==0){AnchorDSP=Clock+.15;firstDSP=AnchorDSP+Math.Max(0,-sourceSecond)/rate;Preparing=false;}
             double when=firstDSP+emitted/(double)sr;
-            if(when<AudioSettings.dspTime+.015){if(clip!=null)Destroy(clip);StretchFailure("Audio preparation fell behind playback");yield break;}
+            if(when<Clock+.015){if(clip!=null)Destroy(clip);StretchFailure("Audio preparation fell behind playback");yield break;}
             var sourcePlayer=stretchSources[slot];
 #if UNITY_WEBGL && !UNITY_EDITOR
-            if(CRStretchAudioSchedule(pcm,frames,ch,sr,emitted/(double)sr,when-AudioSettings.dspTime,start/(double)sr,rate,BackingGain)==0){StretchFailure("Audio preparation fell behind playback");yield break;}
+            if(CRStretchAudioSchedule(pcm,frames,ch,sr,emitted/(double)sr,when,start/(double)sr,rate,BackingGain)==0){StretchFailure("Audio preparation fell behind playback");yield break;}
 #else
             // Stop plus a new clip resets the position. Avoid an extra Web audio seek before scheduling.
             sourcePlayer.Stop();sourcePlayer.clip=clip;sourcePlayer.pitch=1;sourcePlayer.volume=BackingGain;sourcePlayer.PlayScheduled(when);

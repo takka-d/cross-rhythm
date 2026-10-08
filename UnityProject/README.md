@@ -49,7 +49,7 @@ beat: zero-based local quarter beat, bpm: 20..600}]. The existing bpm is the
 initial tempo; charts without tempoChanges retain constant-tempo behavior.
 All playback, hit judgment, waveform, duration/difficulty and audio analysis
 use the same integrated beat/second map. Save/reload and Undo/Redo retain it.
-Practice pitch preservation is implemented for Windows in 0.3.19 below; Web verification is pending.
+Practice pitch preservation is implemented for Windows and Web in 0.3.19 below.
 
 0.3.18: Drop one .mid/.midi file (up to 32 MB) onto Edit in Windows or Web.
 The existing Import MIDI command uses the same overlap review.
@@ -60,9 +60,17 @@ ranges are derived after the choices, so open/closed state stays consistent.
 Cancel preserves the chart; Import is one Undo step. Additional drops and
 background edits are blocked while reviewing or loading.
 
-0.3.19 RELEASE SCOPE: Windows development build only. The Web source is under
-repair and has not passed its full audio regression; do not deploy it yet.
-0.3.18 remains the current public Web development build.
+0.3.19 RELEASE SCOPE: Windows and Web development builds. The Windows package
+is unchanged; download it directly from GitHub Releases. Web now uses one
+AudioContext clock for the chart, judgment and streamed backing at every speed,
+including unchanged PCM at 1x. Unity drum scheduling is converted at the boundary.
+
+Web verification includes 0.25/0.55/0.60/1/2x, seek, pause, mode switching,
+preparation cancellation, count-in, Play and a main-thread stall. The final
+UI run stopped on an obsolete test expecting a full-song AudioBuffer node;
+the preserved recording was then checked against the actual streamed-buffer
+contract without another audio run. See dev/0.3.19/web-verification.json.
+Physical audio-device latency remains outside these source/clock checks.
 
 0.3.19: Practice preserves musical pitch across speeds 0.25 to 2.00.
 Windows and Web use the same Signalsmith Stretch processor. Only a bounded

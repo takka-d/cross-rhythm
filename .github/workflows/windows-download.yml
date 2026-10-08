@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/windows-download.yml'
+      - 'dev/0.3.19/windows/RELEASE-NOTES.md'
   workflow_dispatch:
 permissions:
   contents: write
@@ -31,9 +32,9 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view v0.3.19 --json tagName >/dev/null 2>&1; then
-            gh release upload v0.3.19 CrossRhythm_Windows_0.3.19.zip SHA256SUMS.txt --clobber
+            digest="$(gh api "repos/$GH_REPO/releases/tags/v0.3.19" --jq '.assets[] | select(.name=="CrossRhythm_Windows_0.3.19.zip") | .digest')"
+            test "$digest" = 'sha256:f0dd1ab54b0459591756559257617a699560835ef01b86caa2ceacfe4a09c34e'
+            gh release edit v0.3.19 --notes-file RELEASE-NOTES.md
           else
-            printf '%s\n' 'Windows 64bit development build.' '' 'Practice pitch preservation and timing fixes, application icon, and controller preset labels.' '' 'Extract the ZIP and run CrossRhythm.exe. Web 0.3.19 verification is in progress.' > release-notes.txt
-            gh release create v0.3.19 CrossRhythm_Windows_0.3.19.zip SHA256SUMS.txt --target "$GITHUB_SHA" --title 'Cross Rhythm 0.3.19 · Windows development' --prerelease --latest=false --notes-file release-notes.txt
+            gh release create v0.3.19 CrossRhythm_Windows_0.3.19.zip SHA256SUMS.txt --target "$GITHUB_SHA" --title 'Cross Rhythm 0.3.19 · Windows development' --prerelease --latest=false --notes-file RELEASE-NOTES.md
           fi
-

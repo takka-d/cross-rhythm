@@ -1,0 +1,773 @@
+{
+  "method": "Isolated Chromium actual Unity WebGL; synthetic project import; mouse UI actions; Web Audio buffer starts and read-only engine probes",
+  "probes": [
+    {
+      "tag": "initial-pause",
+      "page": "Practice",
+      "rate": 1,
+      "running": false,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 0,
+      "chartSecond": -3.740748299319728,
+      "segments": 0,
+      "prepared": 0,
+      "maxPreparationSeconds": 0,
+      "anchor": 4.802698412698413,
+      "audioClock": 5.12,
+      "unityDSP": 5.2509977324263035
+    },
+    {
+      "tag": "quarter-speed",
+      "page": "Practice",
+      "rate": 0.25,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 3.445062358276644,
+      "chartSecond": 3.445053334138831,
+      "segments": 2,
+      "prepared": 6,
+      "maxPreparationSeconds": 0.7249999999999996,
+      "anchor": 7.182743764172336,
+      "audioClock": 15.391927437641723,
+      "unityDSP": 16.13997732426304
+    },
+    {
+      "tag": "speed055",
+      "page": "Practice",
+      "rate": 0.55,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 6.906647392290251,
+      "chartSecond": 6.906653671013798,
+      "segments": 3,
+      "prepared": 6,
+      "maxPreparationSeconds": 0.713000000000001,
+      "anchor": 17.611405895691608,
+      "audioClock": 24.851156462585035,
+      "unityDSP": 25.593990929705214
+    },
+    {
+      "tag": "pro-same-speed",
+      "page": "Practice",
+      "rate": 0.55,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 7.093422902494334,
+      "chartSecond": 7.093429181217879,
+      "segments": 3,
+      "prepared": 6,
+      "maxPreparationSeconds": 0.713000000000001,
+      "anchor": 17.611405895691608,
+      "audioClock": 25.19074829931973,
+      "unityDSP": 25.938979591836734
+    },
+    {
+      "tag": "seek055",
+      "page": "Practice",
+      "rate": 0.55,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 10.224162131519277,
+      "chartSecond": 10.224156550383627,
+      "segments": 3,
+      "prepared": 5,
+      "maxPreparationSeconds": 1.0280000000000022,
+      "anchor": 28.31,
+      "audioClock": 33.78213151927438,
+      "unityDSP": 34.53099773242631
+    },
+    {
+      "tag": "rate-change060",
+      "page": "Practice",
+      "rate": 0.6,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 13.683469387755101,
+      "chartSecond": 13.683471743127383,
+      "segments": 3,
+      "prepared": 5,
+      "maxPreparationSeconds": 0.9469999999999956,
+      "anchor": 35.191814058956915,
+      "audioClock": 40.67265306122449,
+      "unityDSP": 41.41897959183674
+    },
+    {
+      "tag": "paused",
+      "page": "Practice",
+      "rate": 0.6,
+      "running": false,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 0,
+      "chartSecond": 13.868070382583165,
+      "segments": 0,
+      "prepared": 0,
+      "maxPreparationSeconds": 0,
+      "anchor": 35.191814058956915,
+      "audioClock": 41.03256235827664,
+      "unityDSP": 41.78099773242631
+    },
+    {
+      "tag": "double-speed",
+      "page": "Practice",
+      "rate": 2,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 15.494943310657606,
+      "chartSecond": 15.494934286519793,
+      "segments": 3,
+      "prepared": 6,
+      "maxPreparationSeconds": 0.8520000000000039,
+      "anchor": 44.021201814058955,
+      "audioClock": 51.07229024943311,
+      "unityDSP": 52.328979591836735
+    },
+    {
+      "tag": "original-speed",
+      "page": "Practice",
+      "rate": 1,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 3.802766439909301,
+      "chartSecond": 3.802757415771488,
+      "segments": 3,
+      "prepared": 4,
+      "maxPreparationSeconds": 0.0519999999999996,
+      "anchor": 52.21204081632653,
+      "audioClock": 54.62204081632653,
+      "unityDSP": 55.873990929705215
+    },
+    {
+      "tag": "after-ui-stall",
+      "page": "Practice",
+      "rate": 1,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 4.403582766439913,
+      "chartSecond": 4.4035737423021,
+      "segments": 3,
+      "prepared": 4,
+      "maxPreparationSeconds": 0.0519999999999996,
+      "anchor": 52.21204081632653,
+      "audioClock": 55.222857142857144,
+      "unityDSP": 56.4809977324263
+    },
+    {
+      "tag": "cancel-preparation",
+      "page": "Practice",
+      "rate": 0.95,
+      "running": false,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 0,
+      "chartSecond": 5.08275741577149,
+      "segments": 0,
+      "prepared": 0,
+      "maxPreparationSeconds": 0,
+      "anchor": 55.98204081632653,
+      "audioClock": 57.652244897959186,
+      "unityDSP": 58.91299319727891
+    },
+    {
+      "tag": "play-count-in",
+      "page": "Play",
+      "rate": 1,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 0,
+      "chartSecond": -3.711723356009074,
+      "segments": 3,
+      "prepared": 3,
+      "maxPreparationSeconds": 0.0009999999999976694,
+      "anchor": 58.16215419501134,
+      "audioClock": 58.450430839002266,
+      "unityDSP": 59.71
+    },
+    {
+      "tag": "play-original-speed",
+      "page": "Play",
+      "rate": 1,
+      "running": true,
+      "preparing": false,
+      "error": "",
+      "sourceSecond": 2.25,
+      "chartSecond": 2.25,
+      "segments": 3,
+      "prepared": 4,
+      "maxPreparationSeconds": 0.04600000000000648,
+      "anchor": 58.16215419501134,
+      "audioClock": 64.41215419501134,
+      "unityDSP": 65.6709977324263
+    }
+  ],
+  "audio": [
+    {
+      "time": 4.652698412698412,
+      "when": 8.802698412698412,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 439,
+      "stop": 5.061950113378685
+    },
+    {
+      "time": 4.652698412698412,
+      "when": 4.652698412698412,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 4.652698412698412
+    },
+    {
+      "time": 4.652698412698412,
+      "when": 4.801678004535147,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 4.652698412698412
+    },
+    {
+      "time": 4.652698412698412,
+      "when": 4.905963725924762,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 5.061950113378685
+    },
+    {
+      "time": 4.83265306122449,
+      "when": 10.802698412698412,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 439,
+      "stop": 5.061950113378685
+    },
+    {
+      "time": 4.83265306122449,
+      "when": 12.802698412698412,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 439,
+      "stop": 5.061950113378685
+    },
+    {
+      "time": 7.032743764172336,
+      "when": 7.182743764172336,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 441
+    },
+    {
+      "time": 7.711927437641723,
+      "when": 9.182743764172336,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 442
+    },
+    {
+      "time": 8.391111111111112,
+      "when": 11.182743764172336,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 439
+    },
+    {
+      "time": 9.84235827664399,
+      "when": 13.182743764172336,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 442
+    },
+    {
+      "time": 11.961179138321995,
+      "when": 15.182743764172336,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 441,
+      "stop": 16.03047619047619
+    },
+    {
+      "time": 13.891337868480726,
+      "when": 17.182743764172336,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 442,
+      "stop": 16.03047619047619
+    },
+    {
+      "time": 15.960816326530612,
+      "when": 19.182743764172336,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 441,
+      "stop": 16.03047619047619
+    },
+    {
+      "time": 17.46140589569161,
+      "when": 17.611405895691608,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 18.120272108843537,
+      "when": 19.611405895691608,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 18.790748299319727,
+      "when": 21.611405895691608,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 20.352290249433107,
+      "when": 23.611405895691608,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 22.250521541950114,
+      "when": 25.611405895691608,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 27.190566893424037
+    },
+    {
+      "time": 24.302585034013607,
+      "when": 27.611405895691608,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 27.190566893424037
+    },
+    {
+      "time": 26.610068027210886,
+      "when": 29.611405895691608,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 27.190566893424037
+    },
+    {
+      "time": 28.171609977324263,
+      "when": 28.31,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 29.251337868480725,
+      "when": 30.31,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 30.17142857142857,
+      "when": 32.31,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 34.09269841269841
+    },
+    {
+      "time": 31.341133786848072,
+      "when": 34.31,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 34.09269841269841
+    },
+    {
+      "time": 33.30031746031746,
+      "when": 36.31,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 34.09269841269841
+    },
+    {
+      "time": 35.041814058956916,
+      "when": 35.191814058956915,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 35.98222222222222,
+      "when": 37.191814058956915,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 36.97197278911565,
+      "when": 39.191814058956915,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 40.98031746031746
+    },
+    {
+      "time": 38.15038548752835,
+      "when": 41.191814058956915,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 40.98031746031746
+    },
+    {
+      "time": 40.09215419501134,
+      "when": 43.191814058956915,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 40.98031746031746
+    },
+    {
+      "time": 43.871201814058956,
+      "when": 44.021201814058955,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 44.72163265306123,
+      "when": 46.021201814058955,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 45.551746031746035,
+      "when": 48.021201814058955,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 46.90140589569161,
+      "when": 50.021201814058955,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 51.76018140589569
+    },
+    {
+      "time": 48.912834467120184,
+      "when": 52.021201814058955,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 51.76018140589569
+    },
+    {
+      "time": 50.89233560090703,
+      "when": 54.021201814058955,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 51.76018140589569
+    },
+    {
+      "time": 52.06204081632653,
+      "when": 52.21204081632653,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440
+    },
+    {
+      "time": 52.11138321995465,
+      "when": 54.21204081632653,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 55.90204081632653
+    },
+    {
+      "time": 52.16072562358276,
+      "when": 56.21204081632653,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 55.90204081632653
+    },
+    {
+      "time": 54.32018140589569,
+      "when": 58.21204081632653,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 440,
+      "stop": 55.90204081632653
+    },
+    {
+      "time": 58.01215419501134,
+      "when": 62.16215419501134,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 439
+    },
+    {
+      "time": 58.01215419501134,
+      "when": 58.01215419501134,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 58.01215419501134
+    },
+    {
+      "time": 58.020861678004536,
+      "when": 58.15913832199547,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 58.020861678004536
+    },
+    {
+      "time": 58.020861678004536,
+      "when": 58.255931979382666,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908
+    },
+    {
+      "time": 58.04117913832199,
+      "when": 64.16215419501134,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 439,
+      "stop": 65.1116553287982
+    },
+    {
+      "time": 58.06149659863946,
+      "when": 66.16215419501134,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 439,
+      "stop": 65.1116553287982
+    },
+    {
+      "time": 59.05124716553288,
+      "when": 59.05124716553288,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 59.05124716553288
+    },
+    {
+      "time": 59.05124716553288,
+      "when": 59.16215419501134,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 59.05124716553288
+    },
+    {
+      "time": 59.05124716553288,
+      "when": 59.20651700415849,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908
+    },
+    {
+      "time": 60.05260770975057,
+      "when": 60.05260770975057,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 60.05260770975057
+    },
+    {
+      "time": 60.05260770975057,
+      "when": 60.16215419501134,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 60.05260770975057
+    },
+    {
+      "time": 60.05260770975057,
+      "when": 60.23883673991747,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908
+    },
+    {
+      "time": 60.58086167800454,
+      "when": 60.58086167800454,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 60.58086167800454
+    },
+    {
+      "time": 60.58086167800454,
+      "when": 60.66215419501134,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 60.58086167800454
+    },
+    {
+      "time": 60.58086167800454,
+      "when": 60.6946711998759,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908
+    },
+    {
+      "time": 61.06267573696145,
+      "when": 61.06267573696145,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 61.06267573696145
+    },
+    {
+      "time": 61.06267573696145,
+      "when": 61.16215419501134,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 61.06267573696145
+    },
+    {
+      "time": 61.06267573696145,
+      "when": 61.20194557585954,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908
+    },
+    {
+      "time": 61.57061224489796,
+      "when": 61.57061224489796,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 61.57061224489796
+    },
+    {
+      "time": 61.57931972789115,
+      "when": 61.66215419501134,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908,
+      "stop": 61.58222222222222
+    },
+    {
+      "time": 61.58222222222222,
+      "when": 61.69412698222126,
+      "offset": 0,
+      "duration": 2.6238321995464853,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 908
+    },
+    {
+      "time": 64.26122448979592,
+      "when": 68.16215419501134,
+      "duration": 2,
+      "sampleRate": 44100,
+      "pitch": 1,
+      "hz": 439,
+      "stop": 65.1116553287982
+    }
+  ],
+  "errors": [],
+  "originalFinalAssertion": "Obsolete expectation: a 40-second buffer must start. Actual 1x backing now uses 2-second PCM buffers."
+}

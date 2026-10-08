@@ -1,5 +1,7 @@
 mergeInto(LibraryManager.library, {
   $CRStretchAudio: {base:0,source:0,rate:1,nodes:[],gain:null,lastEnd:0},
+  CRStretchAudioClock__deps: ['$WEBAudio'],
+  CRStretchAudioClock: function(){return WEBAudio.audioContext?WEBAudio.audioContext.currentTime:0;},
   CRStretchAudioStop__deps: ['$CRStretchAudio'],
   CRStretchAudioStop: function(){
     for(const item of CRStretchAudio.nodes){try{item.node.stop();}catch(_){}item.node.disconnect();}
@@ -7,9 +9,9 @@ mergeInto(LibraryManager.library, {
     if(CRStretchAudio.gain){CRStretchAudio.gain.disconnect();CRStretchAudio.gain=null;}
   },
   CRStretchAudioSchedule__deps: ['$CRStretchAudio','$WEBAudio'],
-  CRStretchAudioSchedule: function(ptr,frames,channels,sampleRate,outputOffset,delay,sourceSecond,rate,gain){
+  CRStretchAudioSchedule: function(ptr,frames,channels,sampleRate,outputOffset,startTime,sourceSecond,rate,gain){
     const ctx=WEBAudio.audioContext;if(!ctx)return 0;
-    if(outputOffset===0){CRStretchAudio.base=ctx.currentTime+delay;CRStretchAudio.source=sourceSecond;CRStretchAudio.rate=rate;
+    if(outputOffset===0){CRStretchAudio.base=startTime;CRStretchAudio.source=sourceSecond;CRStretchAudio.rate=rate;
       CRStretchAudio.gain=ctx.createGain();CRStretchAudio.gain.gain.value=gain;CRStretchAudio.gain.connect(ctx.destination);}
     const when=CRStretchAudio.base+outputOffset;if(when<ctx.currentTime+.005)return 0;
     const buffer=ctx.createBuffer(channels,frames,sampleRate),data=HEAPF32;

@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "rawUIRecord": "web-playback-recording.json",
+  "rawUIExit": "Failed only the obsolete whole-clip-event expectation after all playback and Config UI checks. No browser/audio rerun performed.",
+  "correction": "At 1x, backing audio is now streamed as unchanged 2-second PCM buffers. Validate actual scheduled buffers; do not require a 40-second playback node.",
+  "requiredCases": [
+    "quarter-speed",
+    "speed055",
+    "pro-same-speed",
+    "seek055",
+    "rate-change060",
+    "double-speed",
+    "original-speed",
+    "after-ui-stall",
+    "play-original-speed"
+  ],
+  "maxSourceChartDifferenceMs": 0.009024137813007371,
+  "syncErrorMs": {
+    "quarter-speed": 0.009024137813007371,
+    "speed055": 0.0062787235464156765,
+    "pro-same-speed": 0.006278723545527498,
+    "seek055": 0.005581135649634916,
+    "rate-change060": 0.0023553722812152955,
+    "double-speed": 0.009024137812119193,
+    "original-speed": 0.009024137813007371,
+    "after-ui-stall": 0.009024137813007371,
+    "play-original-speed": 0.0
+  },
+  "audiblePitchBuffers": 24,
+  "frequencyRangeHz": [
+    439,
+    442
+  ],
+  "maxContiguousBuffers": 5,
+  "originalUnityClockDifferenceSeconds": 1.2607482993197223,
+  "browserErrors": [],
+  "audioDeviceLatencyMeasured": false
+}

@@ -37,7 +37,7 @@ public sealed partial class RhythmAudio : MonoBehaviour {
     void OnDestroy(){StopStretch();ReleaseSongPCM();decodeCancellation?.Cancel();decodeCancellation?.Dispose();}
     double ChartSeconds(double beat)=>Project!=null?Project.SecondsAtBeat(beat):beat*60/BPM;
     double ChartBeat(double seconds)=>Project!=null?Project.BeatAtSeconds(seconds):seconds*BPM/60;
-    public double Beat => BeatAt(Math.Max(AudioSettings.dspTime,AnchorDSP));
+    public double Beat => BeatAt(Math.Max(Clock,AnchorDSP));
     public double BeatAt(double dsp)=>Running&&!Preparing?ChartBeat(ChartSeconds(AnchorBeat)+(dsp-AnchorDSP)*Rate):AnchorBeat;
     public double DSPAt(double beat)=>AnchorDSP+(ChartSeconds(beat)-ChartSeconds(AnchorBeat))/Rate;
     public static readonly string[] SampleKeys={"BD","SN","SN_RIM","SIDE","SN_BUZZ","HH","OHH","HH_PEDAL","HT","FT","TOM_RIM","RD","CUP","RIDE_CRASH","CR","SPLASH","CHINA"};
@@ -50,7 +50,17 @@ public sealed partial class RhythmAudio : MonoBehaviour {
     public void Stop(){Running=false;StopStretch();Backing.Stop();foreach(var s in voices)s.Stop();openHats.Clear();voiceStarts.Clear();StopHats();}
     public void Pause(){double b=Beat;Stop();AnchorBeat=b;}
     public void Seek(double beat){bool play=Running;Stop();AnchorBeat=beat;if(play)Play(beat);}
-    public void Play(double beat){Stop();PlaybackError="";Rate=Math.Max(.25,Math.Min(2,Rate));AnchorBeat=beat;AnchorDSP=AudioSettings.dspTime+.08;Running=true;if(Song!=null){double sec=Offset+ChartSeconds(beat);if(sec>=Song.length)return;if(Math.Abs(Rate-1)>1e-8){Preparing=true;stretchWork=StartCoroutine(StreamPitch(beat,Rate,playGeneration));return;}Backing.clip=Song;Backing.pitch=1;Backing.volume=BackingGain;double wait=Math.Max(0,-sec);Backing.timeSamples=(int)Math.Max(0,Math.Min(Song.samples-1,Math.Round(Math.Max(0,sec)*Song.frequency)));Backing.PlayScheduled(AnchorDSP+wait);}}
+    public void Play(double beat){
+        Stop();PlaybackError="";Rate=Math.Max(.25,Math.Min(2,Rate));AnchorBeat=beat;AnchorDSP=Clock+.08;Running=true;
+        if(Song==null)return;double sec=Offset+ChartSeconds(beat);if(sec>=Song.length)return;
+        bool streamed=Math.Abs(Rate-1)>1e-8;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        streamed=true;
+#endif
+        if(streamed){Preparing=true;stretchWork=StartCoroutine(StreamPitch(beat,Rate,playGeneration));return;}
+        Backing.clip=Song;Backing.pitch=1;Backing.volume=BackingGain;double wait=Math.Max(0,-sec);
+        Backing.timeSamples=(int)Math.Max(0,Math.Min(Song.samples-1,Math.Round(Math.Max(0,sec)*Song.frequency)));Backing.PlayScheduled(ToUnityDSP(AnchorDSP+wait));
+    }
     public void Preview(){Stop();Rate=1;Backing.pitch=1;if(Song==null)return;Backing.clip=Song;Backing.volume=BackingGain;Backing.timeSamples=(int)Math.Min(Song.samples-1,Math.Max(0,Offset)*Song.frequency);Backing.Play();}
     void Update(){if(Backing!=null)Backing.volume=BackingGain;UpdateStretch();}
     public void Load(ChartProject p){
@@ -155,9 +165,9 @@ public sealed partial class RhythmAudio : MonoBehaviour {
 #endif
     public void OnAudioError(string msg){try{var o=JObject.Parse(msg);if((int)o["generation"]==loadGeneration)OnReady?.Invoke((string)o["error"]);}catch{OnReady?.Invoke(msg);}}
     public static string KeyFor(ChartNote n,bool closed){switch(n.Instrument){case "BD":return "BD";case "HH":return closed?"HH":"OHH";case "CR":return n.Articulation=="splash"?"SPLASH":n.Articulation=="china"?"CHINA":"CR";case "RD":return n.Articulation=="cup"?"CUP":n.Articulation=="crash"?"RIDE_CRASH":"RD";case "SN":return n.Articulation=="rim_closed"?"SIDE":n.Articulation=="rim_open"?"SN_RIM":n.Articulation=="buzz"?"SN_BUZZ":"SN";case "HT":case "MT":return n.Articulation=="rimshot"?"TOM_RIM":"HT";case "FT":return n.Articulation=="rimshot"?"TOM_RIM":"FT";default:return "HH_PEDAL";}}
-    public void Choke(double when=-1){double close=when<0?AudioSettings.dspTime:when;
+    public void Choke(double when=-1){double close=when<0?Clock:when;
 #if UNITY_WEBGL && !UNITY_EDITOR
-        CRHatClose(Math.Max(0,close-AudioSettings.dspTime));
+        CRHatClose(Math.Max(0,close-Clock));
 #else
         foreach(var h in hatVoices){if(h.Close(close))h.Source.SetScheduledEndTime(close+HiHatClosure.Stop);}
 #endif
@@ -169,9 +179,9 @@ public sealed partial class RhythmAudio : MonoBehaviour {
         foreach(var h in hatVoices){h.Source.Stop();h.Clear();}
 #endif
     }
-    void PlayHat(AudioClip clip,float level,float pitch,double when){double start=when<0?AudioSettings.dspTime:Math.Max(AudioSettings.dspTime,when);
+    void PlayHat(AudioClip clip,float level,float pitch,double when){double start=when<0?Clock:Math.Max(Clock,when);
 #if UNITY_WEBGL && !UNITY_EDITOR
-        CRHatPlay(level*(gainScales.TryGetValue("OHH",out var g)?g:1),pitch,Math.Max(0,start-AudioSettings.dspTime));
+        CRHatPlay(level*(gainScales.TryGetValue("OHH",out var g)?g:1),pitch,Math.Max(0,start-Clock));
 #else
         var h=hatVoices[hatVoice++%hatVoices.Count];h.Source.Stop();h.Prepare(start);h.Source.clip=clip;h.Source.pitch=pitch;h.Source.volume=level;h.Source.PlayScheduled(start);
 #endif
@@ -183,7 +193,7 @@ public sealed partial class RhythmAudio : MonoBehaviour {
     [DllImport("__Internal")]static extern void CRHatStop();
     [DllImport("__Internal")]static extern void CRHatCancelFuture();
 #endif
-    public void CancelFutureDrums(){foreach(var pair in voiceStarts)if(pair.Value>AudioSettings.dspTime)pair.Key.Stop();
+    public void CancelFutureDrums(){foreach(var pair in voiceStarts)if(pair.Value>Clock)pair.Key.Stop();
 #if UNITY_WEBGL && !UNITY_EDITOR
         CRHatCancelFuture();
 #else
@@ -225,10 +235,10 @@ public sealed partial class RhythmAudio : MonoBehaviour {
         if(key=="HH"||key=="HH_PEDAL")Choke(when);
         if(key=="OHH"){PlayHat(clip,level,pitch,when);return;}
         var s=voices[voice++%voices.Count];openHats.Remove(s);s.Stop();s.clip=clip;s.pitch=pitch;s.volume=level;s.loop=duration>0;
-        double start=when<0?AudioSettings.dspTime:Math.Max(AudioSettings.dspTime,when);
+        double start=when<0?Clock:Math.Max(Clock,when);
         voiceStarts[s]=start;
-        if(when<0)s.Play();else s.PlayScheduled(start);
-        if(duration>0)s.SetScheduledEndTime(start+duration);
+        if(when<0)s.Play();else s.PlayScheduled(ToUnityDSP(start));
+        if(duration>0)s.SetScheduledEndTime(ToUnityDSP(start+duration));
         if(key=="OHH")openHats.Add(s);
     }
 }

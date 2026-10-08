@@ -1,10 +1,8 @@
-Cross Rhythm 0.3.19 Windows development / Unity 6000.3.25f1
-WINDOWS ONLY release. Public Web remains 0.3.18.
-Practice preserves pitch from 0.25 to 2.00 using Signalsmith Stretch.
-Scheduled source/beat synchronization, bounded output, seek/rate changes, uninterrupted Normal/Pro switch.
-Native algorithm tests at seven rates; 28 editor pitch assertions and Windows application regressions.
-Original crossed-drumsticks icon and A-button-position labels for controller presets.
-Web source is work in progress: speed-adjusted playback verified in isolated browser,
-whole-clip loading correction still needs a fresh Web build and full audio regression.
-No Web binary published with this release. No private song files or audio bundled.
-Production root and WordPress unchanged.
+Cross Rhythm 0.3.19 development / Unity 6000.3.25f1
+Windows: unchanged verified package from 56e480ce; 177 runtime assertions.
+Web: native browser audio clock used for backing, chart and input timing at all rates.
+Unity scheduled drums converted to its own clock at the playback boundary.
+Whole-clip source upload repaired; unchanged PCM streaming at 1x.
+Actual UI capture verified for rate changes, seek, count-in, pause, mode switch, Play and a UI stall.
+See web-verification.json for the corrected final capture-validation condition.
+No private songs bundled. Production root and WordPress draft unchanged.
