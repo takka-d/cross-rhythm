@@ -43,7 +43,7 @@ public partial class CrossRhythmApp {
         }
         Text(new Rect(36,top+rulerHeight+10,166,25),"Wave",13,muted);Text(new Rect(36,top+2,166,24),"Bar",13,muted);
         var wheel=Event.current;
-        if(!showMeterPanel&&!editorFileOpen&&!draftRunning&&!Editor.ContextOpen&&viewport.Contains(wheel.mousePosition)&&wheel.type==EventType.ScrollWheel){
+        if(GUI.enabled&&!MidiPromptOpen&&!showMeterPanel&&!editorFileOpen&&!draftRunning&&!Editor.ContextOpen&&viewport.Contains(wheel.mousePosition)&&wheel.type==EventType.ScrollWheel){
             // v175: Shift+wheel or a horizontal trackpad gesture pans the timeline.
             float delta=Math.Abs(wheel.delta.x)>Math.Abs(wheel.delta.y)*.55f?wheel.delta.x:wheel.shift?wheel.delta.y:0;
             if(delta!=0)editScroll.x=Mathf.Clamp(editScroll.x+delta*48,0,Math.Max(0,totalWidth-viewport.width+16));else if(wheel.delta.y!=0)EditorSeek(EditorInteraction.WheelBeat(Math.Max(0,Audio.Beat),wheel.delta.y,Project.Grid,Project.Length));wheel.Use();

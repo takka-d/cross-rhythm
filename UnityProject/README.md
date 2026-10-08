@@ -1,4 +1,4 @@
-# Cross Rhythm 0.3.17 development
+# Cross Rhythm 0.3.18 development
 
 Unity 6000.3.25f1. Windows and WebGL use the same Assets/Scripts source.
 Run `./Build.ps1 -Target Both` from PowerShell with the licensed Unity Editor
@@ -7,7 +7,7 @@ Tests run before BuildPipeline.BuildPlayer. No license activation workaround,
 DLL swap or player version-byte replacement is part of this build.
 
 The production root remains 0.3.12. Verified development builds are published
-under `/dev/0.3.17/`. The WordPress article remains a draft.
+under `/dev/0.3.18/`. The WordPress article remains a draft.
 
 Changes: common folder row in Songs/Config; Songs > Edit opens an independent
 editable copy; File in Edit header; Back in Play/Practice; Practice speed
@@ -50,3 +50,12 @@ initial tempo; charts without tempoChanges retain constant-tempo behavior.
 All playback, hit judgment, waveform, duration/difficulty and audio analysis
 use the same integrated beat/second map. Save/reload and Undo/Redo retain it.
 Practice pitch preservation remains a separate pending task.
+
+0.3.18: Drop one .mid/.midi file (up to 32 MB) onto Edit in Windows or Web.
+The existing Import MIDI command uses the same overlap review.
+Same instrument and exact MIDI tick positions are reviewed per instrument:
+prefer a Type, choose stronger/softer hits, or keep all. Different ticks and
+different instruments are preserved, without quantization. Hi-hat pedal
+ranges are derived after the choices, so open/closed state stays consistent.
+Cancel preserves the chart; Import is one Undo step. Additional drops and
+background edits are blocked while reviewing or loading.

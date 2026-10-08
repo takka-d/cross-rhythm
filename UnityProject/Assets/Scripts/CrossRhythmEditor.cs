@@ -16,12 +16,8 @@ public partial class CrossRhythmApp {
     int editMeasure;
     string meterNumerator="4",meterDenominator="4";
     MidiImport.ZeroMode midiZeroMode;
-    void ImportMidi(byte[] bytes,string name){
-        try{var imported=MidiImport.Read(bytes,Project,name,midiZeroMode);Audio.Pause();PushUndo();Project.Chart=imported.Chart;Project.Manifest["title"]=Project.Title;Edited();Editor.Reset();editScroll=Vector2.zero;editMeasure=0;ResetEditorFields();Audio.AnchorBeat=0;
-            status=T("MIDI読込: ","MIDI imported: ")+imported.Hits+" notes · V0 +"+imported.ZeroKept+" / −"+imported.ZeroDropped+(imported.TempoChanges>0?T(" / テンポ変更: "," / Tempo changes: ")+imported.TempoChanges:"");
-        }catch(Exception e){status=T("MIDI読込エラー: ","MIDI import error: ")+e.Message;}
-    }
     void PickMidi(){
+        if(!CanImportMidi)return;
 #if UNITY_WEBGL && !UNITY_EDITOR
         PlatformFiles.CRPickMidi(gameObject.name);
 #else

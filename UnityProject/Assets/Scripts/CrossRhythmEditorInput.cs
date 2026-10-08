@@ -24,13 +24,13 @@ public partial class CrossRhythmApp {
     void SyncEditorNote(){var n=Project.Notes.FirstOrDefault(v=>v.Index==Editor.Active);if(n==null)return;instrument=Array.IndexOf(Instruments,n.Instrument);kind=Math.Max(0,Array.IndexOf(Types[instrument],n.Articulation));duration=n.Duration;durationField=duration.ToString("0.########",System.Globalization.CultureInfo.InvariantCulture);}
     void EditorPlayback(){if(Audio.Running)Audio.Pause();else if(loaded&&!busy){ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}
     public void OnEditorShortcut(string command){
-        if(Current!=Page.Edit||showMeterPanel||discardPrompt||draftRunning||editorFileOpen||(editTextFocused&&command!="Save"&&command!="SaveAs"))return;
+        if(Current!=Page.Edit||showMeterPanel||discardPrompt||MidiPromptOpen||draftRunning||editorFileOpen||(editTextFocused&&command!="Save"&&command!="SaveAs"))return;
         Editor.ContextOpen=false;
         switch(command){case "SelectAll":Editor.SelectAll();break;case "Copy":Copy();break;case "Paste":Paste();break;case "Undo":Restore(false);break;case "Redo":Restore(true);break;case "Save":Save(false);break;case "SaveAs":Save(true);break;case "Open":PickProject(false,true);break;}
         SyncEditorNote();
     }
     void EditorKeys(){
-        var ev=Event.current;if(ev.type!=EventType.KeyDown||showMeterPanel||discardPrompt||draftRunning||editorFileOpen)return;
+        var ev=Event.current;if(ev.type!=EventType.KeyDown||showMeterPanel||discardPrompt||MidiPromptOpen||draftRunning||editorFileOpen)return;
         bool mod=ev.control||ev.command,text=GUI.GetNameOfFocusedControl().StartsWith("edit-");
         if(mod&&ev.keyCode==KeyCode.S){Save(ev.shift);ev.Use();return;}
         if(text)return;
@@ -40,7 +40,7 @@ public partial class CrossRhythmApp {
     }
     void EditorPointerInput(Rect viewport,float notesTop){
         editorViewport=viewport;editorNotesTop=notesTop;var ev=Event.current;
-        bool can=!showMeterPanel&&!discardPrompt&&!editorFileOpen&&!draftRunning;int id=GUIUtility.GetControlID(73517,FocusType.Passive);
+        bool can=GUI.enabled&&!MidiPromptOpen&&!showMeterPanel&&!discardPrompt&&!editorFileOpen&&!draftRunning;int id=GUIUtility.GetControlID(73517,FocusType.Passive);
         Vector2 screen=ev.mousePosition;if(ev.isMouse)editorPointer=screen;
         Vector2 Local(Vector2 p)=>new Vector2(Mathf.Clamp(p.x-viewport.x,0,viewport.width-17)+editScroll.x,p.y-viewport.y-notesTop);
         bool inside=new Rect(viewport.x,viewport.y,viewport.width-16,viewport.height-18).Contains(screen);
@@ -56,7 +56,7 @@ public partial class CrossRhythmApp {
         if(inside&&ev.type==EventType.ContextClick)ev.Use();
     }
     void EditorFrame(){
-        if(Current!=Page.Edit||Project==null||editorViewport.width<=0){lastEditorFrame=Time.realtimeSinceStartupAsDouble;return;}
+        if(Current!=Page.Edit||MidiPromptOpen||Project==null||editorViewport.width<=0){lastEditorFrame=Time.realtimeSinceStartupAsDouble;return;}
         double now=Time.realtimeSinceStartupAsDouble,dt=Math.Min(.05,Math.Max(0,now-lastEditorFrame));lastEditorFrame=now;
         double ppb=EditorPPB*zoom,span=(editorViewport.width-16)/ppb;
         if(Editor.Capturing){

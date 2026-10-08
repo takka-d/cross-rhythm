@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 namespace CrossRhythm {
-public static class MidiImport {
+public static partial class MidiImport {
     public enum ZeroMode { Auto, NoteOff, Mute }
     sealed class Reader {
         public byte[] Bytes;public int At,End;
@@ -17,7 +17,7 @@ public static class MidiImport {
     }
     sealed class Note {public int Track,Channel,Pitch,Velocity;public long Tick;public string Instrument,Type,Hat;public double Beat,Step;}
     sealed class Meter {public long Tick;public int N,D;}
-    public sealed class Result {public JObject Chart;public int Hits,ZeroKept,ZeroDropped,TempoChanges;}
+    public sealed class Result {public JObject Chart;public int Hits,ZeroKept,ZeroDropped,TempoChanges,OverlapsRemoved;public Overlap[] Overlaps=Array.Empty<Overlap>();}
     public static int Strength(int v)=>v<=12?0:v<=37?1:v<=62?2:v<=87?3:v<=113?4:5;
     static void Map(Note n){switch(n.Pitch){
         case 35:case 36:n.Instrument="BD";break;
@@ -36,7 +36,7 @@ public static class MidiImport {
         case 47:case 45:n.Instrument="MT";n.Type="normal";break;
         case 43:case 41:n.Instrument="FT";n.Type="normal";break;
     }}
-    public static Result Read(byte[] bytes,ChartProject source,string name,ZeroMode zeroMode){
+    public static Result Read(byte[] bytes,ChartProject source,string name,ZeroMode zeroMode,IReadOnlyDictionary<string,OverlapChoice> choices=null){
         if(bytes.Length>32*1024*1024)throw new InvalidDataException("MIDI exceeds 32 MB");
         var r=new Reader(bytes);r.Chunk("MThd");int header=r.Number(4);if(header<6)throw new InvalidDataException("Invalid MIDI header");
         int format=r.Number(2),tracks=r.Number(2),ppq=r.Number(2);r.Skip(header-6);
@@ -64,7 +64,8 @@ public static class MidiImport {
         foreach(var n in notes){bool keep=n.Velocity>0||zeroMode==ZeroMode.Mute||(zeroMode==ZeroMode.Auto&&off80.Contains(n.Track));if(n.Velocity==0){if(keep)result.ZeroKept++;else result.ZeroDropped++;}if(keep&&n.Instrument!=null)resolved.Add(n);}
         if(resolved.Count==0)throw new InvalidDataException("No drum notes found in MIDI");
         int channel=resolved.Any(n=>n.Channel==9)?9:resolved.GroupBy(n=>n.Channel).OrderByDescending(g=>g.Count()).First().Key;
-        var hits=resolved.Where(n=>n.Channel==channel).OrderBy(n=>n.Beat).ThenBy(n=>n.Pitch).ToArray();
+        var hits=resolved.Where(n=>n.Channel==channel).OrderBy(n=>n.Tick).ThenBy(n=>n.Pitch).ToArray();
+        result.Overlaps=FindOverlaps(hits);hits=ResolveOverlaps(hits,choices,out result.OverlapsRemoved);
         var orderedTempos=tempos.GroupBy(t=>t.Item1).Select(g=>g.Last()).OrderBy(t=>t.Item1).ToArray();double bpm=orderedTempos.FirstOrDefault(t=>t.Item1==0)?.Item2??120;
         if(orderedTempos.Any(t=>!TempoMap.ValidBPM(t.Item2)))throw new InvalidDataException("BPM must be 20-600");
         result.TempoChanges=orderedTempos.Count(t=>t.Item1>0);

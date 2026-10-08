@@ -26,6 +26,7 @@ public partial class CrossRhythmApp {
         QueueEditorRecovery();PersistEditorSession();UpdateUnsavedBrowserGuard();
     }
     bool ConfirmApplicationQuit(){
+        if(MidiPromptOpen)CancelMidi();
         if(allowApplicationQuit||editorProject==null||!editorProject.Dirty)return true;
         if(Current!=Page.Edit)NavigateNow(Page.Edit);
         AskBeforeLeaving(()=>{allowApplicationQuit=true;Application.Quit();});return false;

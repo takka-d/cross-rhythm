@@ -19,6 +19,7 @@ public static class PlatformFiles {
     [DllImport("__Internal")]public static extern void CRCache(byte[] data,int length,string name,string token);
     [DllImport("__Internal")]public static extern void CRPickAudio(string target);
     [DllImport("__Internal")]public static extern void CRPickMidi(string target);
+    [DllImport("__Internal")]public static extern void CRMidiDropState(string target,int enabled,int english);
 #else
     [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]class OpenFileName {
         public int size=Marshal.SizeOf(typeof(OpenFileName)); public IntPtr owner,instance;

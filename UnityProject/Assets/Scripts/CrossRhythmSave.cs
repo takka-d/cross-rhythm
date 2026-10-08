@@ -10,7 +10,7 @@ public partial class CrossRhythmApp {
     string saveDetail="",saveTime="";
     void SetSaveState(SaveState state,string detail=""){saveState=state;saveStatusProject=savingProject??Project;saveDetail=detail;saveTime=DateTime.Now.ToString("HH:mm:ss");}
     void ClearSave(){savingProject=null;savingBytes=null;savingSnapshot=null;}
-    public void OnSaveButton(string mode){if(mode=="Continue"&&discardPrompt){SaveBeforeLeaving();return;}if(Current!=Page.Edit||showMeterPanel||Editor.ContextOpen||discardPrompt)return;Save(mode=="SaveAs");}
+    public void OnSaveButton(string mode){if(MidiPromptOpen)return;if(mode=="Continue"&&discardPrompt){SaveBeforeLeaving();return;}if(Current!=Page.Edit||showMeterPanel||Editor.ContextOpen||discardPrompt)return;Save(mode=="SaveAs");}
     void SaveButton(Rect r,bool saveAs){
         string caption=saveAs?"Save As":"Save";bool enabled=GUI.enabled&&savingProject==null&&!busy;
 #if UNITY_WEBGL && !UNITY_EDITOR

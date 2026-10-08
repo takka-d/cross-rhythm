@@ -118,6 +118,9 @@ mergeInto(LibraryManager.library, {
   CRPick: function(targetPtr,folder) {
     window.CRFiles.pick(UTF8ToString(targetPtr),folder);
   },
+  CRMidiDropState: function(targetPtr,enabled,english) {
+    if(window.CrossRhythmMidiDrop)window.CrossRhythmMidiDrop.set(UTF8ToString(targetPtr),!!enabled,!!english);
+  },
   CRPickMidi: function(targetPtr) {window.CRFiles.fallback(UTF8ToString(targetPtr),'midi',false);},
   CRRestore: function(targetPtr) {
     const target=UTF8ToString(targetPtr);window.CRFiles.restore(target).catch(e=>SendMessage(target,'OnFileError',e.message));

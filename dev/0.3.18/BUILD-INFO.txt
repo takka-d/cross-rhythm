@@ -1,0 +1,8 @@
+Cross Rhythm 0.3.18 development / Unity 6000.3.25f1
+Windows x64 and WebGL built from shared source with BuildPipeline.BuildPlayer.
+MIDI file drop on Edit and per-instrument overlap review.
+Preferred Type, stronger/softer selection, keep all, Cancel and single-step Undo.
+Exact MIDI ticks, tempo changes, tuplets and hi-hat state preserved.
+20 MIDI overlap assertions, 16 Web drop handler checks, Windows app workflow checks.
+Existing core, editor, tuplet, tempo and audio regressions retained.
+No private song files or audio bundled. Production root remains 0.3.12.
