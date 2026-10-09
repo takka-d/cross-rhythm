@@ -6,7 +6,7 @@ public partial class CrossRhythmApp {
     int loadingPaints;
     bool transitioning,nativeProjectLoading,webPickerOpen;
     string transitionLabel="",loadingFile="";
-    bool InputBlocked=>savingProject!=null||transitioning||nativeProjectLoading||nativePickerOpen||webPickerOpen||importBatch||incoming!=null||pendingPerformance!=null||(Current==Page.Edit&&busy);
+    bool InputBlocked=>exportingMidi||savingProject!=null||transitioning||nativeProjectLoading||nativePickerOpen||webPickerOpen||importBatch||incoming!=null||pendingPerformance!=null||(Current==Page.Edit&&busy);
 
     public void OnPickerState(string state){webPickerOpen=state=="open";if(webPickerOpen)PrepareExclusiveOperation();}
     void PrepareExclusiveOperation(){
@@ -40,7 +40,7 @@ public partial class CrossRhythmApp {
         Text(new Rect(box.x,box.y-56,620,36),"CROSS RHYTHM",23,mint,true);
         RectFill(box,panel);Border(box,line);
         bool save=savingProject!=null;
-        string heading=save?T("保存中…","Saving…"):nativePickerOpen?T("フォルダーを選択してください","Choose a folder"):T("読み込み中…","Loading…");
+        string heading=exportingMidi?T("MIDIを書き出し中…","Exporting MIDI…"):save?T("保存中…","Saving…"):nativePickerOpen?T("フォルダーを選択してください","Choose a folder"):T("読み込み中…","Loading…");
         Text(new Rect(box.x+28,box.y+25,564,38),heading,30,Color.white,true);
         string detail=save?savingProject.FileName:transitioning?transitionLabel:incoming!=null?incomingName:importBatch?T("プロジェクトフォルダー","Project folder")+" · "+importedCount:!string.IsNullOrEmpty(loadingFile)?loadingFile:Project.FileName;
         FittedText(new Rect(box.x+28,box.y+78,564,30),detail,18,mint);

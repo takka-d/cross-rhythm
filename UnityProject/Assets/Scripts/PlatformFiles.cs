@@ -20,6 +20,7 @@ public static class PlatformFiles {
     [DllImport("__Internal")]public static extern void CRCache(byte[] data,int length,string name,string token);
     [DllImport("__Internal")]public static extern void CRPickAudio(string target);
     [DllImport("__Internal")]public static extern void CRPickMidi(string target);
+    [DllImport("__Internal")]public static extern void CRExportMidi(byte[] data,int length,string name,string target);
     [DllImport("__Internal")]public static extern void CRMidiDropState(string target,int enabled,int english);
 #else
     [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]class OpenFileName {
@@ -33,7 +34,7 @@ public static class PlatformFiles {
     public static string Pick(bool save,string name="",bool audio=false,bool midi=false){
         var o=new OpenFileName{maxFile=32768,file=Marshal.AllocHGlobal(65536),title=audio?"Audio":"Cross Rhythm",flags=0x00080000|0x00000008|(save?0x2:0x1000)};
         if(audio){o.filter="Audio\0*.wav;*.mp3;*.m4a;*.ogg;*.flac;*.aac\0All files\0*.*\0";o.defExt="wav";}
-        if(midi){o.filter="MIDI\0*.mid;*.midi\0All files\0*.*\0";o.defExt="mid";o.title="Import MIDI";}
+        if(midi){o.filter="MIDI\0*.mid;*.midi\0All files\0*.*\0";o.defExt="mid";o.title=save?"Export MIDI":"Import MIDI";}
         try{for(int i=0;i<65536;i++)Marshal.WriteByte(o.file,i,0);var chars=(name+"\0").ToCharArray();Marshal.Copy(chars,0,o.file,chars.Length);bool ok=save?GetSaveFileName(o):GetOpenFileName(o);return ok?Marshal.PtrToStringUni(o.file):null;}finally{Marshal.FreeHGlobal(o.file);}
     }
 #endif

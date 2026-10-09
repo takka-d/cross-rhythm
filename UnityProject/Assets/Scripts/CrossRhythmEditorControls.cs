@@ -6,7 +6,7 @@ public partial class CrossRhythmApp {
     int editorPanel;
     const float EditorTop=202;
     bool editorFileOpen;
-    static readonly Rect EditorFileButtonRect=new Rect(110,86,90,38),EditorFileMenuRect=new Rect(110,132,280,222);
+    static readonly Rect EditorFileButtonRect=new Rect(110,86,90,38),EditorFileMenuRect=new Rect(110,132,280,264);
     void DismissEditorFileMenu(){
         if(Current!=Page.Edit||!editorFileOpen)return;
         var ev=Event.current;
@@ -47,7 +47,8 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(menuX+12,menuY+54,256,34),"New Project",false,true,15)){editorFileOpen=false;NewProject();}
         if(Button(new Rect(menuX+12,menuY+96,256,34),"Audio",false,true,15))PickAudio();
         if(Button(new Rect(menuX+12,menuY+138,256,34),"Import MIDI",false,true,15)){editorFileOpen=false;PickMidi();}
-        if(Button(new Rect(menuX+12,menuY+180,256,34),"Auto Draft",false,true,15)){editorPanel=2;editorFileOpen=false;}
+        MidiExportButton(new Rect(menuX+12,menuY+180,256,34));
+        if(Button(new Rect(menuX+12,menuY+222,256,34),"Auto Draft",false,true,15)){editorPanel=2;editorFileOpen=false;}
     }
     void EditorInspector(){
         float top=EditorBottom,x=40,y=top+55,cw=(W-104)/3;

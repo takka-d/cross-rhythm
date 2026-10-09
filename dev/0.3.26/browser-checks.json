@@ -1,0 +1,16 @@
+{
+  "version": "0.3.26",
+  "tambourinePlacementUndoRedo": true,
+  "editorTBLabel": true,
+  "midiExportButton": true,
+  "pickerCalledWithUserActivation": true,
+  "savePickerResponse": "substituted with real origin-private file handle",
+  "actualMidiFileWriteAndReadback": true,
+  "independentBrowserMidiRead": "Mido: one channel-10 Tambourine note, velocity 100",
+  "exportPreservesUnsavedProject": true,
+  "exportCancellationSimulatedAndRecovered": true,
+  "exportPendingWriteBlocksNavigation": true,
+  "consoleErrors": 0,
+  "nativeFileDialogVerified": false,
+  "subjectiveListeningVerified": false
+}

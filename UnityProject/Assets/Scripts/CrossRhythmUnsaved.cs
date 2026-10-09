@@ -26,7 +26,7 @@ public partial class CrossRhythmApp {
         QueueEditorRecovery();PersistEditorSession();UpdateUnsavedBrowserGuard();
     }
     bool ConfirmApplicationQuit(){
-        if(savingProject!=null)return false;
+        if(savingProject!=null||exportingMidi)return false;
         if(MidiPromptOpen)CancelMidi();
         if(allowApplicationQuit||editorProject==null||!editorProject.Dirty)return true;
         if(Current!=Page.Edit)NavigateNow(Page.Edit);
@@ -34,7 +34,7 @@ public partial class CrossRhythmApp {
     }
     void UpdateUnsavedBrowserGuard(){
 #if UNITY_WEBGL && !UNITY_EDITOR
-        int dirty=savingProject!=null||(editorProject!=null&&editorProject.Dirty)?1:0;
+        int dirty=exportingMidi||savingProject!=null||(editorProject!=null&&editorProject.Dirty)?1:0;
         if(dirty!=browserDirty){browserDirty=dirty;PlatformFiles.CRUnsaved(dirty);}
 #endif
     }

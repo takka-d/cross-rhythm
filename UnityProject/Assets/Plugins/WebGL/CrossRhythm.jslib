@@ -1,4 +1,20 @@
 mergeInto(LibraryManager.library, {
+  CRExportMidi: function(pointer,length,namePtr,targetPtr){
+    const bytes=HEAPU8.slice(pointer,pointer+length),name=UTF8ToString(namePtr),target=UTF8ToString(targetPtr);
+    const done=value=>SendMessage(target,'OnMidiExported',JSON.stringify(value));
+    if(typeof window.showSaveFilePicker!=='function'){
+      try{const url=URL.createObjectURL(new Blob([bytes],{type:'audio/midi'})),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);done({download:true,name});}catch(e){done({error:e.message});}return;
+    }
+    let choice;try{choice=window.showSaveFilePicker({suggestedName:name,types:[{description:'MIDI',accept:{'audio/midi':['.mid','.midi']}}],excludeAcceptAllOption:true});}catch(e){done({error:e.name==='AbortError'?'Cancelled':e.message});return;}
+    (async()=>{let stream;try{
+      const handle=await choice;
+      if(!/\.midi?$/i.test(handle.name))throw Error('Choose a .mid file');
+      stream=await handle.createWritable();await stream.write(bytes);await stream.close();stream=null;
+      const saved=new Uint8Array(await (await handle.getFile()).arrayBuffer());
+      if(saved.length!==bytes.length||saved.some((v,i)=>v!==bytes[i]))throw Error('MIDI write verification failed');
+      done({saved:true,name:handle.name});
+    }catch(e){if(stream)try{await stream.abort();}catch(_){}done({error:e.name==='AbortError'?'Cancelled':e.message});}})();
+  },
   CRKeyboardFileMode: function(mode){if(window.CrossRhythmPicker)window.CrossRhythmPicker.keyboardMode=mode;},
   CRProjectButtonsBegin: function(){if(window.CrossRhythmPicker)window.CrossRhythmPicker.begin();},
   CRProjectButtonsEnd: function(){if(window.CrossRhythmPicker)window.CrossRhythmPicker.end();},

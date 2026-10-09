@@ -40,8 +40,8 @@ public sealed partial class RhythmAudio : MonoBehaviour {
     public double Beat => BeatAt(Math.Max(Clock,AnchorDSP));
     public double BeatAt(double dsp)=>Running&&!Preparing?ChartBeat(ChartSeconds(AnchorBeat)+(dsp-AnchorDSP)*Rate):AnchorBeat;
     public double DSPAt(double beat)=>AnchorDSP+(ChartSeconds(beat)-ChartSeconds(AnchorBeat))/Rate;
-    public static readonly string[] SampleKeys={"BD","SN","SN_RIM","SIDE","SN_BUZZ","HH","OHH","HH_PEDAL","HT","FT","TOM_RIM","RD","CUP","RIDE_CRASH","CR","SPLASH","CHINA"};
-    static readonly float[] SampleGains={.78f,1.141123f,1.172821f,1.109425f,1.077727f,.54f,.57f,.58f,.70f,.72f,.74f,.50f,.54f,.168936f,1.505649f,.56f,.56f};
+    public static readonly string[] SampleKeys={"BD","SN","SN_RIM","SIDE","SN_BUZZ","HH","OHH","HH_PEDAL","HT","FT","TOM_RIM","RD","CUP","RIDE_CRASH","CR","SPLASH","CHINA","TAMBOURINE"};
+    static readonly float[] SampleGains={.78f,1.141123f,1.172821f,1.109425f,1.077727f,.54f,.57f,.58f,.70f,.72f,.74f,.50f,.54f,.168936f,1.505649f,.56f,.56f,.48f};
     void Awake(){Backing=gameObject.AddComponent<AudioSource>();Backing.playOnAwake=false;Backing.priority=0;for(int i=0;i<128;i++){var s=gameObject.AddComponent<AudioSource>();s.playOnAwake=false;voices.Add(s);}foreach(string k in SampleKeys)clips[k]=Resources.Load<AudioClip>("Drums/"+k);
 #if !UNITY_WEBGL || UNITY_EDITOR
         for(int i=0;i<32;i++){var go=new GameObject("OpenHat"+i);go.transform.SetParent(transform);var envelope=go.AddComponent<HiHatEnvelope>();envelope.Source=go.AddComponent<AudioSource>();envelope.Source.playOnAwake=false;envelope.Clear();hatVoices.Add(envelope);}
@@ -164,7 +164,7 @@ public sealed partial class RhythmAudio : MonoBehaviour {
     }
 #endif
     public void OnAudioError(string msg){try{var o=JObject.Parse(msg);if((int)o["generation"]==loadGeneration)OnReady?.Invoke((string)o["error"]);}catch{OnReady?.Invoke(msg);}}
-    public static string KeyFor(ChartNote n,bool closed){switch(n.Instrument){case "BD":return "BD";case "HH":return closed?"HH":"OHH";case "CR":return n.Articulation=="splash"?"SPLASH":n.Articulation=="china"?"CHINA":"CR";case "RD":return n.Articulation=="cup"?"CUP":n.Articulation=="crash"?"RIDE_CRASH":"RD";case "SN":return n.Articulation=="rim_closed"?"SIDE":n.Articulation=="rim_open"?"SN_RIM":n.Articulation=="buzz"?"SN_BUZZ":"SN";case "HT":case "MT":return n.Articulation=="rimshot"?"TOM_RIM":"HT";case "FT":return n.Articulation=="rimshot"?"TOM_RIM":"FT";default:return "HH_PEDAL";}}
+    public static string KeyFor(ChartNote n,bool closed){switch(n.Instrument){case "BD":return "BD";case "HH":return n.Articulation=="tambourine"?"TAMBOURINE":closed?"HH":"OHH";case "CR":return n.Articulation=="splash"?"SPLASH":n.Articulation=="china"?"CHINA":"CR";case "RD":return n.Articulation=="cup"?"CUP":n.Articulation=="crash"?"RIDE_CRASH":"RD";case "SN":return n.Articulation=="rim_closed"?"SIDE":n.Articulation=="rim_open"?"SN_RIM":n.Articulation=="buzz"?"SN_BUZZ":"SN";case "HT":case "MT":return n.Articulation=="rimshot"?"TOM_RIM":"HT";case "FT":return n.Articulation=="rimshot"?"TOM_RIM":"FT";default:return "HH_PEDAL";}}
     public void Choke(double when=-1){double close=when<0?Clock:when;
 #if UNITY_WEBGL && !UNITY_EDITOR
         CRHatClose(Math.Max(0,close-Clock));

@@ -4,12 +4,12 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/windows-download.yml'
-      - 'dev/0.3.25/windows/RELEASE-NOTES.md'
+      - 'dev/0.3.26/windows/RELEASE-NOTES.md'
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: windows-download-0.3.25
+  group: windows-download-0.3.26
   cancel-in-progress: false
 jobs:
   release:
@@ -17,24 +17,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: dev/0.3.25/windows
+          sparse-checkout: dev/0.3.26/windows
           persist-credentials: false
       - name: Assemble and verify tested Windows package
-        working-directory: dev/0.3.25/windows
+        working-directory: dev/0.3.26/windows
         run: |
-          cat CrossRhythm_Windows_0.3.25.zip.part1 CrossRhythm_Windows_0.3.25.zip.part2 > CrossRhythm_Windows_0.3.25.zip
+          cat CrossRhythm_Windows_0.3.26.zip.part1 CrossRhythm_Windows_0.3.26.zip.part2 > CrossRhythm_Windows_0.3.26.zip
           sha256sum --check SHA256SUMS.txt
-          unzip -tq CrossRhythm_Windows_0.3.25.zip
+          unzip -tq CrossRhythm_Windows_0.3.26.zip
       - name: Publish direct ZIP download
-        working-directory: dev/0.3.25/windows
+        working-directory: dev/0.3.26/windows
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view v0.3.25 --json tagName >/dev/null 2>&1; then
-            digest="$(gh api "repos/$GH_REPO/releases/tags/v0.3.25" --jq '.assets[] | select(.name=="CrossRhythm_Windows_0.3.25.zip") | .digest')"
-            test "$digest" = 'sha256:3a2846cdda0fff9ea72ffdf8a1a933391c1c0d42682f8c17cdab9ba346a8b719'
-            gh release edit v0.3.25 --notes-file RELEASE-NOTES.md
+          if gh release view v0.3.26 --json tagName >/dev/null 2>&1; then
+            digest="$(gh api "repos/$GH_REPO/releases/tags/v0.3.26" --jq '.assets[] | select(.name=="CrossRhythm_Windows_0.3.26.zip") | .digest')"
+            test "$digest" = 'sha256:3b07b128ea2d4311a584882622fc9de142596bda6dda17e4c4315d5f7fe0491a'
+            gh release edit v0.3.26 --notes-file RELEASE-NOTES.md
           else
-            gh release create v0.3.25 CrossRhythm_Windows_0.3.25.zip SHA256SUMS.txt --target "$GITHUB_SHA" --title 'Cross Rhythm 0.3.25 · Windows development' --prerelease --latest=false --notes-file RELEASE-NOTES.md
+            gh release create v0.3.26 CrossRhythm_Windows_0.3.26.zip SHA256SUMS.txt --target "$GITHUB_SHA" --title 'Cross Rhythm 0.3.26 · Windows development' --prerelease --latest=false --notes-file RELEASE-NOTES.md
           fi

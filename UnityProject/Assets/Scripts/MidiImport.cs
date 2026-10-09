@@ -27,6 +27,7 @@ public static partial class MidiImport {
         case 42:n.Instrument="HH";n.Hat="closed";break;
         case 44:n.Instrument="HHSTATE";n.Hat="pedal";break;
         case 46:n.Instrument="HH";n.Hat="open";break;
+        case 54:n.Instrument="HH";n.Type="tambourine";break;
         case 49:case 57:n.Instrument="CR";n.Type="crash";break;
         case 55:n.Instrument="CR";n.Type="splash";break;
         case 52:n.Instrument="CR";n.Type="china";break;

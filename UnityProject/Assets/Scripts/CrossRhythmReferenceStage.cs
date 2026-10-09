@@ -13,7 +13,16 @@ public partial class CrossRhythmApp {
     static Rect AtlasUV(int i,int cols,int rows)=>new Rect((i%cols)/(float)cols,1-(i/cols+1)/(float)rows,1f/cols,1f/rows);
     double ReferencePosition(double b){int bar=Project.BarAt(b);double start=bar<0?bar*CountIn.Length(Project):Project.Starts[bar],length=bar<0?CountIn.Length(Project):Project.Measures[bar];return bar+Math.Max(0,Math.Min(1,(b-start)/length));}
     float ReferenceTop(int bar,double b)=>520+(float)(bar-ReferencePosition(b))*204;
-    void ReferenceGlyph(ChartNote note,float x,float y,float z,float alpha,bool outline=false,bool missed=false){ReferenceSprite(note.Instrument+"-"+(outline?"outline":missed?"miss":"normal")+"-"+note.Velocity,new Rect(x-40,y-40,80,80),z,alpha);}
+    void ReferenceGlyph(ChartNote note,float x,float y,float z,float alpha,bool outline=false,bool missed=false){
+        if(note.Articulation=="tambourine"){
+            float radius=(12+note.Velocity*2)*z;var center=new Vector2(x*z,y*z);
+            Color color=(missed?muted:C("#e3c18c"))*new Color(1,1,1,alpha);
+            // A ring with four paired jingles stays legible at the same note footprint.
+            for(int i=0;i<24;i++){float a=i*Mathf.PI/12;RectFill(new Rect(center.x+Mathf.Cos(a)*radius-z,center.y+Mathf.Sin(a)*radius-z,2*z,2*z),color);}
+            for(int i=0;i<4;i++){float a=i*Mathf.PI/2;RectFill(new Rect(center.x+Mathf.Cos(a)*radius-3*z,center.y+Mathf.Sin(a)*radius-2*z,6*z,4*z),color);}
+            return;
+        }
+        ReferenceSprite(note.Instrument+"-"+(outline?"outline":missed?"miss":"normal")+"-"+note.Velocity,new Rect(x-40,y-40,80,80),z,alpha);}
     void ReferenceLine(float x,float y,float width,float height,float z,Color color)=>RectFill(new Rect(x*z,y*z,width*z,height*z),color);
     void ReferenceBeat(float x,float top,float width,float z,float alpha){
         if(Math.Abs(width-242.5f)<.001f){ReferenceSprite("beat",new Rect(x-16,top-16,274.5f,200),z,alpha);return;}

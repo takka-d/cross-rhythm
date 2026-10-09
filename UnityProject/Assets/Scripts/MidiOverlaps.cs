@@ -34,9 +34,9 @@ public static partial class MidiImport {
         return result.OrderBy(n=>n.Tick).ThenBy(n=>n.Pitch).ToArray();
     }
     public static string PitchLabel(int pitch){
-        string source=pitch switch {35=>"Acoustic Bass Drum",36=>"Bass Drum 1",37=>"Side Stick",38=>"Acoustic Snare",39=>"Hand Clap",40=>"Electric Snare",42=>"Closed Hi-Hat",46=>"Open Hi-Hat",49=>"Crash Cymbal 1",57=>"Crash Cymbal 2",55=>"Splash Cymbal",52=>"Chinese Cymbal",51=>"Ride Cymbal 1",59=>"Ride Cymbal 2",53=>"Ride Bell",50=>"High Tom",48=>"Hi-Mid Tom",47=>"Low-Mid Tom",45=>"Low Tom",43=>"High Floor Tom",41=>"Low Floor Tom",_=>"MIDI "+pitch};
+        string source=pitch switch {35=>"Acoustic Bass Drum",36=>"Bass Drum 1",37=>"Side Stick",38=>"Acoustic Snare",39=>"Hand Clap",40=>"Electric Snare",42=>"Closed Hi-Hat",46=>"Open Hi-Hat",49=>"Crash Cymbal 1",57=>"Crash Cymbal 2",55=>"Splash Cymbal",52=>"Chinese Cymbal",51=>"Ride Cymbal 1",59=>"Ride Cymbal 2",53=>"Ride Bell",54=>"Tambourine",50=>"High Tom",48=>"Hi-Mid Tom",47=>"Low-Mid Tom",45=>"Low Tom",43=>"High Floor Tom",41=>"Low Floor Tom",_=>"MIDI "+pitch};
         var n=new Note{Pitch=pitch};Map(n);
-        string type=n.Hat=="closed"?"Closed":n.Hat=="open"?"Open":n.Type=="center"?"Normal":n.Type=="rim_closed"?"Closed rimshot":n.Type=="rim_open"?"Open rimshot":n.Type=="cup"?"Cup":n.Type=="ride"?"Ride":n.Type=="high"?"High":n.Type=="crash"?"Crash":n.Type=="china"?"China":n.Type=="splash"?"Splash":"Normal";
+        string type=n.Type=="tambourine"?"Tambourine":n.Hat=="closed"?"Closed":n.Hat=="open"?"Open":n.Type=="center"?"Normal":n.Type=="rim_closed"?"Closed rimshot":n.Type=="rim_open"?"Open rimshot":n.Type=="cup"?"Cup":n.Type=="ride"?"Ride":n.Type=="high"?"High":n.Type=="crash"?"Crash":n.Type=="china"?"China":n.Type=="splash"?"Splash":"Normal";
         return source+" ["+pitch+"] → "+type;
     }
 }

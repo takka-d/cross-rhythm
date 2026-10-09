@@ -9,7 +9,7 @@ public static class EditorTypesControllerTests {
     static void Check(bool ok,string message){if(!ok)throw new Exception("INPUT TYPES / CONTROLLER: "+message);}
     public static void Run(){
         var p=ChartProject.Demo();p.Chart["events"]=new JArray();p.Rebuild();var e=new EditorInteraction(new HashSet<int>()){Project=p,PPB=100,RowHeight=46};
-        foreach(int row in new[]{0,1,3,4,5,6})foreach(string type in EditorNoteTypes.Types[row]){
+        foreach(int row in new[]{0,1,2,3,4,5,6})foreach(string type in EditorNoteTypes.Types[row]){
             e.Clear();p.Chart["events"]=new JArray();p.Rebuild();EditorNoteTypes.Set(p,row,type);var at=new Vector2(112,row*46+23);e.Down(at,0,1,false,false);e.Up(at);
             Check(p.Notes.Single().Articulation==type,"placement uses lane input type "+row+"/"+type);
         }

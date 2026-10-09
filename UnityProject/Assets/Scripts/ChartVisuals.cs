@@ -8,14 +8,14 @@ public static class ChartVisuals {
     public static Color Hex(string hex){ColorUtility.TryParseHtmlString(hex,out var color);return color;}
     public static Color PlayColor(string inst)=>Hex(inst=="CR"||inst=="RD"?"#bf9b48":inst=="HH"?"#9ba9b8":inst=="SN"?"#5678c8":inst=="HT"||inst=="MT"||inst=="FT"?"#c8874a":inst=="BD"?"#2f8f9d":"#8162bd");
     public static Color EditColor(ChartProject p,ChartNote n){
-        string hex=n.Instrument=="HH"?(p.ClosedAt(n.Beat)?"#f7d25f":"#ffad4f"):n.Instrument=="SN"?"#ff6f7d":n.Instrument=="CR"?"#7ee787":n.Instrument=="RD"?"#63d8c7":n.Instrument=="HT"?"#ff9f68":n.Instrument=="MT"?"#ff8b68":n.Instrument=="FT"?"#ff7468":n.Instrument=="BD"?"#59a9ff":"#c084fc";
+        string hex=n.Articulation=="tambourine"?"#e3c18c":n.Instrument=="HH"?(p.ClosedAt(n.Beat)?"#f7d25f":"#ffad4f"):n.Instrument=="SN"?"#ff6f7d":n.Instrument=="CR"?"#7ee787":n.Instrument=="RD"?"#63d8c7":n.Instrument=="HT"?"#ff9f68":n.Instrument=="MT"?"#ff8b68":n.Instrument=="FT"?"#ff7468":n.Instrument=="BD"?"#59a9ff":"#c084fc";
         Color c=Hex(hex);c.a=.45f+.55f*Mathf.Clamp((float?)n.Source?["confidence"]??.8f,.15f,1);return c;
     }
     public static string TypeCode(ChartNote n){
         string a=n.Articulation;
         if(string.IsNullOrEmpty(a)||a=="normal")a=n.Instrument=="CR"?"crash":n.Instrument=="RD"?"ride":n.Instrument=="SN"||n.Instrument=="HT"||n.Instrument=="MT"||n.Instrument=="FT"?"center":"";
         if(n.Instrument=="RD"&&a=="crash")return "RC";
-        switch(a){case "crash":return "CR";case "splash":return "SP";case "china":return "CH";case "ride":return "RD";case "cup":return "BL";case "center":return "N";case "rim_open":return "OR";case "rim_closed":return "CS";case "rimshot":return "RM";case "high":return "HI";case "buzz":return "BZ";default:return "";}
+        switch(a){case "crash":return "CR";case "splash":return "SP";case "china":return "CH";case "ride":return "RD";case "cup":return "BL";case "center":return "N";case "rim_open":return "OR";case "rim_closed":return "CS";case "rimshot":return "RM";case "high":return "HI";case "buzz":return "BZ";case "tambourine":return "TB";default:return "";}
     }
     public static Rect EditRect(ChartProject p,ChartNote n,int row,float ppb,float rh){
         float span=(float)Math.Min(Math.Min(.25,n.Step),p.Measures[n.Measure]-n.Local)*ppb;

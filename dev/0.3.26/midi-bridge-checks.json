@@ -1,0 +1,11 @@
+{
+  "checks": [
+    "verified MIDI bytes and picker type",
+    "picker cancellation",
+    "permission failure",
+    "project overwrite rejected",
+    "failed write aborts",
+    "readback mismatch",
+    "fallback reports download started only"
+  ]
+}

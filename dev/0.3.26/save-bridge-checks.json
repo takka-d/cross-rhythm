@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "overwrite permission starts synchronously in click",
+    "prepared notification occurs before archive/write",
+    "Save does not report success while write is pending",
+    "success follows completed write and verification",
+    "denied permission clears request without writing",
+    "external change conflict never overwrites file",
+    "write failure aborts stream and reports error",
+    "readback mismatch is not reported saved",
+    "Save As picker starts synchronously before yielding",
+    "picker cancellation releases pending save",
+    "fallback copy is reported as download, not verified overwrite"
+  ]
+}
