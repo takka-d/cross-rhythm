@@ -4,7 +4,7 @@ using UnityEngine;
 namespace CrossRhythm {
 public partial class CrossRhythmApp {
     MidiFileDrop midiFileDrop;
-    bool CanDropMidi=>CanImportMidi&&!editorFileOpen&&!Editor.ContextOpen;
+    bool CanDropMidi=>!InputBlocked&&CanImportMidi&&!editorFileOpen&&!Editor.ContextOpen;
     void InitializeMidiDrop(){midiFileDrop=new MidiFileDrop();}
     void DisposeMidiDrop(){midiFileDrop?.Dispose();}
     void UpdateMidiDrop(){

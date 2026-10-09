@@ -23,6 +23,7 @@ public partial class CrossRhythmApp {
     void RefreshHeld(double beat){held.Clear();foreach(var k in physicalHeld.Values)held.Add(k);foreach(var k in footRoles.Keys.Where(k=>!held.Contains(k)).ToArray())footRoles.Remove(k);SetPedal(footRoles.Values.Contains("pedal")||(pro&&(held.Contains(Key.C)||held.Contains(Key.Comma))),beat);}
     static string PadPath(InputControl control)=>control.path.Substring(control.device.path.Length+1);
     void OnInput(InputEventPtr evt,InputDevice device){
+        if(InputBlocked)return;
         if(device is not Keyboard&&device is not Gamepad)return;
         if(!evt.IsA<StateEvent>()&&!evt.IsA<DeltaStateEvent>())return;
         bool pad=device is Gamepad;

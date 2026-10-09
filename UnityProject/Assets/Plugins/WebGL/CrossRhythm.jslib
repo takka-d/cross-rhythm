@@ -20,7 +20,7 @@ mergeInto(LibraryManager.library, {
       limited(promise,ms){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Storage or folder access timed out. Please try again.')),ms||5000);})]).finally(()=>clearTimeout(timer));},
       progress(target,path,count){SendMessage(target,'OnImportProgress',JSON.stringify({path,count:String(count)}));if(window.CrossRhythmPicker)window.CrossRhythmPicker.progress(path,count);},
       saveSource(source,handle){if(source.kind!=='folder')return;this.source=source;try{localStorage.setItem('CrossRhythmPlaySource',JSON.stringify(source));}catch(_){}if(handle){this.directory=handle;this.cache({token:'@directory',directory:true,handle,source}).catch(e=>console.warn(e.message));}},
-      cancel(){this.operation++;this.picking=false;if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();},
+      cancel(){this.operation++;this.picking=false;SendMessage('CrossRhythm','OnPickerState','closed');if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();},
       check(operation){if(operation!=null&&operation!==this.operation){const e=Error('Cancelled');e.name='AbortError';throw e;}},
       serialized(work) {const operation=this.queue.then(work);this.queue=operation.catch(()=>{});return operation;},
       async fingerprint(name,bytes) {return name.toLowerCase()+'\n'+await this.hash(bytes);},
@@ -52,6 +52,7 @@ mergeInto(LibraryManager.library, {
       async hash(bytes) {return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join('-');},
       async send(target,bytes,name,token,kind,source) {
         SendMessage(target,'OnImportStart',JSON.stringify({name,token,size:bytes.length,kind:kind||'project',source}));
+        await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
         for(let i=0;i<bytes.length;i+=49152){let s='';for(const b of bytes.subarray(i,i+49152))s+=String.fromCharCode(b);SendMessage(target,'OnImportChunk',btoa(s));if(i%393216===0)await this.delay();}
         SendMessage(target,'OnImportEnd','');
       },
@@ -95,12 +96,12 @@ mergeInto(LibraryManager.library, {
           if(kind){for(const f of files)await this.open(f,null,target,kind);return;}
           const source={kind:folder?'folder':'project',name:folder?((files[0]||{}).webkitRelativePath||'').split('/')[0]:files.map(f=>f.name).join(', ')};
           await this.batch(target,files.filter(f=>/\.crproj$/i.test(f.name)).map(file=>({file,path:file.webkitRelativePath||file.name})),source,operation);
-        }catch(e){SendMessage(target,'OnFileError',e.message);}finally{input.remove();this.picking=false;if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();}};
-        input.oncancel=()=>{SendMessage(target,'OnFileError','Cancelled');input.remove();this.picking=false;if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();};
+        }catch(e){SendMessage(target,'OnFileError',e.message);}finally{input.remove();this.picking=false;SendMessage(target,'OnPickerState','closed');if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();}};
+        input.oncancel=()=>{SendMessage(target,'OnFileError','Cancelled');input.remove();this.picking=false;SendMessage(target,'OnPickerState','closed');if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();};
         input.style.display='none';document.body.appendChild(input);input.click();
       },
       async pick(target,mode){
-        if(this.picking)return;this.picking=true;const operation=++this.operation;let fallback=false;if(window.CrossRhythmPicker)window.CrossRhythmPicker.waiting(mode);
+        if(this.picking)return;this.picking=true;SendMessage(target,'OnPickerState','open');const operation=++this.operation;let fallback=false;if(window.CrossRhythmPicker)window.CrossRhythmPicker.waiting(mode);
         try {
           if(mode===1&&this.canUseFilePicker()&&window.showDirectoryPicker){
             const options={mode:'read',id:'cross-rhythm-projects'};if(this.directory)options.startIn=this.directory;const dir=await window.showDirectoryPicker(options),entries=[],errors=[];this.check(operation);this.saveSource({kind:'folder',name:dir.name},dir);this.progress(target,dir.name,0);
@@ -111,7 +112,7 @@ mergeInto(LibraryManager.library, {
             const handles=await window.showOpenFilePicker({multiple:false,types:[{description:'Cross Rhythm',accept:{'application/zip':['.crproj']}}]});
             this.check(operation);if(handles.length)await this.batch(target,handles.map(handle=>({handle,path:handle.name})),{kind:'project',name:handles.map(h=>h.name).join(', ')},operation);
           }else {fallback=true;this.fallback(target,null,mode===1,mode===2);}
-        }catch(e){SendMessage(target,'OnFileError',e.name==='AbortError'?'Cancelled':e.message);}finally{if(!fallback&&operation===this.operation){this.picking=false;if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();}}
+        }catch(e){SendMessage(target,'OnFileError',e.name==='AbortError'?'Cancelled':e.message);}finally{if(!fallback&&operation===this.operation){this.picking=false;SendMessage(target,'OnPickerState','closed');if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();}}
       }
     };
   },
@@ -125,15 +126,26 @@ mergeInto(LibraryManager.library, {
   CRRestore: function(targetPtr) {
     const target=UTF8ToString(targetPtr);window.CRFiles.restore(target).catch(e=>SendMessage(target,'OnFileError',e.message));
   },
+  CRPrepareSave: function(namePtr,tokenPtr,targetPtr,saveAs) {
+    const name=UTF8ToString(namePtr),token=UTF8ToString(tokenPtr),target=UTF8ToString(targetPtr),bridge=window.CRFiles;
+    if(bridge.saveRequest)return;
+    const request={handle:saveAs||!bridge.canUseFilePicker()?null:bridge.handles.get(token)};bridge.saveRequest=request;
+    (async()=>{try{
+      // Both permission APIs must start synchronously inside the Save click.
+      const picker=!request.handle&&bridge.canUseFilePicker()&&window.showSaveFilePicker?showSaveFilePicker({suggestedName:name,types:[{description:'Cross Rhythm',accept:{'application/zip':['.crproj']}}]}):null;
+      const permission=request.handle?request.handle.requestPermission({mode:'readwrite'}):null;
+      if(picker)request.handle=await picker;
+      if(permission&&await permission!=='granted')throw Error('Write permission was not granted. Use Save As.');
+      SendMessage(target,'OnSavePrepared','');
+    }catch(e){bridge.saveRequest=null;SendMessage(target,'OnFileError',e.name==='AbortError'?'Save cancelled':e.message);}})();
+  },
   CRSave: function(data,length,namePtr,tokenPtr,baselinePtr,targetPtr,saveAs) {
     const bytes=HEAPU8.slice(data,data+length),name=UTF8ToString(namePtr),token=UTF8ToString(tokenPtr),baseline=UTF8ToString(baselinePtr),target=UTF8ToString(targetPtr),bridge=window.CRFiles;
-    let handle=saveAs||!bridge.canUseFilePicker()?null:bridge.handles.get(token);
+    const request=bridge.saveRequest;bridge.saveRequest=null;
+    let handle=request&&request.handle;
     (async()=>{try{
-      const picker=!handle&&bridge.canUseFilePicker()&&window.showSaveFilePicker?showSaveFilePicker({suggestedName:name,types:[{description:'Cross Rhythm',accept:{'application/zip':['.crproj']}}]}):null;
-      const permission=handle?handle.requestPermission({mode:'readwrite'}):null;
-      if(picker)handle=await picker;
+      if(!request)throw Error('Save was not prepared. Please try Save again.');
       if(!handle){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([bytes],{type:'application/zip'}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);SendMessage(target,'OnSaved',JSON.stringify({status:'download'}));return;}
-      if(permission&&await permission!=='granted')throw Error('Write permission was not granted. Use Save As.');
       let same=bridge.handles.has(token)&&await handle.isSameEntry(bridge.handles.get(token));
       if(same){const current=await handle.getFile();if(await bridge.hash(await current.arrayBuffer())!==baseline)throw Error('The original file changed. Use Save As with a different file.');}
       const writable=await handle.createWritable();try{await writable.write(bytes);await writable.close();}catch(e){try{await writable.abort();}catch(_){}throw e;}

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using Newtonsoft.Json.Linq;
 namespace CrossRhythm {
@@ -10,7 +11,7 @@ public partial class CrossRhythmApp {
     string saveDetail="",saveTime="";
     void SetSaveState(SaveState state,string detail=""){saveState=state;saveStatusProject=savingProject??Project;saveDetail=detail;saveTime=DateTime.Now.ToString("HH:mm:ss");}
     void ClearSave(){savingProject=null;savingBytes=null;savingSnapshot=null;}
-    public void OnSaveButton(string mode){if(MidiPromptOpen||LaneTypeOpen)return;if(mode=="Continue"&&discardPrompt){SaveBeforeLeaving();return;}if(Current!=Page.Edit||showMeterPanel||Editor.ContextOpen||discardPrompt)return;Save(mode=="SaveAs");}
+    public void OnSaveButton(string mode){if(InputBlocked||MidiPromptOpen||LaneTypeOpen)return;if(mode=="Continue"&&discardPrompt){SaveBeforeLeaving();return;}if(Current!=Page.Edit||showMeterPanel||Editor.ContextOpen||discardPrompt)return;Save(mode=="SaveAs");}
     void SaveButton(Rect r,bool saveAs){
         string caption=saveAs?"Save As":"Save";bool enabled=GUI.enabled&&savingProject==null&&!busy;
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -35,6 +36,7 @@ public partial class CrossRhythmApp {
     public void OnFileError(string error){
         status=error=="Cancelled"?T("キャンセルしました","Cancelled"):error;
         if(savingProject!=null){SetSaveState(error=="Save cancelled"?SaveState.Cancelled:SaveState.Error,error);ClearSave();}
+        else {incoming?.Dispose();incoming=null;nativeProjectLoading=false;loadingFile="";}
     }
     public void OnSaved(string json){
         if(savingProject==null)return;
@@ -52,20 +54,49 @@ public partial class CrossRhythmApp {
         finally{ClearSave();TryFinishLeaving();}
     }
     void Save(bool saveAs){
-        if(savingProject!=null)return;
-        EndSongInfoEdit();
+        if(InputBlocked)return;
+        PrepareExclusiveOperation();
         try{
             savingProject=Project;SetSaveState(SaveState.Saving);status=T("保存中…","Saving…");
 #if UNITY_WEBGL && !UNITY_EDITOR
-            savingSnapshot=new ProjectSaveSnapshot(Project);savingBytes=Project.Write();
-            PlatformFiles.CRSave(savingBytes,savingBytes.Length,Project.FileName,Project.FilePath,Project.Baseline,gameObject.name,saveAs?1:0);
+            // Acquire browser permission inside the original click, before yielding to paint.
+            PlatformFiles.CRPrepareSave(Project.FileName,Project.FilePath,gameObject.name,saveAs?1:0);
 #else
-            string path=Project.FilePath;
-            if(saveAs||string.IsNullOrEmpty(path))path=PlatformFiles.Pick(true,Project.FileName);
-            if(path==null){SetSaveState(SaveState.Cancelled);ClearSave();return;}
-            Project.SaveNative(path,!saveAs);RefreshSavedLibrary(Project);QueueEditorRecovery();PersistEditorSession();SetSaveState(SaveState.Saved);status=T("保存しました: ","Saved: ")+Project.FileName;ClearSave();
+            StartCoroutine(SaveNativeRoutine(saveAs));
 #endif
         }catch(Exception e){SetSaveState(SaveState.Error,e.Message);status=T("保存エラー: ","Save error: ")+e.Message;ClearSave();}
     }
+    public void OnSavePrepared(string _){
+#if UNITY_WEBGL && !UNITY_EDITOR
+        if(savingProject!=null)StartCoroutine(SaveWebRoutine());
+#endif
+    }
+#if UNITY_WEBGL && !UNITY_EDITOR
+    IEnumerator SaveWebRoutine(){
+        yield return null;yield return null;
+        try{
+            if(savingProject==null)yield break;
+            savingSnapshot=new ProjectSaveSnapshot(savingProject);savingBytes=savingProject.Write();
+            PlatformFiles.CRSave(savingBytes,savingBytes.Length,savingProject.FileName,savingProject.FilePath,savingProject.Baseline,gameObject.name,0);
+        }catch(Exception e){OnFileError(e.Message);}
+    }
+#else
+    IEnumerator SaveNativeRoutine(bool saveAs){
+        yield return null;yield return null;
+        string path=savingProject.FilePath;
+        try{if(saveAs||string.IsNullOrEmpty(path))path=PlatformFiles.Pick(true,savingProject.FileName);}
+        catch(Exception e){OnFileError(e.Message);yield break;}
+        if(path==null){OnFileError("Save cancelled");yield break;}
+        System.Threading.Tasks.Task<byte[]> write;
+        try{
+            savingSnapshot=new ProjectSaveSnapshot(savingProject);var snapshot=savingSnapshot;
+            write=System.Threading.Tasks.Task.Run(()=>snapshot.CopyForSave().SaveNative(path,!saveAs));
+        }catch(Exception e){OnFileError(e.Message);yield break;}
+        while(!write.IsCompleted)yield return null;
+        if(write.IsFaulted){OnFileError(write.Exception.GetBaseException().Message);yield break;}
+        savingBytes=write.Result;
+        OnSaved(new JObject{{"status","saved"},{"token",path},{"name",System.IO.Path.GetFileName(path)}}.ToString());
+    }
+#endif
 }
 }

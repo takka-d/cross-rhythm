@@ -34,7 +34,7 @@ public partial class CrossRhythmApp {
         NavigateNow(Page.Songs);FocusSong(1);yield return new WaitForSeconds(.5f);Check(Project.Title=="Track D","new Play folder selected independently");
         yield return new WaitForEndOfFrame();ScreenCapture.CaptureScreenshot(Path.Combine(workspaceCheckRoot,"Play.png"));yield return new WaitForSeconds(.2f);
         NavigateNow(Page.Edit);yield return new WaitForSeconds(.5f);Check(Project==retained&&Project.Title=="Draft A","Edit survives folder change");
-        Save(false);Check(!Project.Dirty&&ChartProject.Read(File.ReadAllBytes(aPath),"A.crproj").Title=="Draft A","explicit Save writes editor file");
+        Save(false);yield return WaitForOperations();Check(!Project.Dirty&&ChartProject.Read(File.ReadAllBytes(aPath),"A.crproj").Title=="Draft A","explicit Save writes editor file");
         yield return new WaitForEndOfFrame();ScreenCapture.CaptureScreenshot(Path.Combine(workspaceCheckRoot,"Edit.png"));yield return new WaitForSeconds(.2f);
         NewProject();Check(Project==editorProject&&Project.Title=="Untitled"&&Library.Count==2,"New Project stays outside Play list");
         lines.Add(failed?"WORKSPACE_RUNTIME_FAIL":"WORKSPACE_RUNTIME_PASS");File.WriteAllLines(Path.Combine(workspaceCheckRoot,"workspace-check.txt"),lines);Application.Quit(failed?1:0);

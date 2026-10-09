@@ -16,9 +16,18 @@ public partial class CrossRhythmApp {
         var task=NativeFolderPicker.PickAsync();while(!task.IsCompleted)yield return null;
         nativePickerOpen=false;if(task.IsFaulted){status=task.Exception.GetBaseException().Message;yield break;}if(task.Result==null)yield break;
         projectPath=task.Result;PlayerPrefs.SetString("projects",projectPath);PlayerPrefs.Save();
-        OnImportBatch("open");var paths=System.IO.Directory.EnumerateFiles(projectPath,"*.crproj",System.IO.SearchOption.AllDirectories).GetEnumerator();
+        OnImportBatch("open");yield return null;yield return null;var paths=System.IO.Directory.EnumerateFiles(projectPath,"*.crproj",System.IO.SearchOption.AllDirectories).GetEnumerator();
         while(true){string path=null;try{if(paths.MoveNext())path=paths.Current;}catch(Exception e){importErrors.Add(e.Message);}if(path==null)break;ImportNative(path);yield return null;}
         paths.Dispose();OnLibrarySource(new JObject{{"kind","folder"},{"name",projectPath}}.ToString());
+    }
+    System.Collections.IEnumerator LoadNativeProject(string path){
+        PrepareExclusiveOperation();nativeProjectLoading=true;loadingFile=System.IO.Path.GetFileName(path);
+        yield return null;yield return null;
+        var task=System.Threading.Tasks.Task.Run(()=>ChartProject.Read(System.IO.File.ReadAllBytes(path),System.IO.Path.GetFileName(path),path));
+        while(!task.IsCompleted)yield return null;
+        try{if(task.IsFaulted)throw task.Exception.GetBaseException();OpenEditorProject(task.Result);}
+        catch(Exception e){status=e.Message;}
+        finally{nativeProjectLoading=false;loadingFile="";}
     }
     bool nativePickerOpen;
     public void OnImportProgress(string json){try{var p=JObject.Parse(json);status=T("読込中: ","Loading: ")+(string)p["path"]+"  "+(string)p["count"];}catch{}}

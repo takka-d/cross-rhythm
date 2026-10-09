@@ -30,6 +30,7 @@ public partial class CrossRhythmApp {
         menuItems.Add(new MenuItem{Id=id,Center=GUIUtility.GUIToScreenPoint(rect.center)});
     }
     void MenuKeys(){
+        if(InputBlocked)return;
         var e=Event.current;if(e.type==EventType.Repaint&&padMenu.Count>0)e=new Event{type=EventType.KeyDown,keyCode=padMenu.Dequeue()};if(e.type!=EventType.KeyDown||discardPrompt||(Current==Page.Edit&&!MidiPromptOpen)||Current==Page.Play||Current==Page.Practice||GUI.GetNameOfFocusedControl().StartsWith("config-")||GUI.GetNameOfFocusedControl()=="location-readonly"||bindingsOpen)return;
         if(e.control||e.command||e.alt)return;
         if(e.keyCode==KeyCode.Escape){if(MidiPromptOpen)CancelMidi();else Navigate(Page.Title);e.Use();return;}
@@ -37,7 +38,7 @@ public partial class CrossRhythmApp {
         bool vertical=e.keyCode==KeyCode.UpArrow||e.keyCode==KeyCode.DownArrow;
         if(Current==Page.Songs&&(menuFocus==""||menuFocus.StartsWith("song:"))){
             if(vertical){keyboardMenu=true;FocusSong(selected+(e.keyCode==KeyCode.DownArrow?1:-1));uiFeedback.Hover();e.Use();return;}
-            if(enter){Begin(false);e.Use();return;}
+            if(enter){RequestBegin(false);e.Use();return;}
             if(e.keyCode==KeyCode.RightArrow){keyboardMenu=true;menuFocus="start";e.Use();return;}
         }
         if(Current==Page.Songs&&e.keyCode==KeyCode.LeftArrow&&menuFocus!=""){keyboardMenu=true;FocusSong(selected);e.Use();return;}

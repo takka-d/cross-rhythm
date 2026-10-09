@@ -35,7 +35,7 @@ public partial class CrossRhythmApp {
         string previousTitle=Library[savedIndex].SongTitle;
         SetSongInfoField("title","Saved song title");SetSongInfoField("artist","Saved artist");
         check(Library[savedIndex].SongTitle==previousTitle,"unsaved metadata remains isolated from Songs");
-        OnSaveButton("Save");
+        OnSaveButton("Save");yield return WaitForOperations();
         var onDisk=ChartProject.Read(File.ReadAllBytes(p.FilePath),p.FileName,p.FilePath);
         check(saveState==SaveState.Saved&&!p.Dirty&&onDisk.SongTitle=="Saved song title"&&onDisk.Artist=="Saved artist","Save button writes title and artist to the existing Windows file");
         check(Library.Count==librarySize+1&&selected==selectedBefore&&Library[savedIndex].SongTitle==onDisk.SongTitle&&Library[savedIndex].Artist==onDisk.Artist,"verified save refreshes existing Songs entry without changing membership or selection");

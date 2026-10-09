@@ -85,20 +85,21 @@ public partial class CrossRhythmApp : MonoBehaviour {
     void RestoreLibrary(){if(!Directory.Exists(projectPath))return;Scan();}
     void Scan(){if(!Directory.Exists(projectPath)){status=T("フォルダーが見つかりません","Folder not found");return;}if(string.IsNullOrEmpty(workspaceCheckRoot)){PlayerPrefs.SetString("projects",projectPath);PlayerPrefs.Save();}OnImportBatch("restore");foreach(string path in Directory.GetFiles(projectPath,"*.crproj",SearchOption.AllDirectories))ImportNative(path);OnLibrarySource(new JObject{{"kind","folder"},{"name",projectPath}}.ToString());}
     void PickProject(bool folder,bool editor=false){
+        if(InputBlocked)return;
         if(editor)Audio.Pause();
 #if UNITY_WEBGL && !UNITY_EDITOR
         PlatformFiles.CRPick(gameObject.name,folder?1:editor?2:0);
 #else
-        if(folder){StartCoroutine(PickFolderNative());return;}string path=PlatformFiles.Pick(false);if(path==null)return;ImportNative(path);
+        if(folder){StartCoroutine(PickFolderNative());return;}string path=PlatformFiles.Pick(false);if(path==null)return;StartCoroutine(LoadNativeProject(path));
 #endif
     }
     public void OnImportStart(string json){var p=JObject.Parse(json);incomingName=(string)p["name"];incomingToken=(string)p["token"];incomingKind=(string)p["kind"]??"project";incomingSource=p["source"] as JObject;expectedBytes=(int)p["size"];if(expectedBytes>256*1024*1024)throw new Exception("Project too large");incoming=new MemoryStream();incomingMidiProject=(incomingKind=="midi"||incomingKind=="midi-drop")&&CanImportMidi?Project:null;}
     public void OnImportChunk(string data){byte[] b=Convert.FromBase64String(data);incoming.Write(b,0,b.Length);}
     public void OnImportEnd(string _){try{if(incoming.Length!=expectedBytes)throw new Exception("Incomplete project transfer");byte[] bytes=incoming.ToArray();incoming.Dispose();incoming=null;if(incomingKind=="audio"){SetAudio(bytes,incomingName);}else if(incomingKind=="midi"||incomingKind=="midi-drop"){if(!ReferenceEquals(Project,incomingMidiProject)||!CanImportMidi){status=T("Editで読込をやり直してください","Import again in Edit");return;}ImportMidi(bytes,incomingName);}else{if(incomingSource!=null)projectOrigins[incomingToken]=incomingSource;if(incomingKind=="editor"||incomingKind=="editor-restore"){var p=ChartProject.Read(bytes,incomingName,incomingToken);OpenEditorProject(p,incomingKind=="editor-restore",incomingSource?["session"] as JObject);}else AddProject(bytes,incomingName,incomingToken);}}catch(Exception e){status=e.Message;busy=false;if(importBatch)importErrors.Add(incomingName+": "+e.Message);}}
-    void Navigate(Page page){if(MidiPromptOpen||page==Current)return;if(Current==Page.Edit&&editorProject.Dirty){AskBeforeLeaving(()=>NavigateNow(page));return;}NavigateNow(page);}
-    void NavigateNow(Page page){if(draftRunning||MidiPromptOpen)return;EndSongInfoEdit();CancelWaveMove();laneTypeRow=-1;editorFileOpen=false;interaction?.Reset();pendingPerformance=null;pendingPracticeSpeed=null;stageLoadError="";previewRequested=false;Audio.Pause();Audio.Rate=1;ReleaseInputs();closed=false;if(ReferenceEquals(Project,editorProject)){RememberEditorSession();QueueEditorRecovery();PersistEditorSession();}Current=page;if(page==Page.Edit)ActivateProject(editorProject);else if(page==Page.Songs)ActivateProject(Library[Mathf.Clamp(selected,0,Library.Count-1)]);if(page==Page.Edit&&Audio.AnchorBeat<0)Audio.AnchorBeat=0;ResetMenuFocus();if(page==Page.Songs)RequestSongPreview();GUI.FocusControl(null);}
+    void Navigate(Page page){if(InputBlocked||MidiPromptOpen||page==Current)return;if(Current==Page.Edit&&editorProject.Dirty){AskBeforeLeaving(()=>Transition(()=>NavigateNow(page),page.ToString()));return;}Transition(()=>NavigateNow(page),page.ToString());}
+    void NavigateNow(Page page){if(savingProject!=null||draftRunning||MidiPromptOpen)return;EndSongInfoEdit();CancelWaveMove();laneTypeRow=-1;editorFileOpen=false;interaction?.Reset();pendingPerformance=null;pendingPracticeSpeed=null;stageLoadError="";previewRequested=false;Audio.Pause();Audio.Rate=1;ReleaseInputs();closed=false;if(ReferenceEquals(Project,editorProject)){RememberEditorSession();QueueEditorRecovery();PersistEditorSession();}Current=page;if(page==Page.Edit)ActivateProject(editorProject);else if(page==Page.Songs)ActivateProject(Library[Mathf.Clamp(selected,0,Library.Count-1)]);if(page==Page.Edit&&Audio.AnchorBeat<0)Audio.AnchorBeat=0;ResetMenuFocus();if(page==Page.Songs)RequestSongPreview();GUI.FocusControl(null);}
     void Begin(bool practice){
-        if(Project==null||importBatch||incoming!=null)return;
+        if(savingProject!=null||Project==null||importBatch||incoming!=null)return;
         bool ready=loaded&&!busy&&ReferenceEquals(Audio.Project,Project);
         Current=practice?Page.Practice:Page.Play;previewRequested=false;stageLoadError="";pendingPracticeSpeed=null;
         stageGrids.Clear();Records.Clear();judged.Clear();ResetScheduled();stageEffects.Clear();ReleaseInputs();heldPedal.Clear();pedalStart=null;closed=false;auto=false;lastClick=-999;lastJudge="";
@@ -131,6 +132,7 @@ public partial class CrossRhythmApp : MonoBehaviour {
     void Update(){
         if(Project==null)return;
         UpdateMidiDrop();
+        if(InputBlocked){UpdateUnsavedBrowserGuard();return;}
         UpdateSongPreview();UpdatePracticeSpeed();UpdateEditorRecovery();UpdateUnsavedBrowserGuard();
         UpdateDisplayKeys();
         EditorFrame();

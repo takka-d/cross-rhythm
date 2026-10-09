@@ -11,7 +11,7 @@ public partial class CrossRhythmApp {
         string root=workspaceCheckRoot;Directory.CreateDirectory(root);var checks=new List<string>();
         bool hadPreview=PlayerPrefs.HasKey("songPreview");int originalPreview=PlayerPrefs.GetInt("songPreview",0);
         void Check(bool ok,string message){if(!ok){File.WriteAllText(Path.Combine(root,"failed.txt"),message);allowApplicationQuit=true;Application.Quit(1);throw new Exception(message);}checks.Add(message);Debug.Log("PASS tasks: "+message);}
-        IEnumerator Ready(){double end=Time.realtimeSinceStartupAsDouble+30;while((busy||!loaded)&&Time.realtimeSinceStartupAsDouble<end)yield return null;Check(loaded&&!busy,"audio finished loading");}
+        IEnumerator Ready(){double end=Time.realtimeSinceStartupAsDouble+30;while((InputBlocked||busy||!loaded)&&Time.realtimeSinceStartupAsDouble<end)yield return null;Check(loaded&&!busy,"audio finished loading");}
         try{
             yield return Ready();
             SetSongPreview(false);NavigateNow(Page.Songs);yield return Ready();
@@ -45,9 +45,9 @@ public partial class CrossRhythmApp {
                 editorFileOpen=true;Editor.ContextOpen=true;Navigate(destination);
                 Check(discardPrompt&&Current==Page.Edit&&!editorFileOpen&&!Editor.ContextOpen,"unsaved guard closes menus before navigating to "+destination);CancelLeaving();
             }
-            Navigate(Page.Title);SaveBeforeLeaving();
+            Navigate(Page.Title);SaveBeforeLeaving();yield return WaitForOperations();
             Check(Current==Page.Title&&!discardPrompt&&!p.Dirty&&ChartProject.Read(File.ReadAllBytes(path),"check").Title=="Unsaved title","Save and Continue waits for verified save and navigates");
-            NavigateNow(Page.Edit);yield return Ready();p.SetSongInfo("Newer unsaved title","");File.AppendAllText(path,"external change");Navigate(Page.Songs);SaveBeforeLeaving();
+            NavigateNow(Page.Edit);yield return Ready();p.SetSongInfo("Newer unsaved title","");File.AppendAllText(path,"external change");Navigate(Page.Songs);SaveBeforeLeaving();yield return WaitForOperations();
             Check(discardPrompt&&Current==Page.Edit&&p.Dirty&&saveState==SaveState.Error,"save conflict keeps the prompt open and does not navigate");CancelLeaving();
             Check(!ConfirmApplicationQuit()&&discardPrompt&&Current==Page.Edit,"window close is blocked by unsaved prompt");CancelLeaving();
             Check(p.Title=="Newer unsaved title"&&p.Dirty,"cancelling close preserves changes");
@@ -57,7 +57,7 @@ public partial class CrossRhythmApp {
             Check(Current==Page.Edit&&Project.Title=="Untitled"&&Project.Notes.Count==0&&!Project.Dirty&&undo.Count==0&&redo.Count==0,"New Project Leave creates a clean empty document");
             Check(ChartProject.Hash(File.ReadAllBytes(path))==diskBefore,"discard does not change the original file");
             Check(!editorDocuments.Values.Contains(p)&&!editorSessions.ContainsKey(p),"discard removes old document and undo session");
-            Project.SetSongInfo("Disposable draft","");Edited();Navigate(Page.Config);CompleteLeaving();
+            Project.SetSongInfo("Disposable draft","");Edited();Navigate(Page.Config);CompleteLeaving();yield return WaitForOperations();
             Check(Current==Page.Config&&!editorProject.Dirty&&editorProject.Notes.Count==0&&editorProject.Title=="Untitled","Leave discards instead of retaining the draft");
             var recovery=JObject.Parse(File.ReadAllText(EditorRecoveryPath));var recovered=ChartProject.Read(Convert.FromBase64String((string)recovery["bytes"]),"recovered");
             Check(recovered.Title=="Untitled"&&recovered.Notes.Count==0&&!(bool)recovery["dirty"],"restart recovery cannot bring back discarded edits");
@@ -90,7 +90,8 @@ public partial class CrossRhythmApp {
             yield return ArrangementRuntimeCheck(Check);
             yield return MixerRuntimeCheck(Check);
             yield return InputTypesRuntimeCheck(Check);
-            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.24"},{"checks",new JArray(checks)}}.ToString());
+            yield return LoadingRuntimeCheck(Check);
+            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.25"},{"checks",new JArray(checks)}}.ToString());
             Debug.Log("CROSS_RHYTHM_TASKS_CHECK_PASS");
         }finally{if(hadPreview)PlayerPrefs.SetInt("songPreview",originalPreview);else PlayerPrefs.DeleteKey("songPreview");PlayerPrefs.Save();allowApplicationQuit=true;}
         Application.Quit();

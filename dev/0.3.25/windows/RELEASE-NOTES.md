@@ -1,0 +1,9 @@
+0.3.25 development
+
+- Save: a dedicated saving screen blocks editing, shortcuts, file opening, repeated Save, navigation and native application quit until completion. Windows paints the saving screen before writing an isolated snapshot on a worker thread. Completion follows atomic replacement and SHA-256 readback verification. Failure, cancellation and external changes keep the draft and restore controls. Save & Continue waits for verified success. Songs refresh remains limited to matching existing files.
+- Web Save: permission / Save As selection starts within the original browser click, then archive creation yields for a loading frame. Verified overwrite and download-copy states remain distinct. Permission denial, cancellation, write error and readback mismatch release the pending save.
+- Loading: screen transitions, project transfer, existing Windows project reads, folder import and Edit audio preparation use a common animated loading view. Performance preparation offers Back and starts count-in only when ready. Songs background preview stays interactive with Start, Practice, Edit and track selection available.
+
+Windows and WebGL share Unity 6000.3.25f1 source. Core regression suites and native runtime assertions cover save/readback, operation blocking, cancellation/error recovery, independent Songs/Edit state, screen transitions and nonblocking preview. Web bridge checks cover original-click permission timing and write outcome handling. Browser evidence accompanies this development release.
+
+No private projects or music are included. Native file-dialog interaction, the user's physical controller and subjective listening are not covered by automated tests. The user's Chrome ZIP download-completion issue and task 16 single-instance verification remain separately unresolved. Production root and WordPress content are unchanged.

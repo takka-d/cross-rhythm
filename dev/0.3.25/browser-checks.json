@@ -1,0 +1,33 @@
+{
+  "version": "0.3.25",
+  "localUrl": "http://127.0.0.1:8786/",
+  "checks": [
+    "Actual Save click displays Japanese Saving screen and hides Save/Save As/maximize controls",
+    "Controlled pending write: Songs click and Ctrl+Z do not navigate or remove the newly placed note",
+    "Real origin-private browser file write and readback complete; Saved/Write verified is displayed",
+    "Save As picker is called with navigator.userActivation.isActive true",
+    "Simulated picker cancellation preserves dirty notes and restores editing",
+    "Simulated permission denial shows Save failed and restores editing",
+    "Actual Save & Continue writes the second note then navigates to Config",
+    "Controlled partial project transfer displays English Loading screen and filename",
+    "Transfer failure releases blocking screen and returns to Config",
+    "Readback archive has two added notes, all 104 original events, identical meter/tempo data and audio",
+    "Browser console errors: 0"
+  ],
+  "originalEvents": 104,
+  "savedEvents": 106,
+  "windowsRuntimeAssertions": 252,
+  "saveBridgeAssertions": 11,
+  "nativeVisualVerified": false,
+  "nativeFileDialogVerified": false,
+  "browserFileWrite": "real origin-private FileSystemFileHandle with controlled write delay",
+  "systemSavePickerDialogVerified": false,
+  "browserDownloadResolved": false,
+  "screenshots": [
+    "saving-screen.png",
+    "saved-screen.png",
+    "save-cancelled.png",
+    "save-denied.png",
+    "loading-screen-en.png"
+  ]
+}

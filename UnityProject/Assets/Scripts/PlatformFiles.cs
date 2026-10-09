@@ -13,6 +13,7 @@ public static class PlatformFiles {
     [DllImport("__Internal")]public static extern void CREditorKeys(int enabled,int textFocus);
     [DllImport("__Internal")]public static extern void CRDisplayLayout(float x,float y,float w,float h,int english,int enabled);
     [DllImport("__Internal")]public static extern void CRPick(string target,int folder);
+    [DllImport("__Internal")]public static extern void CRPrepareSave(string name,string token,string target,int saveAs);
     [DllImport("__Internal")]public static extern void CRSave(byte[] data,int length,string name,string token,string baseline,string target,int saveAs);
     [DllImport("__Internal")]public static extern void CRRestore(string target);
     [DllImport("__Internal")]public static extern void CRSaveEditorSession(byte[] data,int length,string metadata);

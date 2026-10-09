@@ -157,11 +157,11 @@ public sealed partial class ChartProject {
             }return buffer.ToArray();
         }
     }
-    public void SaveNative(string path,bool overwrite){
+    public byte[] SaveNative(string path,bool overwrite){
         if(File.Exists(path) && string.Equals(FilePath,path,StringComparison.OrdinalIgnoreCase) && Hash(File.ReadAllBytes(path))!=Baseline)throw new Exception("File changed outside Cross Rhythm. Use Save As with a different file.");
         byte[] bytes=Write();string tmp=path+".crtmp-"+Guid.NewGuid().ToString("N");
         try{File.WriteAllBytes(tmp,bytes);if(File.Exists(path))File.Replace(tmp,path,null);else File.Move(tmp,path);}finally{if(File.Exists(tmp))File.Delete(tmp);}
-        var verified=Hash(bytes);if(Hash(File.ReadAllBytes(path))!=verified)throw new IOException("Saved file verification failed.");Baseline=verified;FilePath=path;FileName=Path.GetFileName(path);Dirty=false;
+        var verified=Hash(bytes);if(Hash(File.ReadAllBytes(path))!=verified)throw new IOException("Saved file verification failed.");Baseline=verified;FilePath=path;FileName=Path.GetFileName(path);Dirty=false;return bytes;
     }
     public static ChartProject Demo(){
         var p=new ChartProject();p.Manifest=JObject.Parse("{\"format\":\"cross-rhythm-project\",\"version\":1,\"title\":\"Rhythm Check\",\"chart\":\"chart.json\"}");
