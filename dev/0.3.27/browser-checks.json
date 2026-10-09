@@ -1,0 +1,25 @@
+{
+  "version": "0.3.27",
+  "gridDropdownMousePresets": [
+    12,
+    20,
+    28
+  ],
+  "gridKeyboardArrowsEnter": true,
+  "gridSelectionPreservesExistingNote": true,
+  "samePageSaveDialogRetainsEditor": true,
+  "blockedSaveNavigation": true,
+  "actualBrowserFileWriteAndReadback": true,
+  "savePickerResponse": "substituted with a real origin-private file handle",
+  "folderPickerResponse": "substituted with a real origin-private directory handle",
+  "savedNewFileAppearsOnSongsReturn": true,
+  "modifiedAndDeletedProjectsRefresh": true,
+  "selectionPreservedWhenFileExists": true,
+  "parserFailureKeepsVisibleList": true,
+  "parserFailureKeepsCachedBytes": true,
+  "parserFailureKeepsMembership": true,
+  "persistentFailureNotice": true,
+  "subsequentVisitRecovers": true,
+  "consoleErrors": 0,
+  "nativeFileDialogVerified": false
+}

@@ -7,7 +7,7 @@ namespace CrossRhythm {
 public partial class CrossRhythmApp {
     static readonly string[] Instruments={"CR","RD","HH","SN","HT","MT","FT","BD","HHSTATE"};
     static readonly string[][] Types=EditorNoteTypes.Types;
-    static readonly int[] Grids={4,8,16,32,64,6,12,24,48,10,20,40,14,28,56,36,44,52,60};
+    static readonly int[] Grids={1,2,4,8,16,32,64,6,12,24,48,10,20,40,14,28,56,36,44,52,60};
     sealed class Snapshot {public JObject Chart,Manifest;public Dictionary<string,byte[]> Files;}
     Stack<Snapshot> undo=new Stack<Snapshot>(),redo=new Stack<Snapshot>();
     HashSet<int> selection=new HashSet<int>();

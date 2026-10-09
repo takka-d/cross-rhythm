@@ -18,7 +18,7 @@ public partial class CrossRhythmApp {
 #endif
     }
     public void OnMidiExportButton(string unused){
-        if(Current!=Page.Edit||InputBlocked||MidiPromptOpen||discardPrompt||draftRunning||LaneTypeOpen)return;
+        if(Current!=Page.Edit||InputBlocked||MidiPromptOpen||discardPrompt||draftRunning||LaneTypeOpen||gridMenuOpen)return;
         try{
             PrepareExclusiveOperation();var result=MidiExport.Write(Project);string name=MidiExport.FileName(Project.Title);
             midiExportSummary=result.Hits+" notes"+(result.Muted>0?T(" / 無音除外 "," / Muted omitted ")+result.Muted:"")+(result.Approximate>0?T(" / 標準ドラム音へ置換 "," / GM substitutions ")+result.Approximate:"");

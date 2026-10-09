@@ -16,6 +16,8 @@ public static class PlatformFiles {
     [DllImport("__Internal")]public static extern void CRPrepareSave(string name,string token,string target,int saveAs);
     [DllImport("__Internal")]public static extern void CRSave(byte[] data,int length,string name,string token,string baseline,string target,int saveAs);
     [DllImport("__Internal")]public static extern void CRRestore(string target);
+    [DllImport("__Internal")]public static extern void CRReloadLibrary(string target);
+    [DllImport("__Internal")]public static extern void CRLibraryRefreshResult(int accepted);
     [DllImport("__Internal")]public static extern void CRSaveEditorSession(byte[] data,int length,string metadata);
     [DllImport("__Internal")]public static extern void CRCache(byte[] data,int length,string name,string token);
     [DllImport("__Internal")]public static extern void CRPickAudio(string target);

@@ -1,0 +1,53 @@
+Cross Rhythm — third-party assets
+
+Virtuosity Drums
+Performed by Austin McMahon; recorded by Versilian Studios at Virtuosity Musical Instruments.
+Source: https://github.com/studiorack/virtuosity-drums
+License: CC0 1.0 Universal. Full text: ThirdParty/Virtuosity-LICENSE.txt
+Selected FLAC samples are converted to WAV for Unity import. Imported runtime audio uses Vorbis compression.
+
+Salamander Drumkit
+Creator: Alexander Holm (Rytmenpinne).
+Source: https://github.com/studiorack/salamander-drumkit
+Original: https://rytmenpinne.wordpress.com/sounds-and-such/salamander-drumkit/
+License: Creative Commons Attribution-ShareAlike 3.0 Unported.
+https://creativecommons.org/licenses/by-sa/3.0/
+Selected samples: ride2Crash_OH_FF_1.flac, splash1_OH_F_1.flac, china1_OH_FF_1.flac.
+Converted to WAV and imported as Vorbis. These converted recordings remain under CC BY-SA 3.0.
+The ride-crash playback gain is reduced by 19 dB relative to its previous recording gain.
+
+Noto Sans CJK JP
+Copyright Adobe and the Noto project contributors.
+SIL Open Font License 1.1. Full text: ThirdParty/Noto-LICENSE.txt
+https://github.com/notofonts/noto-cjk
+
+NAudio 2.2.1 (Core and Wasapi)
+Copyright Mark Heath and contributors. MIT. Full text: ThirdParty/NAudio-LICENSE.txt
+https://github.com/naudio/NAudio
+Used only on Windows for Media Foundation audio decoding.
+
+Newtonsoft.Json is provided by Unity's com.unity.nuget.newtonsoft-json package under its included MIT license.
+Unity Input System is provided by com.unity.inputsystem under its included Unity Companion License.
+
+The generated Rhythm Check chart is a functionality test, not one of the planned two original songs.
+No user-provided song recordings or project charts are bundled in this project.
+
+Signalsmith Stretch 1.3.2
+Copyright Geraint Luff / Signalsmith Audio. MIT.
+Source: https://github.com/Signalsmith-Audio/signalsmith-stretch
+Pinned commit: a670068d9aeb64913331d5cc29337b19a457a7df
+Full text: ThirdParty/Signalsmith-Stretch-LICENSE.txt
+
+Signalsmith Linear 0.6.4
+Copyright Geraint Luff / Signalsmith Audio. MIT.
+Source: https://github.com/Signalsmith-Audio/linear
+Pinned commit: de55e6a50ffcf6f8f43f649692d94691c7025151
+Full text: ThirdParty/Signalsmith-Linear-LICENSE.txt
+
+AVL Percussions
+Creator: Glen MacArthur. Source: https://github.com/studiorack/avl-percussions
+Pinned commit: 86e91b9b0374a36d2a228150742c1514f90d52b4
+Sample: Samples/44-Tambourine-4.flac. Converted to WAV, imported as Vorbis; playback gain adjusted.
+License: CC BY-SA 3.0 Unported. These converted recordings remain under CC BY-SA 3.0.
+https://creativecommons.org/licenses/by-sa/3.0/
+Full text: ThirdParty/AVL-Percussions-LICENSE.txt

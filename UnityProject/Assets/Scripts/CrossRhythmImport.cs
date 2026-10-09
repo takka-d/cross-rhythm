@@ -5,7 +5,8 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 namespace CrossRhythm {
 public partial class CrossRhythmApp {
-    bool importBatch,restoreBatch;int importedIndex=-1,importedCount;
+    bool importBatch,restoreBatch,refreshBatch;
+    List<ChartProject> refreshLibrary;int importedIndex=-1,importedCount;
     readonly List<string> importErrors=new List<string>();
     sealed class EditorSession {public Stack<Snapshot> Undo,Redo;public double Beat;public Vector2 Scroll;}
     readonly Dictionary<ChartProject,EditorSession> editorSessions=new Dictionary<ChartProject,EditorSession>();
@@ -31,10 +32,15 @@ public partial class CrossRhythmApp {
     }
     bool nativePickerOpen;
     public void OnImportProgress(string json){try{var p=JObject.Parse(json);status=T("読込中: ","Loading: ")+(string)p["path"]+"  "+(string)p["count"];}catch{}}
-    public void OnImportBatch(string mode){importBatch=true;restoreBatch=mode=="restore";importedIndex=-1;importedCount=0;importErrors.Clear();if(Current!=Page.Edit)Audio.Pause();Library.Clear();Library.Add(ChartProject.Demo());selected=0;}
+    public void OnImportBatch(string mode){libraryRefreshFailure="";if(mode=="refresh"){refreshBatch=true;refreshLibrary=new List<ChartProject>{ChartProject.Demo()};importBatch=true;restoreBatch=true;importedIndex=-1;importedCount=0;importErrors.Clear();Audio.Pause();return;}refreshBatch=false;importBatch=true;restoreBatch=mode=="restore";importedIndex=-1;importedCount=0;importErrors.Clear();if(Current!=Page.Edit)Audio.Pause();Library.Clear();Library.Add(ChartProject.Demo());selected=0;}
     public void OnLibrarySource(string json){
         var info=JObject.Parse(json);bool restoring=restoreBatch;importBatch=false;restoreBatch=false;
         if(info["errors"] is JArray errors)foreach(var error in errors)importErrors.Add((string)error);
+        if(refreshBatch){
+#if UNITY_WEBGL && !UNITY_EDITOR
+            PlatformFiles.CRLibraryRefreshResult(importErrors.Count==0?1:0);
+#endif
+            refreshBatch=false;if(importErrors.Count>0){refreshLibrary=null;OnLibraryReloadUnavailable(string.Join("; ",importErrors));return;}Library=refreshLibrary;refreshLibrary=null;}
         if((string)info["kind"]=="folder"){lastSource=info;if(string.IsNullOrEmpty(workspaceCheckRoot)){PlayerPrefs.SetString("projectSource",info.ToString(Newtonsoft.Json.Formatting.None));PlayerPrefs.Save();}}
         if(restoring)SelectRestoredPlay();else SelectProject(importedIndex>=0?importedIndex:0);
         string result=T("読込: ","Opened: ")+importedCount+T("曲"," tracks");

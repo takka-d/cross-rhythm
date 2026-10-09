@@ -27,26 +27,26 @@ public partial class CrossRhythmApp {
 
     void OnGUI(){
         Styles();scale=Mathf.Min(Screen.width/1280f,Screen.height/800f);W=Screen.width/scale;H=Screen.height/scale;GUI.matrix=Matrix4x4.Scale(new Vector3(scale,scale,1));RectFill(new Rect(0,0,W,H),bg);
-        if(InputBlocked){LoadingPage();return;}
-        if(Project==null)return;DismissEditorFileMenu();DismissLaneTypeMenu();BindingKeys();MenuKeys();if(Event.current.type==EventType.Repaint)menuItems.Clear();
+        if(InputBlocked){LoadingBackground();LoadingPage();return;}
+        if(Project==null)return;DismissEditorFileMenu();DismissLaneTypeMenu();DismissGridMenu();BindingKeys();MenuKeys();if(Event.current.type==EventType.Repaint)menuItems.Clear();
 #if UNITY_WEBGL && !UNITY_EDITOR
         if(Event.current.type==EventType.Repaint){fileButtonCount=0;PlatformFiles.CRProjectButtonsBegin();}
 #endif
         bool stage=Current==Page.Play||Current==Page.Practice;
-        bool uiEnabled=GUI.enabled;GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen&&!(Current==Page.Edit&&(showMeterPanel||draftRunning||editorFileOpen));
+        bool uiEnabled=GUI.enabled;GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen&&!(Current==Page.Edit&&(showMeterPanel||draftRunning||editorFileOpen));
         if(!stage)Header();
-        GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen;
+        GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen;
         switch(Current){case Page.Title:TitlePage();break;case Page.Songs:SongsPage();break;case Page.Config:ConfigPage();break;case Page.Result:ResultPage();break;case Page.Play:case Page.Practice:Stage();break;case Page.Edit:EditorPage();break;}
         editTextFocused=Current==Page.Edit&&GUI.GetNameOfFocusedControl().StartsWith("edit-");
         DisplaySizeButton();
         GUI.enabled=uiEnabled;
         if(bindingsOpen)BindingSettings();
-        UnsavedPrompt();MidiOverlapPrompt();EditorLaneTypeMenu();
+        UnsavedPrompt();MidiOverlapPrompt();EditorLaneTypeMenu();EditorGridMenu();
 #if UNITY_WEBGL && !UNITY_EDITOR
         if(Event.current.type==EventType.Repaint){PlatformFiles.CRProjectButtonsEnd();PlatformFiles.CRKeyboardFileMode(keyboardMenu&&menuFocus.StartsWith("file:")?int.Parse(menuFocus.Substring(5)):-1);}
 #endif
 #if UNITY_WEBGL && !UNITY_EDITOR
-        PlatformFiles.CREditorKeys(Current==Page.Edit&&!showMeterPanel&&!discardPrompt&&!draftRunning&&!editorFileOpen&&!MidiPromptOpen&&!LaneTypeOpen?1:0,editTextFocused?1:0);
+        PlatformFiles.CREditorKeys(Current==Page.Edit&&!showMeterPanel&&!discardPrompt&&!draftRunning&&!editorFileOpen&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen?1:0,editTextFocused?1:0);
 #endif
         if(!stage&&Current!=Page.Result)Text(new Rect(26,H-28,W-52,24),busy?T("読込中…","Loading…"):status,13,muted);
     }
@@ -71,7 +71,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(x,553,290,64),"Songs",true))Navigate(Page.Songs);
         if(Button(new Rect(x+308,553,180,64),"Edit"))Navigate(Page.Edit);
         if(Button(new Rect(x+506,553,180,64),"Config"))Navigate(Page.Config);
-        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.26",14,muted);
+        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.27",14,muted);
         for(int i=0;i<7;i++){float h=35+i%3*15;RectFill(new Rect(W-260+i*22,240+i*16,7,h),new Color(mint.r,mint.g,mint.b,.18f+i*.04f));}
     }
     void FittedText(Rect r,string value,int size,Color color,bool bold=false){
@@ -87,7 +87,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(x+934,210,226,32),"Preview "+(songPreviewEnabled?"ON":"OFF"),songPreviewEnabled,true,14,"song-preview"))SetSongPreview(!songPreviewEnabled);
         var view=new Rect(x,254,660,H-344);songScroll=GUI.BeginScrollView(view,songScroll,new Rect(0,0,640,Library.Count*138));
         for(int i=0;i<Library.Count;i++){
-            var p=Library[i];var r=new Rect(0,i*138,630,126);bool choose=Button(r,"",false,true,18,"song:"+i);bool hoverFocus=Event.current.type==EventType.Repaint&&r.Contains(Event.current.mousePosition)&&UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.delta.ReadValue().sqrMagnitude>0;if(i==selected){RectFill(r,new Color(.09f,.19f,.18f));Border(r,mint,2);}
+            var p=Library[i];var r=new Rect(0,i*138,630,126);bool choose=Button(r,"",false,true,18,"song:"+i);bool hoverFocus=GUI.enabled&&Event.current.type==EventType.Repaint&&r.Contains(Event.current.mousePosition)&&UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.delta.ReadValue().sqrMagnitude>0;if(i==selected){RectFill(r,new Color(.09f,.19f,.18f));Border(r,mint,2);}
             FittedText(new Rect(20,r.y+10,500,32),p.Title+(p.Dirty?" *":""),23,Color.white,true);
             FittedText(new Rect(20,r.y+46,490,25),ArtistDisplay(p),15,muted);
             FittedText(new Rect(20,r.y+70,510,21),p.FileName,12,muted);
@@ -105,7 +105,8 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(right+28,H-256,408,62),"Start",true,SongActionsAvailable,18,"start"))RequestBegin(false);
         if(Button(new Rect(right+28,H-180,198,48),"Practice",false,SongActionsAvailable,18,"practice"))RequestBegin(true);
         if(Button(new Rect(right+238,H-180,198,48),"Edit",false,SongActionsAvailable,18,"edit-selected"))RequestEditSelected();
-        Text(new Rect(x,H-73,1150,30),!HasExternalProjects?T("Open Folderで曲を開けます。Rhythm Checkは動作確認用です。","Open a folder to add tracks. Rhythm Check is a test track."):T("Open Folderで対象フォルダーを変更できます。","Change the project folder with Open Folder."),14,muted);
+        if(libraryRefreshFailure!="")FittedText(new Rect(x,H-73,1150,30),LibraryRefreshMessage(),14,C("#edc779"));
+        else Text(new Rect(x,H-73,1150,30),!HasExternalProjects?T("Open Folderで曲を開けます。Rhythm Checkは動作確認用です。","Open a folder to add tracks. Rhythm Check is a test track."):T("Open Folderで対象フォルダーを変更できます。","Change the project folder with Open Folder."),14,muted);
     }
     void ConfigPage(){float x=(W-1160)/2;Text(new Rect(x,102,800,50),"Config",38,Color.white,true);
         RectFill(new Rect(x,174,1160,204),panel);Text(new Rect(x+24,190,1000,32),"Project Folder",22,Color.white,true);

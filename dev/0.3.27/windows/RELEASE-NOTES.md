@@ -1,0 +1,9 @@
+0.3.27 development
+
+- Grid: Edit note spacing is a dropdown with straight and 3/5/7/9/11/13/15-tuplet presets. Select immediately applies the interval. Custom 1-1024 divisions remain available inside the dropdown with Apply. Escape/outside click dismisses the dropdown, arrows/Enter select, and editor shortcuts do not leak through it. Existing note times and horizontal-only zoom are preserved.
+- Saving/loading: same-screen operations retain the source page under a translucent black overlay and a central dialog. Input and file controls remain blocked until completion or failure. Full-page loading is reserved for screen transitions and performance preparation.
+- Songs: every visit reloads the configured project folder, discovering new saves and reflecting modifications/deletions while preserving the selected file where it still exists. Native reads occur off the UI thread. Web reloads the retained directory handle only with current read permission; unsupported or revoked access is shown with an Open Folder instruction. Failed scans keep the old list and report the failure. Edit data/history and Songs membership remain separate.
+
+Windows and WebGL share Unity 6000.3.25f1 source. Native runtime checks, core regressions, save/MIDI bridge regressions, folder-refresh lifecycle/error tests and independent MIDI parsing passed. Browser UI checks cover the dropdown, retained-page dialogs, actual browser-private file writes, folder changes and reloading.
+
+Native file-dialog interaction is not verified by these checks. Browser-private filesystem testing does not prove Explorer drag-and-drop or OS picker operation. The user's Chrome ZIP download-completion issue and task 16 single-instance verification remain separately unresolved. No private projects or recordings are included. Production root and WordPress content are unchanged.

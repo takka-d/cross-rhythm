@@ -25,13 +25,13 @@ public partial class CrossRhythmApp {
     void EditorPlayback(){if(Audio.Running)Audio.Pause();else if(loaded&&!busy){ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}
     public void OnEditorShortcut(string command){
         if(InputBlocked)return;
-        if(Current!=Page.Edit||showMeterPanel||discardPrompt||MidiPromptOpen||LaneTypeOpen||draftRunning||editorFileOpen||(editTextFocused&&command!="Save"&&command!="SaveAs"))return;
+        if(Current!=Page.Edit||showMeterPanel||discardPrompt||MidiPromptOpen||LaneTypeOpen||gridMenuOpen||draftRunning||editorFileOpen||(editTextFocused&&command!="Save"&&command!="SaveAs"))return;
         Editor.ContextOpen=false;
         switch(command){case "SelectAll":Editor.SelectAll();break;case "Copy":Copy();break;case "Paste":Paste();break;case "Undo":Restore(false);break;case "Redo":Restore(true);break;case "Save":Save(false);break;case "SaveAs":Save(true);break;case "Open":PickProject(false,true);break;}
         SyncEditorNote();
     }
     void EditorKeys(){
-        var ev=Event.current;if(ev.type!=EventType.KeyDown||showMeterPanel||discardPrompt||MidiPromptOpen||LaneTypeOpen||draftRunning||editorFileOpen)return;
+        var ev=Event.current;if(ev.type!=EventType.KeyDown||showMeterPanel||discardPrompt||MidiPromptOpen||LaneTypeOpen||gridMenuOpen||draftRunning||editorFileOpen)return;
         bool mod=ev.control||ev.command,text=GUI.GetNameOfFocusedControl().StartsWith("edit-");
         if(mod&&ev.keyCode==KeyCode.S){Save(ev.shift);ev.Use();return;}
         if(text)return;
@@ -58,7 +58,7 @@ public partial class CrossRhythmApp {
         if(inside&&ev.type==EventType.ContextClick)ev.Use();
     }
     void EditorFrame(){
-        if(InputBlocked||Current!=Page.Edit||MidiPromptOpen||LaneTypeOpen||Project==null||editorViewport.width<=0){lastEditorFrame=Time.realtimeSinceStartupAsDouble;return;}
+        if(InputBlocked||Current!=Page.Edit||MidiPromptOpen||LaneTypeOpen||gridMenuOpen||Project==null||editorViewport.width<=0){lastEditorFrame=Time.realtimeSinceStartupAsDouble;return;}
         double now=Time.realtimeSinceStartupAsDouble,dt=Math.Min(.05,Math.Max(0,now-lastEditorFrame));lastEditorFrame=now;
         double ppb=EditorPPB*zoom,span=(editorViewport.width-16)/ppb;
         if(waveCaptured){

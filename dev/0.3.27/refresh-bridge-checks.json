@@ -1,0 +1,18 @@
+{
+  "checks": [
+    "refresh enumerates only projects and uses replacement batch",
+    "refresh lifecycle always releases input block",
+    "new projects found; same handle retains token",
+    "deleted file removed from saved membership",
+    "revoked read permission requests Open Folder without silently reusing cache",
+    "fallback browser explicitly requests folder re-selection",
+    "failed partial read does not replace persisted library membership",
+    "access failure reports reason and releases block",
+    "overlapping navigation refresh requests are coalesced",
+    "empty folder clears saved project membership",
+    "chart parser rejection retains cached membership",
+    "parser rejection preserves existing cached file bytes, not just membership",
+    "successful refresh commits updated cached bytes",
+    "cache failure is distinguished from a folder read failure"
+  ]
+}

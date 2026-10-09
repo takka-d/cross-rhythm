@@ -13,7 +13,7 @@ public partial class CrossRhythmApp {
     PendingMidi pendingMidi;
     Vector2 midiOverlapScroll;int midiOverlapInstrument;
     bool MidiPromptOpen=>pendingMidi!=null;
-    bool CanImportMidi=>Current==Page.Edit&&Project!=null&&ReferenceEquals(Project,editorProject)&&loaded&&!busy&&!draftRunning&&!discardPrompt&&!showMeterPanel&&!bindingsOpen&&!MidiPromptOpen&&!LaneTypeOpen&&savingProject==null;
+    bool CanImportMidi=>Current==Page.Edit&&Project!=null&&ReferenceEquals(Project,editorProject)&&loaded&&!busy&&!draftRunning&&!discardPrompt&&!showMeterPanel&&!bindingsOpen&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen&&savingProject==null;
     void ImportMidi(byte[] bytes,string name){
         if(!CanImportMidi){status=T("Editの読込完了後にMIDIを入れてください","Import MIDI after Edit is ready");return;}
         try{

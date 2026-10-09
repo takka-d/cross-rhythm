@@ -34,7 +34,7 @@ mergeInto(LibraryManager.library, {
       handles: new Map(), catalog: new Map(), queue: Promise.resolve(), operation:0,
       delay(){return new Promise(resolve=>setTimeout(resolve,0));},
       limited(promise,ms){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Storage or folder access timed out. Please try again.')),ms||5000);})]).finally(()=>clearTimeout(timer));},
-      progress(target,path,count){SendMessage(target,'OnImportProgress',JSON.stringify({path,count:String(count)}));if(window.CrossRhythmPicker)window.CrossRhythmPicker.progress(path,count);},
+      progress(target,path,count){SendMessage(target,'OnImportProgress',JSON.stringify({path,count:String(count)}));if(!this.reloading&&window.CrossRhythmPicker)window.CrossRhythmPicker.progress(path,count);},
       saveSource(source,handle){if(source.kind!=='folder')return;this.source=source;try{localStorage.setItem('CrossRhythmPlaySource',JSON.stringify(source));}catch(_){}if(handle){this.directory=handle;this.cache({token:'@directory',directory:true,handle,source}).catch(e=>console.warn(e.message));}},
       cancel(){this.operation++;this.picking=false;SendMessage('CrossRhythm','OnPickerState','closed');if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();},
       check(operation){if(operation!=null&&operation!==this.operation){const e=Error('Cancelled');e.name='AbortError';throw e;}},
@@ -73,7 +73,7 @@ mergeInto(LibraryManager.library, {
         SendMessage(target,'OnImportEnd','');
       },
       async open(file,handle,target,kind,source) {return this.serialized(()=>this.openOne(file,handle,target,kind,source));},
-      async openOne(file,handle,target,kind,source) {
+      async openOne(file,handle,target,kind,source,staged) {
           const bytes=new Uint8Array(await file.arrayBuffer());let token=null;
           if(kind==='audio'||kind==='midi'){await this.send(target,bytes,file.name,crypto.randomUUID(),kind);return;}
           if(handle){for(const [key,h] of this.handles){try{if(h.name===handle.name&&await this.limited(h.isSameEntry(handle),1500)){token=key;break;}}catch(_){}}}
@@ -82,19 +82,31 @@ mergeInto(LibraryManager.library, {
           token=token||crypto.randomUUID();handle=handle||this.handles.get(token);
           source=source||{kind:'project',name:file.name};
           await this.send(target,bytes,file.name,token,kind,source);
-          let cacheError=null;try{await this.remember({token,name:file.name,bytes,handle,source,fingerprint});}catch(error){cacheError=error;}
+          let cacheError=null;try{const item={token,name:file.name,bytes,handle,source,fingerprint};if(staged)staged.push(item);else await this.remember(item);}catch(error){cacheError=error;}
           if(cacheError)console.warn('Project opened, but browser storage could not be updated: '+cacheError.message);return token;
       },
-      async batch(target,entries,source,operation) {
+      async batch(target,entries,source,operation,refresh=false) {
         return this.serialized(async()=>{
-          this.check(operation);const folder=source.kind==='folder',tokens=[],errors=(source.errors||[]).slice();let count=0;
-          if(folder){this.saveSource(source);SendMessage(target,'OnImportBatch','open');}
+          this.check(operation);const folder=source.kind==='folder',tokens=[],staged=refresh?[]:null,errors=(source.errors||[]).slice();let count=0;
+          if(folder){this.saveSource(source);if(refresh)this.refreshAccepted=false;SendMessage(target,'OnImportBatch',refresh?'refresh':'open');}
           try {for(const entry of entries){this.check(operation);this.progress(target,entry.path||entry.name,count+1);try {
             const file=entry.file||await this.limited(entry.handle.getFile(),15000);
-            const token=await this.openOne(file,entry.handle||null,target,folder?null:'editor',Object.assign({},source,{relativePath:entry.path||file.name}));tokens.push(token);count++;
+            const token=await this.openOne(file,entry.handle||null,target,folder?null:'editor',Object.assign({},source,{relativePath:entry.path||file.name}),staged);tokens.push(token);count++;
           }catch(e){errors.push((entry.path||entry.name||'Project')+': '+e.message);}await this.delay();}}
-          finally{if(folder){SendMessage(target,'OnLibrarySource',JSON.stringify(Object.assign({},source,{count,errors})));await this.cache({token:'@library',workspace:true,source,tokens});}else if(errors.length)SendMessage(target,'OnFileError',errors.join('; '));}
+          finally{if(folder){SendMessage(target,'OnLibrarySource',JSON.stringify(Object.assign({},source,{count,errors})));if(!refresh||(!errors.length&&this.refreshAccepted))try{if(staged)for(const item of staged)await this.remember(item);await this.cache({token:'@library',workspace:true,source,tokens});}catch(e){SendMessage(target,'OnLibraryCacheError',e.message);}}else if(errors.length)SendMessage(target,'OnFileError',errors.join('; '));}
         });
+      },
+      async reload(target){
+        if(this.reloading||this.picking||!this.source||this.source.kind!=='folder')return;
+        if(!this.directory){SendMessage(target,'OnLibraryReloadUnavailable','unsupported');return;}
+        this.reloading=true;const operation=this.operation;SendMessage(target,'OnLibraryReloadState','start');
+        try{
+          if(await this.limited(this.directory.queryPermission({mode:'read'}))!=='granted'){SendMessage(target,'OnLibraryReloadUnavailable','permission');return;}
+          const entries=[],errors=[];await this.directoryEntries(this.directory,this.source.name,entries,errors,target,operation);this.check(operation);
+          if(errors.length)throw Error(errors.join('; '));entries.sort((a,b)=>a.path.localeCompare(b.path));
+          await this.batch(target,entries,Object.assign({},this.source,{errors:[]}),operation,true);
+        }catch(e){SendMessage(target,'OnLibraryReloadUnavailable',e.message);}
+        finally{this.reloading=false;SendMessage(target,'OnLibraryReloadState','done');}
       },
       async directoryEntries(dir,prefix,entries,errors,target,operation){
         const iterator=dir.values()[Symbol.asyncIterator]();let seen=0;
@@ -111,6 +123,7 @@ mergeInto(LibraryManager.library, {
           this.check(operation);const files=Array.from(input.files||[]);
           if(kind){for(const f of files)await this.open(f,null,target,kind);return;}
           const source={kind:folder?'folder':'project',name:folder?((files[0]||{}).webkitRelativePath||'').split('/')[0]:files.map(f=>f.name).join(', ')};
+          if(folder){this.directory=null;await this.cache({token:'@directory',directory:true,handle:null,source});}
           await this.batch(target,files.filter(f=>/\.crproj$/i.test(f.name)).map(file=>({file,path:file.webkitRelativePath||file.name})),source,operation);
         }catch(e){SendMessage(target,'OnFileError',e.message);}finally{input.remove();this.picking=false;SendMessage(target,'OnPickerState','closed');if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();}};
         input.oncancel=()=>{SendMessage(target,'OnFileError','Cancelled');input.remove();this.picking=false;SendMessage(target,'OnPickerState','closed');if(window.CrossRhythmPicker)window.CrossRhythmPicker.finish();};
@@ -132,6 +145,8 @@ mergeInto(LibraryManager.library, {
       }
     };
   },
+  CRLibraryRefreshResult: function(accepted){window.CRFiles.refreshAccepted=!!accepted;},
+  CRReloadLibrary: function(targetPtr){window.CRFiles.reload(UTF8ToString(targetPtr));},
   CRPick: function(targetPtr,folder) {
     window.CRFiles.pick(UTF8ToString(targetPtr),folder);
   },

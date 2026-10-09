@@ -11,12 +11,12 @@ public partial class CrossRhythmApp {
     string saveDetail="",saveTime="";
     void SetSaveState(SaveState state,string detail=""){saveState=state;saveStatusProject=savingProject??Project;saveDetail=detail;saveTime=DateTime.Now.ToString("HH:mm:ss");}
     void ClearSave(){savingProject=null;savingBytes=null;savingSnapshot=null;}
-    public void OnSaveButton(string mode){if(InputBlocked||MidiPromptOpen||LaneTypeOpen)return;if(mode=="Continue"&&discardPrompt){SaveBeforeLeaving();return;}if(Current!=Page.Edit||showMeterPanel||Editor.ContextOpen||discardPrompt)return;Save(mode=="SaveAs");}
+    public void OnSaveButton(string mode){if(InputBlocked||MidiPromptOpen||LaneTypeOpen||gridMenuOpen)return;if(mode=="Continue"&&discardPrompt){SaveBeforeLeaving();return;}if(Current!=Page.Edit||showMeterPanel||Editor.ContextOpen||discardPrompt)return;Save(mode=="SaveAs");}
     void SaveButton(Rect r,bool saveAs){
         string caption=saveAs?"Save As":"Save";bool enabled=GUI.enabled&&savingProject==null&&!busy;
 #if UNITY_WEBGL && !UNITY_EDITOR
         Button(r,"",!saveAs,enabled,16);
-        if(MidiPromptOpen||LaneTypeOpen||bindingsOpen||discardPrompt)return;
+        if(MidiPromptOpen||LaneTypeOpen||gridMenuOpen||bindingsOpen||discardPrompt)return;
         if(Event.current.type==EventType.Repaint)PlatformFiles.CRProjectButton(fileButtonCount++,r.x/W,r.y/H,r.width/W,r.height/H,saveAs?4:3,english?1:0,enabled?1:0,saveAs?0:1,16*scale);
 #else
         if(Button(r,caption,!saveAs,enabled,16))Save(saveAs);

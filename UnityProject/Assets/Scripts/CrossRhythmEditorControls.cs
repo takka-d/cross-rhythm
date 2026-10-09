@@ -30,9 +30,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(36,162,82,30),"Grid",Project.SnapToGrid,true,14)&&!Project.SnapToGrid){PushUndo();Project.Chart["editorSnapToGrid"]=true;QueueEditorRecovery();Project.Dirty=true;}
         if(Button(new Rect(126,162,82,30),"Free",!Project.SnapToGrid,true,14)&&Project.SnapToGrid){PushUndo();Project.Chart["editorSnapToGrid"]=false;QueueEditorRecovery();Project.Dirty=true;}
         Text(new Rect(236,166,42,24),"Grid",13,muted);int q=(int?)Project.Chart["quantize"]??16;
-        if(Button(new Rect(278,162,76,30),"1/"+q,false,true,14)){int i=Array.IndexOf(Grids,q);PushUndo();Project.Chart["quantize"]=Grids[(i+1)%Grids.Length];Edited();gridField="";}
-        if(gridField=="")gridField=q.ToString();gridField=EditField("grid",new Rect(363,162,58,30),gridField);
-        if(Button(new Rect(429,162,52,30),"Set",false,true,13)&&int.TryParse(gridField,out int custom)&&custom>=1&&custom<=1024){PushUndo();Project.Chart["quantize"]=custom;Edited();}
+        if(Button(GridButtonRect,GridLabel(q)+"  v",gridMenuOpen,true,14)){EndSongInfoEdit();Editor.Cancel();gridMenuOpen=true;gridMenuIndex=Math.Max(0,Array.IndexOf(Grids,q));gridMenuScroll.y=Math.Max(0,gridMenuIndex*32-128);gridField=q.ToString();GUI.FocusControl(null);}
         Text(new Rect(510,166,66,24),"Zoom X",13,muted);float previousZoom=zoom;zoom=GUI.HorizontalSlider(new Rect(580,174,160,18),zoom,30f/56f,20);if(Math.Abs(zoom-previousZoom)>.00001f)editScroll.x*=zoom/previousZoom;
         Text(new Rect(763,166,W-787,24),$"Bar {editMeasure+1} / {Project.Measures.Length}   ·   {selection.Count} "+T("選択","selected"),13,muted);
         EditorTimeline();EditorInspector();TrackSongInfoFocus();

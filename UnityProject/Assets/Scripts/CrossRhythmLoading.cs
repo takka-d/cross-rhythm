@@ -6,13 +6,14 @@ public partial class CrossRhythmApp {
     int loadingPaints;
     bool transitioning,nativeProjectLoading,webPickerOpen;
     string transitionLabel="",loadingFile="";
-    bool InputBlocked=>exportingMidi||savingProject!=null||transitioning||nativeProjectLoading||nativePickerOpen||webPickerOpen||importBatch||incoming!=null||pendingPerformance!=null||(Current==Page.Edit&&busy);
+    bool LoadingIsDialog=>!transitioning&&pendingPerformance==null;
+    bool InputBlocked=>libraryRefreshing||exportingMidi||savingProject!=null||transitioning||nativeProjectLoading||nativePickerOpen||webPickerOpen||importBatch||incoming!=null||pendingPerformance!=null||(Current==Page.Edit&&busy);
 
     public void OnPickerState(string state){webPickerOpen=state=="open";if(webPickerOpen)PrepareExclusiveOperation();}
     void PrepareExclusiveOperation(){
         Audio.Pause();ReleaseInputs();EndSongInfoEdit();CancelWaveMove();interaction?.Cancel();
         if(interaction!=null)interaction.ContextOpen=false;
-        editorFileOpen=false;laneTypeRow=-1;menuActivate="";padMenu.Clear();GUI.FocusControl(null);
+        editorFileOpen=false;laneTypeRow=-1;gridMenuOpen=false;menuActivate="";padMenu.Clear();GUI.FocusControl(null);
     }
     void Transition(Action action,string destination){
         if(InputBlocked)return;
@@ -28,6 +29,15 @@ public partial class CrossRhythmApp {
     void RequestBegin(bool practice){Transition(()=>Begin(practice),practice?"Practice":"Play");}
     void RequestEditSelected(){Transition(EditSelectedSong,"Edit");}
 
+    void LoadingBackground(){
+        // Render the retained page only on repaint. No input event reaches its controls.
+        if(!LoadingIsDialog||Project==null||Event.current.type!=EventType.Repaint)return;
+        menuActivate="";bool enabled=GUI.enabled;GUI.enabled=false;
+        try{
+            if(Current!=Page.Play&&Current!=Page.Practice)Header();
+            switch(Current){case Page.Title:TitlePage();break;case Page.Songs:SongsPage();break;case Page.Config:ConfigPage();break;case Page.Result:ResultPage();break;case Page.Play:case Page.Practice:Stage();break;case Page.Edit:EditorPage();break;}
+        }finally{GUI.enabled=enabled;}
+    }
     void LoadingPage(){
         if(Event.current.type==EventType.Repaint)loadingPaints++;
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -36,8 +46,9 @@ public partial class CrossRhythmApp {
         PlatformFiles.CRDisplayLayout(0,0,0,0,english?1:0,0);
 #endif
         menuItems.Clear();menuActivate="";
+        if(LoadingIsDialog)RectFill(new Rect(0,0,W,H),new Color(0,0,0,.58f));
         var box=new Rect((W-620)/2,(H-236)/2,620,236);
-        Text(new Rect(box.x,box.y-56,620,36),"CROSS RHYTHM",23,mint,true);
+        if(!LoadingIsDialog)Text(new Rect(box.x,box.y-56,620,36),"CROSS RHYTHM",23,mint,true);
         RectFill(box,panel);Border(box,line);
         bool save=savingProject!=null;
         string heading=exportingMidi?T("MIDIを書き出し中…","Exporting MIDI…"):save?T("保存中…","Saving…"):nativePickerOpen?T("フォルダーを選択してください","Choose a folder"):T("読み込み中…","Loading…");
