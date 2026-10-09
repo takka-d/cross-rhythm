@@ -29,7 +29,7 @@ public partial class CrossRhythmApp {
         },"Bar / Meter");
     }
     void EditorTimeline(){
-        float rh=EditorRowHeight;const float top=EditorTop,waveHeight=48,rulerHeight=24,labelWidth=142;
+        float rh=EditorRowHeight;const float top=EditorTop,waveHeight=48,rulerHeight=24,labelWidth=256;
         float ppb=EditorPPB*zoom,notesTop=waveHeight+rulerHeight,notesHeight=9*rh,totalWidth=(float)Project.Length*ppb;
         Rect viewport=new Rect(24+labelWidth,top,W-48-labelWidth,notesTop+notesHeight+18);
         EditorPointerInput(viewport,notesTop);
@@ -37,11 +37,14 @@ public partial class CrossRhythmApp {
         for(int row=0;row<9;row++){
             int laneCount=0,selectedCount=0;if(Event.current.type==EventType.Repaint)foreach(var note in Project.Notes)if(note.Instrument==Instruments[row]){laneCount++;if(selection.Contains(note.Index))selectedCount++;}float y=top+notesTop+row*rh;
             if(selectedCount>0){RectFill(new Rect(24,y,labelWidth,rh),C(selectedCount==laneCount?"#203c55":"#182c3e"));RectFill(new Rect(24,y,3,rh),C("#94d5ff"));}
-            Text(new Rect(36,y+(rh>=40&&selectedCount>0?3:(rh-24)/2),labelWidth-12,25),LaneNames[row],12,selectedCount>0?C("#eef8ff"):C("#b6c5d3"));
-            if(selectedCount>0&&rh>=40)Text(new Rect(36,y+25,labelWidth-12,20),$"{selectedCount} / {laneCount} "+T("選択","selected"),10,C("#a9cae1"));
-            if(!showMeterPanel&&!editorFileOpen&&!draftRunning&&GUI.Button(new Rect(24,y,labelWidth,rh),GUIContent.none,GUIStyle.none)){instrument=row;kind=0;Editor.SelectLane(row,Event.current.control||Event.current.command);GUI.FocusControl(null);}
+            string[] names={"CRASH","RIDE","HI-HAT","SNARE","HIGH TOM","MID TOM","FLOOR TOM","KICK","PEDAL"};
+            Text(new Rect(34,y+(rh-24)/2,96,25),names[row],12,selectedCount>0?C("#eef8ff"):C("#b6c5d3"));
+            if(GUI.Button(new Rect(24,y,100,rh),GUIContent.none,GUIStyle.none)){instrument=row;kind=Math.Max(0,Array.IndexOf(Types[row],EditorNoteTypes.Get(Project,row)));Editor.SelectLane(row,Event.current.control||Event.current.command);GUI.FocusControl(null);}
+            string inputType=EditorTypeLabel(EditorNoteTypes.Get(Project,row));
+            if(Button(new Rect(128,y+2,146,rh-4),inputType+(Types[row].Length>1?"  >":""),false,Types[row].Length>1,12,"lane-type-"+row)){laneTypeRow=row;Editor.ContextOpen=false;Editor.Cancel();GUI.FocusControl(null);}
+
         }
-        Text(new Rect(36,top+rulerHeight+2,124,20),"Wave ↔",13,muted);Text(new Rect(36,top+rulerHeight+23,124,20),$"{EditorAudioOffset:0.000} s",11,waveCaptured?mint:muted);Text(new Rect(36,top+2,166,24),"Bar",13,muted);
+        Text(new Rect(134,top+rulerHeight+24,136,24),"Input Type",12,muted);Text(new Rect(36,top+rulerHeight+2,124,20),"Wave ↔",13,muted);Text(new Rect(36,top+rulerHeight+23,124,20),$"{EditorAudioOffset:0.000} s",11,waveCaptured?mint:muted);Text(new Rect(36,top+2,166,24),"Bar",13,muted);
         var wheel=Event.current;
         if(GUI.enabled&&!MidiPromptOpen&&!showMeterPanel&&!editorFileOpen&&!draftRunning&&!Editor.ContextOpen&&viewport.Contains(wheel.mousePosition)&&wheel.type==EventType.ScrollWheel){
             // v175: Shift+wheel or a horizontal trackpad gesture pans the timeline.

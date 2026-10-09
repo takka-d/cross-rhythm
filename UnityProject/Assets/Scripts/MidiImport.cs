@@ -15,7 +15,7 @@ public static partial class MidiImport {
         public void Skip(int n){if(n<0||n>End-At)throw new InvalidDataException("Truncated MIDI chunk");At+=n;}
         public void Chunk(string name){foreach(char c in name)if(Byte()!=c)throw new InvalidDataException("Missing "+name);}
     }
-    sealed class Note {public int Track,Channel,Pitch,Velocity;public long Tick;public string Instrument,Type,Hat;public double Beat,Step;}
+    sealed class Note {public int Id,Track,Channel,Pitch,Velocity;public long Tick;public string Instrument,Type,Hat;public double Beat,Step;}
     sealed class Meter {public long Tick;public int N,D;}
     public sealed class Result {public JObject Chart;public int Hits,ZeroKept,ZeroDropped,TempoChanges,OverlapsRemoved;public Overlap[] Overlaps=Array.Empty<Overlap>();}
     public static int Strength(int v)=>v<=12?0:v<=37?1:v<=62?2:v<=87?3:v<=113?4:5;
@@ -55,7 +55,7 @@ public static partial class MidiImport {
                 if(status==0xF0||status==0xF7){int size=r.Variable();r.Skip(size);running=0;continue;}
                 if(status>=0xF0)throw new InvalidDataException("Unsupported MIDI status");
                 int kind=status&0xF0,d1=r.Byte(),d2=kind==0xC0||kind==0xD0?0:r.Byte();if(d1>=128||d2>=128)throw new InvalidDataException("Invalid MIDI data");
-                if(kind==0x90){var n=new Note{Track=track,Channel=status&15,Pitch=d1,Velocity=d2,Tick=tick,Beat=(double)tick/ppq};Map(n);notes.Add(n);}
+                if(kind==0x90){var n=new Note{Id=notes.Count,Track=track,Channel=status&15,Pitch=d1,Velocity=d2,Tick=tick,Beat=(double)tick/ppq};Map(n);notes.Add(n);}
                 if(kind==0x80)off80.Add(track);
             }
             r.End=fileEnd;

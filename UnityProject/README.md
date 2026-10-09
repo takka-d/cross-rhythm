@@ -94,7 +94,7 @@ and saved controller preferences are unchanged. Connected device names remain
 as supplied by the operating system/browser to identify actual hardware.
 
 
-0.3.23 development
+0.3.24 development
 
 - Songs: Start, Practice and Edit accept input while preview audio is loading. Start/Practice enter their screen immediately and start the count-in only after the selected audio is ready. Back cancels the pending start. Open Folder stays available while audio loads.
 - Practice: a 0.25 to 2.00 speed slider is restored alongside the existing fine-step/reset controls. The displayed value changes during a drag; audio speed is applied on release to avoid repeatedly restarting preparation. Pitch preservation remains enabled.
@@ -140,3 +140,14 @@ Additional 0.3.22 validation exercises the Windows Save-button handler, reads th
 Windows and WebGL built from the same Unity 6000.3.25f1 source. Core regression suites passed, including mixed tuplets and variable-meter grids. 220 Windows runtime assertions passed, including actual audio voice gain ratios at 0/25/100/150 percent, continuous mixer editing without stopping playback or rebuilding clips, Undo/Redo, and saved-file readback. Browser interaction checks cover File dismissal, Mixer changes/undo, recovery and 6/8 Edit/Practice rendering.
 
 No private projects or music are included. Native file-dialog interaction and subjective listening are not covered by automated tests. The user's Chrome download-completion issue and task 16 single-instance verification remain separately unresolved. Production root and WordPress content are unchanged.
+
+
+0.3.24 development
+
+- MIDI overlap review: select exactly one source event at each shared instrument/tick. Shows GM source sound, MIDI pitch, mapped Type, track/channel, raw velocity and strength, bar/beat/time and exact tick. Per-instrument bulk selection applies only where the selected source uniquely exists; missing or ambiguous positions still require an explicit choice. There is no stronger/softer or keep-all policy. Import stays disabled until every collision is resolved. Other hits, exact tuplets, tempo changes, cancel, single-step Undo/Redo and hi-hat state are preserved.
+- Edit Input Type: choose the type to place from each instrument's label column. This changes future placement only. Instrument-name clicks still select the lane and Ctrl adds to selection. Choices are project-specific, undoable, saved and recovered. Normal note selection and context-menu editing remain separate.
+- Controller: generic XInput backend names are no longer claimed as the device model. Shows an available device-reported product or Model unavailable. Added a live pressed-button indicator and a separate label/confirm-position choice (A on right or A/cross on bottom) that keeps custom performance mappings. Reset controls remain explicit. Physical recognition of the user's controller has not been verified.
+
+Windows and WebGL built from the same Unity 6000.3.25f1 source. Core regression suites passed, including exact MIDI selection, mixed tuplets, variable-meter grids, editor gestures, per-lane types and controller identity handling. Windows runtime assertions cover the actual import/undo/save pipeline, per-lane pointer placement, saved-file readback and synthetic InputSystem button events. Browser interaction evidence is stored with this release.
+
+No private projects or music are included. Native file-dialog interaction, the user's physical controller and subjective listening are not covered by automated tests. The user's Chrome download-completion issue and task 16 single-instance verification remain separately unresolved. Production root and WordPress content are unchanged.

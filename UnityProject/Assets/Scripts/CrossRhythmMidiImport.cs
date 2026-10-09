@@ -7,12 +7,13 @@ namespace CrossRhythm {
 public partial class CrossRhythmApp {
     sealed class PendingMidi {
         public byte[] Bytes;public string Name;public ChartProject Source;public MidiImport.Result Preview;public MidiImport.ZeroMode ZeroMode;
+        public ChartProject Chart;
         public readonly Dictionary<string,MidiImport.OverlapChoice> Choices=new Dictionary<string,MidiImport.OverlapChoice>();
     }
     PendingMidi pendingMidi;
-    Vector2 midiOverlapScroll;
+    Vector2 midiOverlapScroll;int midiOverlapInstrument;
     bool MidiPromptOpen=>pendingMidi!=null;
-    bool CanImportMidi=>Current==Page.Edit&&Project!=null&&ReferenceEquals(Project,editorProject)&&loaded&&!busy&&!draftRunning&&!discardPrompt&&!showMeterPanel&&!bindingsOpen&&!MidiPromptOpen&&savingProject==null;
+    bool CanImportMidi=>Current==Page.Edit&&Project!=null&&ReferenceEquals(Project,editorProject)&&loaded&&!busy&&!draftRunning&&!discardPrompt&&!showMeterPanel&&!bindingsOpen&&!MidiPromptOpen&&!LaneTypeOpen&&savingProject==null;
     void ImportMidi(byte[] bytes,string name){
         if(!CanImportMidi){status=T("Editの読込完了後にMIDIを入れてください","Import MIDI after Edit is ready");return;}
         try{
@@ -21,7 +22,8 @@ public partial class CrossRhythmApp {
             if(imported.Overlaps.Length==0){CommitMidi(imported);return;}
             pendingMidi=new PendingMidi{Bytes=bytes,Name=name,Source=Project,Preview=imported,ZeroMode=midiZeroMode};
             foreach(var overlap in imported.Overlaps)pendingMidi.Choices[overlap.Instrument]=new MidiImport.OverlapChoice();
-            midiOverlapScroll=Vector2.zero;ResetMenuFocus();
+            pendingMidi.Chart=new ChartProject{Chart=imported.Chart,Manifest=Project.Manifest};pendingMidi.Chart.Rebuild();
+            midiOverlapInstrument=0;midiSourcePage=0;midiOverlapScroll=Vector2.zero;ResetMenuFocus();
         }catch(Exception e){status=T("MIDI読込エラー: ","MIDI import error: ")+e.Message;}
     }
     void CommitMidi(MidiImport.Result imported){
@@ -35,33 +37,50 @@ public partial class CrossRhythmApp {
         try{var result=MidiImport.Read(p.Bytes,p.Source,p.Name,p.ZeroMode,p.Choices);pendingMidi=null;CommitMidi(result);ResetMenuFocus();}
         catch(Exception e){status=T("MIDI読込エラー: ","MIDI import error: ")+e.Message;}
     }
+    int MidiRemaining=>pendingMidi==null?0:pendingMidi.Preview.Overlaps.Sum(o=>o.Collisions.Count(c=>pendingMidi.Choices[o.Instrument].SelectedId(c)<0));
     void MidiOverlapPrompt(){
         if(pendingMidi==null)return;var p=pendingMidi;
-        RectFill(new Rect(0,0,W,H),new Color(0,0,0,.7f));
-        float width=Math.Min(960,W-48),height=Math.Min(H-100,228+p.Preview.Overlaps.Length*86),x=(W-width)/2,y=(H-height)/2;
+        RectFill(new Rect(0,0,W,H),new Color(0,0,0,.8f));
+        float width=Math.Min(1120,W-48),height=H-64,x=(W-width)/2,y=32;
         RectFill(new Rect(x,y,width,height),panel);Border(new Rect(x,y,width,height),mint);
-        Text(new Rect(x+24,y+17,width-48,34),T("MIDIの重複ノーツ","MIDI overlapping notes"),24,Color.white,true);
-        FittedText(new Rect(x+24,y+55,width-48,24),p.Name,14,muted);
-        Text(new Rect(x+24,y+86,width-48,26),T("同じ楽器・同じ時刻のノーツを整理します。異なる時刻と別の楽器は残ります","Choose notes at the same time on each instrument. Other hits stay unchanged."),13,muted);
-        float listHeight=height-210;
-        midiOverlapScroll=GUI.BeginScrollView(new Rect(x+20,y+121,width-40,listHeight),midiOverlapScroll,new Rect(0,0,width-64,p.Preview.Overlaps.Length*86),false,false);
+        Text(new Rect(x+24,y+16,width-48,32),T("MIDI: 残すノーツを選択","MIDI: choose the note to keep"),24,Color.white,true);
+        FittedText(new Rect(x+24,y+51,width-48,23),p.Name,14,muted);
+        Text(new Rect(x+24,y+80,width-48,25),T("同じ楽器・同じ位置には1つだけ残します。音名 → 種別、Track、強弱を確認して選択してください。","Keep one hit per instrument and position. Review source sound → Type, track and velocity."),13,muted);
+        float tabWidth=(width-48)/p.Preview.Overlaps.Length;
         for(int i=0;i<p.Preview.Overlaps.Length;i++){
-            var overlap=p.Preview.Overlaps[i];var choice=p.Choices[overlap.Instrument];float row=i*86;
-            Text(new Rect(6,row,width-76,26),overlap.Instrument+"  ·  "+overlap.Positions+T("箇所 / 余分なノーツ "," positions / extra notes ")+overlap.Extra,15,mint,true);
-            float typeWidth=(width-100)*.46f,velocityWidth=(width-100)*.30f;
-            string type=choice.PreferredPitch<0?T("種別: Auto","Type: Auto"):MidiImport.PitchLabel(choice.PreferredPitch);
-            if(Button(new Rect(6,row+31,typeWidth,33),type,false,!choice.KeepAll,13)){
-                int at=Array.IndexOf(overlap.Pitches,choice.PreferredPitch);choice.PreferredPitch=at+1<overlap.Pitches.Length?overlap.Pitches[at+1]:-1;
-            }
-            if(Button(new Rect(18+typeWidth,row+31,velocityWidth,33),choice.Softest?T("弱い方を残す","Keep softer"):T("強い方を残す","Keep stronger"),false,!choice.KeepAll,13))choice.Softest=!choice.Softest;
-            if(Button(new Rect(30+typeWidth+velocityWidth,row+31,width-94-typeWidth-velocityWidth,33),T("両方残す","Keep all"),choice.KeepAll,true,13))choice.KeepAll=!choice.KeepAll;
+            var o=p.Preview.Overlaps[i];int left=o.Collisions.Count(c=>p.Choices[o.Instrument].SelectedId(c)<0);
+            if(Button(new Rect(x+24+i*tabWidth,y+115,tabWidth-8,34),o.Instrument+" · "+(o.Positions-left)+"/"+o.Positions,midiOverlapInstrument==i,true,14)){midiOverlapInstrument=i;midiSourcePage=0;midiOverlapScroll=Vector2.zero;ResetMenuFocus();}
+        }
+        var overlap=p.Preview.Overlaps[midiOverlapInstrument];var choice=p.Choices[overlap.Instrument];
+        Text(new Rect(x+24,y+159,width-48,25),T("一括選択: この音名・Trackを残す (該当する箇所のみ)","Apply to this instrument: keep this sound / track wherever it is available"),13,mint);
+        var sources=overlap.Collisions.SelectMany(c=>c.Candidates).GroupBy(c=>(c.Track,c.Pitch)).Select(g=>g.First()).ToArray();
+        // Bulk choices stay compact even for a many-track file; cycle pages.
+        int pageCount=(sources.Length+5)/6;midiSourcePage=Math.Min(midiSourcePage,pageCount-1);
+        int sourceStart=midiSourcePage*6,shown=Math.Min(6,sources.Length-sourceStart);
+        for(int i=0;i<shown;i++){var c=sources[sourceStart+i];if(Button(new Rect(x+24+i%2*(width-48)/2,y+187+i/2*34,(width-64)/2,29),MidiImport.PitchLabel(c.Pitch)+" · Track "+(c.Track+1),false,true,12))choice.SelectSource(overlap,c.Track,c.Pitch);}
+        float listTop=y+192+((shown+1)/2)*34;
+        if(pageCount>1){if(Button(new Rect(x+24,listTop,width-48,26),T("他の音名 / Track ","More sounds / tracks ")+(midiSourcePage+1)+"/"+pageCount,false,true,12))midiSourcePage=(midiSourcePage+1)%pageCount;listTop+=32;}
+        float listHeight=y+height-80-listTop,totalHeight=overlap.Collisions.Sum(c=>40+c.Candidates.Length*38);
+        midiOverlapScroll=GUI.BeginScrollView(new Rect(x+20,listTop,width-40,listHeight),midiOverlapScroll,new Rect(0,0,width-62,totalHeight),false,false);
+        float row=0;
+        foreach(var collision in overlap.Collisions){
+            float rowHeight=40+collision.Candidates.Length*38;
+            if(row+rowHeight>=midiOverlapScroll.y&&row<=midiOverlapScroll.y+listHeight){
+                int bar=p.Chart.BarAt(collision.Beat),selected=choice.SelectedId(collision);double beat=(collision.Beat-p.Chart.Starts[bar])/ChartVisuals.BeatUnit(p.Chart,bar)+1;
+                RectFill(new Rect(0,row,width-64,30),bg);
+                Text(new Rect(8,row+3,width-90,24),$"M{bar+1} · Beat {beat:0.######} · {p.Chart.SecondsAtBeat(collision.Beat):0.000} s · Tick {collision.Tick}"+(selected<0?T("  未選択","  Choose one"):""),13,selected<0?Color.white:mint);
+                for(int i=0;i<collision.Candidates.Length;i++){var c=collision.Candidates[i];string label=(selected==c.Id?"● ":"○ ")+MidiImport.PitchLabel(c.Pitch)+$" · Track {c.Track+1} / Ch {c.Channel+1} · V{MidiImport.Strength(c.Velocity)} ({c.Velocity}/127) · #{c.Id+1}";
+                    if(Button(new Rect(8,row+34+i*38,width-84,33),label,selected==c.Id,true,13,"midi-candidate-"+c.Id))choice.Selected[collision.Tick]=c.Id;
+                }
+            }row+=rowHeight;
         }
         GUI.EndScrollView();
-        int removed=p.Preview.Overlaps.Where(o=>!p.Choices[o.Instrument].KeepAll).Sum(o=>o.Extra);
-        Text(new Rect(x+24,y+height-80,width-48,24),T("選んだ種別を優先し、同種別は強弱で選択。整理するノーツ: ","Prefer the selected type, then resolve by velocity. Notes to remove: ")+removed,12,muted);
-        if(Button(new Rect(x+width-282,y+height-45,116,32),"Cancel",false,true,14)){CancelMidi();return;}
-        if(Button(new Rect(x+width-152,y+height-45,128,32),"Import",true,true,14)){ApplyPendingMidi();return;}
+        int remaining=MidiRemaining;
+        Text(new Rect(x+24,y+height-66,width-346,50),remaining>0?T("未選択: ","Still to choose: ")+remaining:T("各位置に1つ残して読み込みます","Ready: one hit at each position"),15,mint);
+        if(Button(new Rect(x+width-282,y+height-54,116,34),"Cancel",false,true,14)){CancelMidi();return;}
+        if(Button(new Rect(x+width-152,y+height-54,128,34),"Import",true,remaining==0,14)){ApplyPendingMidi();return;}
         if(Event.current.type==EventType.KeyDown&&Event.current.keyCode==KeyCode.Escape){CancelMidi();Event.current.Use();}
     }
+    int midiSourcePage;
 }
 }

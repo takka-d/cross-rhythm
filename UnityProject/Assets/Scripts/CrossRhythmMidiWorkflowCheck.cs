@@ -18,8 +18,12 @@ public partial class CrossRhythmApp {
         ImportDroppedMidi(new[]{file,file});Check(!MidiPromptOpen&&JToken.DeepEquals(original,Project.Chart),"multiple dropped files cannot overwrite sequentially");
         ImportDroppedMidi(new[]{file+".txt"});Check(!MidiPromptOpen&&JToken.DeepEquals(original,Project.Chart),"non-MIDI drop is rejected");
         ImportMidi(bytes,Path.GetFileName(file));Check(MidiPromptOpen,"Import MIDI uses the same overlap review");
-        pendingMidi.Choices["SN"].PreferredPitch=37;pendingMidi.Choices["CR"].KeepAll=true;ApplyPendingMidi();
-        Check(!MidiPromptOpen&&Project.PlayableNoteCount==11&&Project.Dirty,"confirmed policies apply exactly once");
+        Check(MidiRemaining==5,"overlap dialog initially requires five concrete choices");
+        ApplyPendingMidi();Check(MidiPromptOpen&&JToken.DeepEquals(original,Project.Chart),"incomplete choices cannot replace the chart");
+        foreach(var overlap in pendingMidi.Preview.Overlaps)foreach(var c in overlap.Collisions)pendingMidi.Choices[overlap.Instrument].Selected[c.Tick]=c.Candidates[0].Id;
+        var sn=pendingMidi.Preview.Overlaps.Single(o=>o.Instrument=="SN");pendingMidi.Choices["SN"].SelectSource(sn,sn.Collisions[0].Candidates.First(c=>c.Pitch==37).Track,37);
+        Check(MidiRemaining==0,"each exact candidate resolves one position");ApplyPendingMidi();
+        Check(!MidiPromptOpen&&Project.PlayableNoteCount==10&&Project.Dirty,"confirmed policies apply exactly once");
         Check(Project.Notes.Single(n=>n.Instrument=="SN"&&n.Beat==0).Articulation=="rim_closed","app imports selected type");
         var imported=(JObject)Project.Chart.DeepClone();Restore(false);Check(JToken.DeepEquals(original,Project.Chart),"single Undo restores the entire pre-import chart");Restore(true);Check(JToken.DeepEquals(imported,Project.Chart),"Redo restores resolved notes and tempo");
         string path=Path.Combine(workspaceCheckRoot,"MIDI Overlap Check.crproj");Project.SaveNative(path,false);Check(JToken.DeepEquals(ChartProject.Read(File.ReadAllBytes(path),"saved").Chart,imported),"resolved import survives native save and reopen");

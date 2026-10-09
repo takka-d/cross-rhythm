@@ -27,25 +27,25 @@ public partial class CrossRhythmApp {
 
     void OnGUI(){
         Styles();scale=Mathf.Min(Screen.width/1280f,Screen.height/800f);W=Screen.width/scale;H=Screen.height/scale;GUI.matrix=Matrix4x4.Scale(new Vector3(scale,scale,1));RectFill(new Rect(0,0,W,H),bg);
-        if(Project==null)return;DismissEditorFileMenu();BindingKeys();MenuKeys();if(Event.current.type==EventType.Repaint)menuItems.Clear();
+        if(Project==null)return;DismissEditorFileMenu();DismissLaneTypeMenu();BindingKeys();MenuKeys();if(Event.current.type==EventType.Repaint)menuItems.Clear();
 #if UNITY_WEBGL && !UNITY_EDITOR
         if(Event.current.type==EventType.Repaint){fileButtonCount=0;PlatformFiles.CRProjectButtonsBegin();}
 #endif
         bool stage=Current==Page.Play||Current==Page.Practice;
-        bool uiEnabled=GUI.enabled;GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!(Current==Page.Edit&&(showMeterPanel||draftRunning||editorFileOpen));
+        bool uiEnabled=GUI.enabled;GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen&&!(Current==Page.Edit&&(showMeterPanel||draftRunning||editorFileOpen));
         if(!stage)Header();
-        GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen;
+        GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen;
         switch(Current){case Page.Title:TitlePage();break;case Page.Songs:SongsPage();break;case Page.Config:ConfigPage();break;case Page.Result:ResultPage();break;case Page.Play:case Page.Practice:Stage();break;case Page.Edit:EditorPage();break;}
         editTextFocused=Current==Page.Edit&&GUI.GetNameOfFocusedControl().StartsWith("edit-");
         DisplaySizeButton();
         GUI.enabled=uiEnabled;
         if(bindingsOpen)BindingSettings();
-        UnsavedPrompt();MidiOverlapPrompt();
+        UnsavedPrompt();MidiOverlapPrompt();EditorLaneTypeMenu();
 #if UNITY_WEBGL && !UNITY_EDITOR
         if(Event.current.type==EventType.Repaint){PlatformFiles.CRProjectButtonsEnd();PlatformFiles.CRKeyboardFileMode(keyboardMenu&&menuFocus.StartsWith("file:")?int.Parse(menuFocus.Substring(5)):-1);}
 #endif
 #if UNITY_WEBGL && !UNITY_EDITOR
-        PlatformFiles.CREditorKeys(Current==Page.Edit&&!showMeterPanel&&!discardPrompt&&!draftRunning&&!editorFileOpen&&!MidiPromptOpen?1:0,editTextFocused?1:0);
+        PlatformFiles.CREditorKeys(Current==Page.Edit&&!showMeterPanel&&!discardPrompt&&!draftRunning&&!editorFileOpen&&!MidiPromptOpen&&!LaneTypeOpen?1:0,editTextFocused?1:0);
 #endif
         if(!stage&&Current!=Page.Result)Text(new Rect(26,H-28,W-52,24),busy?T("読込中…","Loading…"):status,13,muted);
     }
@@ -70,7 +70,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(x,553,290,64),"Songs",true))Navigate(Page.Songs);
         if(Button(new Rect(x+308,553,180,64),"Edit"))Navigate(Page.Edit);
         if(Button(new Rect(x+506,553,180,64),"Config"))Navigate(Page.Config);
-        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.23",14,muted);
+        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.24",14,muted);
         for(int i=0;i<7;i++){float h=35+i%3*15;RectFill(new Rect(W-260+i*22,240+i*16,7,h),new Color(mint.r,mint.g,mint.b,.18f+i*.04f));}
     }
     void FittedText(Rect r,string value,int size,Color color,bool bold=false){

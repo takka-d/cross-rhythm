@@ -20,7 +20,7 @@ public partial class CrossRhythmApp {
         Audio.Stop();ClearDraft();var old=editorProject;editorSessions.Remove(old);
         foreach(var key in new System.Collections.Generic.List<string>(editorDocuments.Keys))if(ReferenceEquals(editorDocuments[key],old))editorDocuments.Remove(key);
         editorProject=EmptyEditorProject();editorOpenedByUser=true;interaction?.Reset();
-        undo.Clear();redo.Clear();editScroll=Vector2.zero;editMeasure=0;zoom=1;showMeterPanel=false;editorFileOpen=false;
+        undo.Clear();redo.Clear();editScroll=Vector2.zero;editMeasure=0;zoom=1;laneTypeRow=-1;showMeterPanel=false;editorFileOpen=false;
         if(Current==Page.Edit)ActivateProject(editorProject);
         // Replace recovery with the empty document, so discarded edits cannot reappear on restart.
         QueueEditorRecovery();PersistEditorSession();UpdateUnsavedBrowserGuard();

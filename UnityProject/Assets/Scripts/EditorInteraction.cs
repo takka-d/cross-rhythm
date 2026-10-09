@@ -102,7 +102,7 @@ public sealed class EditorInteraction {
         var duplicate=Project.Notes.FirstOrDefault(n=>n.Instrument==Lanes[row]&&Math.Abs(n.Beat-beat)<1e-6);if(duplicate!=null){Only(duplicate);return;}
         Snapshot();int bar=Project.BarAt(beat);string inst=Lanes[row];var e=new JObject{{"id","u-"+Guid.NewGuid().ToString("N")},{"measure",bar},{"beat",beat-Project.Starts[bar]},{"instrument",inst},{"velocity",DefaultVelocity},{"gridStepBeats",Project.Grid},{"confidence",1},{"source","manual"}};
         if(inst=="SN"||inst=="HHSTATE")e["durationBeats"]=Math.Min(inst=="HHSTATE"?Math.Max(Project.Grid,DefaultDuration):Project.Grid,Project.Length-beat);
-        e["articulation"]=inst=="CR"?"crash":inst=="RD"?"ride":inst=="SN"||inst=="HT"||inst=="MT"||inst=="FT"?"center":inst=="HHSTATE"?"closed":"auto";
+        e["articulation"]=EditorNoteTypes.Get(Project,row);
         target=Project.Events.Count;Project.Events.Add(e);Commit();Only(Note(target));Preview?.Invoke(Note(target));
         if(inst=="HHSTATE"){gesture=Gesture.Pedal;originalStart=beat;pushed=true;}
     }
