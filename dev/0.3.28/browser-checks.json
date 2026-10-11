@@ -1,0 +1,36 @@
+{
+  "version": "0.3.28",
+  "browser": "Codex in-app browser",
+  "localUrl": "http://127.0.0.1:8788/?qa=0328",
+  "generatedWavDropDecoded": true,
+  "syntheticAudioSeconds": 9.25,
+  "audioBarsAfterImport": 5,
+  "addBarThenRemoveBar": true,
+  "extendToAudioNoShrink": true,
+  "englishAndJapaneseControlsObserved": true,
+  "musicMuteGain": [
+    0.699999988079071,
+    0,
+    0.699999988079071
+  ],
+  "musicMuteAudioClockSeconds": [
+    25.370702947845803,
+    25.910566893424036,
+    26.31111111111111
+  ],
+  "musicMuteSameGainNode": true,
+  "saveWriteVerified": true,
+  "savedProjectReadBackVerified": true,
+  "reopenedAudioAndFiveBars": true,
+  "reopenedSnMute": true,
+  "reopenedMetronome": true,
+  "finalConsoleErrors": 0,
+  "nativeFilePickerGestureVerified": false,
+  "explorerDropGestureVerified": false,
+  "physicalAudioListeningVerified": false,
+  "otherCodecDecodeVerified": false,
+  "savePickerNote": "Candidate Save As used an origin-private file-system handle as picker response. Final Save overwrote the retained real handle and read back its ZIP.",
+  "screenshots": [
+    "mixer-en.png"
+  ]
+}

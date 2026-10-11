@@ -4,7 +4,7 @@ using UnityEngine;
 namespace CrossRhythm {
 public partial class CrossRhythmApp {
     MidiFileDrop midiFileDrop;
-    bool CanDropMidi=>!InputBlocked&&CanImportMidi&&!editorFileOpen&&!Editor.ContextOpen;
+    bool CanDropMidi=>!InputBlocked&&CanImportMidi&&!editorFileOpen&&!gridMenuOpen&&laneTypeRow<0&&!Editor.ContextOpen;
     void InitializeMidiDrop(){midiFileDrop=new MidiFileDrop();}
     void DisposeMidiDrop(){midiFileDrop?.Dispose();}
     void UpdateMidiDrop(){
@@ -16,12 +16,12 @@ public partial class CrossRhythmApp {
 #endif
     }
     void ImportDroppedMidi(string[] paths){
-        if(!CanDropMidi){status=T("Editの読込完了後にMIDIをドロップしてください","Drop MIDI after Edit is ready");return;}
-        if(paths==null||paths.Length!=1||!MidiDropFiles.IsMidi(paths[0])){status=T("MIDIファイル(.mid / .midi)を1つドロップしてください","Drop one MIDI file (.mid / .midi)");return;}
+        if(!CanDropMidi){status=T("Editの読込完了後にMIDI・音声をドロップしてください","Drop MIDI or audio after Edit is ready");return;}
+        if(paths==null||paths.Length!=1||(!MidiDropFiles.IsMidi(paths[0])&&!MidiDropFiles.IsAudio(paths[0]))){status=T("MIDIまたは音声ファイルを1つドロップしてください","Drop one MIDI or audio file");return;}
         try{
-            var info=new FileInfo(paths[0]);if(!info.Exists||info.Length<=0||info.Length>MidiDropFiles.MaxBytes){status=T("MIDIは空でない32 MB以下のファイルを選んでください","Choose a nonempty MIDI file up to 32 MB");return;}
-            ImportMidi(File.ReadAllBytes(paths[0]),Path.GetFileName(paths[0]));
-        }catch(Exception e){status=T("MIDI読込エラー: ","MIDI import error: ")+e.Message;}
+            var info=new FileInfo(paths[0]);if(!info.Exists||info.Length<=0||info.Length>(MidiDropFiles.IsMidi(paths[0])?MidiDropFiles.MaxBytes:MidiDropFiles.MaxAudioBytes)){status=T("空でないファイルを選択: MIDI 32 MB / 音声128 MB以下","Choose a nonempty file: MIDI up to 32 MB / audio up to 128 MB");return;}
+            if(MidiDropFiles.IsAudio(paths[0]))StartCoroutine(LoadDroppedAudio(paths[0]));else ImportMidi(File.ReadAllBytes(paths[0]),Path.GetFileName(paths[0]));
+        }catch(Exception e){status=T("ファイル読込エラー: ","File import error: ")+e.Message;}
     }
     public void OnMidiDropError(string message){status=message;}
 }

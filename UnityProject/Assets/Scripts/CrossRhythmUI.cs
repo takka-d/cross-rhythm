@@ -71,7 +71,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(x,553,290,64),"Songs",true))Navigate(Page.Songs);
         if(Button(new Rect(x+308,553,180,64),"Edit"))Navigate(Page.Edit);
         if(Button(new Rect(x+506,553,180,64),"Config"))Navigate(Page.Config);
-        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.27",14,muted);
+        Text(new Rect(x,H-85,900,30),"Windows / Web   ·   Unity Preview 0.3.28",14,muted);
         for(int i=0;i<7;i++){float h=35+i%3*15;RectFill(new Rect(W-260+i*22,240+i*16,7,h),new Color(mint.r,mint.g,mint.b,.18f+i*.04f));}
     }
     void FittedText(Rect r,string value,int size,Color color,bool bold=false){
@@ -123,7 +123,7 @@ public partial class CrossRhythmApp {
         Text(new Rect(x+24,y+272,500,24),T("＋: 入力を早い時刻として補正","＋: compensate delayed input"),14,muted);
         BindingPanel(new Rect(x+580,y,580,304));
         if(Button(new Rect(x,718,180,42),english?"Language: EN":"Language: JA")){english=!english;status="";PlayerPrefs.SetInt("language",english?1:0);PlayerPrefs.Save();}
-        if(Button(new Rect(x+200,718,220,42),"Click: "+(metronome?"ON":"OFF")))metronome=!metronome;
+        if(Button(new Rect(x+200,718,220,42),"Metronome: "+(metronome?"ON":"OFF")))SetMetronome(!metronome);
     }
     void ResultPage(){float x=(W-1160)/2;Text(new Rect(x,106,700,55),"Result",38,Color.white,true);Text(new Rect(x,170,1080,36),Project.Title,22,muted);RectFill(new Rect(x,240,275,345),panel);Text(new Rect(x+28,266,230,115),Result.Rank,92,mint,true);Text(new Rect(x+28,395,240,102),Result.Score.ToString("0.0"),64,Color.white,true);Text(new Rect(x+28,500,230,35),"/ 100",22,muted);
         string[] names={T("ノーツ判定","Accuracy"),T("打点の安定性","Hit stability"),T("拍の安定性","Beat stability")};double[] vals={Result.Accuracy*.4,Result.Hits*.3,Result.Beats*.3};for(int i=0;i<3;i++){float xx=x+299+i*290;RectFill(new Rect(xx,240,274,190),panel);Text(new Rect(xx+20,261,240,35),names[i],20);Text(new Rect(xx+20,316,240,66),vals[i].ToString("0.0"),44,mint,true);Text(new Rect(xx+20,385,240,30),"/ "+(i==0?40:30),16,muted);}

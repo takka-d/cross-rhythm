@@ -24,7 +24,8 @@ public partial class CrossRhythmApp {
             Text(new Rect(483,38,20,26),"/",18,muted);GUI.SetNextControlName("edit-meter-d");meterDenominator=GUI.TextField(new Rect(505,34,64,34),meterDenominator,field);
             if(Button(new Rect(583,34,72,34),"Set"))ApplyMeter();
             if(Button(new Rect(20,98,130,36),"+ Bar"))InsertEditorMeasure();
-            if(Button(new Rect(166,98,160,36),"Remove Bar",false,Project.Measures.Length>1))RemoveEditorMeasure();
+            if(Button(new Rect(166,98,160,36),"Remove Bar",false,Project.CanRemoveMeasure(editMeasure)))RemoveEditorMeasure();
+            if(Button(new Rect(346,98,252,36),T("音源の長さまで追加","Extend to Audio"),false,Audio.Song!=null))ExtendEditorToAudio();
             if(Button(new Rect(724,122,112,36),"Close",true))showMeterPanel=false;
         },"Bar / Meter");
     }

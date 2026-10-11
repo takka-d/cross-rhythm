@@ -94,7 +94,7 @@ and saved controller preferences are unchanged. Connected device names remain
 as supplied by the operating system/browser to identify actual hardware.
 
 
-0.3.27 development
+0.3.28 development
 
 - Songs: Start, Practice and Edit accept input while preview audio is loading. Start/Practice enter their screen immediately and start the count-in only after the selected audio is ready. Back cancels the pending start. Open Folder stays available while audio loads.
 - Practice: a 0.25 to 2.00 speed slider is restored alongside the existing fine-step/reset controls. The displayed value changes during a drag; audio speed is applied on release to avoid repeatedly restarting preparation. Pitch preservation remains enabled.
@@ -187,3 +187,12 @@ Native file-dialog interaction, physical controller/MIDI hardware and subjective
 Windows and WebGL share Unity 6000.3.25f1 source. Native runtime checks, core regressions, save/MIDI bridge regressions, folder-refresh lifecycle/error tests and independent MIDI parsing passed. Browser UI checks cover the dropdown, retained-page dialogs, actual browser-private file writes, folder changes and reloading.
 
 Native file-dialog interaction is not verified by these checks. Browser-private filesystem testing does not prove Explorer drag-and-drop or OS picker operation. The user's Chrome ZIP download-completion issue and task 16 single-instance verification remain separately unresolved. No private projects or recordings are included. Production root and WordPress content are unchanged.
+
+
+0.3.28 development
+
+- Edit accepts one audio file (.wav/.mp3/.m4a/.ogg/.flac/.aac, up to 128 MB) by drag and drop, alongside existing MIDI import (32 MB). Decoding uses the existing platform decoder; codec availability remains platform-dependent. Failed decoding restores the previous audio, chart and history. Successful replacement is one Undo/Redo action, does not add a Songs entry, and supports project saving/reopening.
+- Audio import extends the chart with complete bars through the end of the audio. Coverage follows tempo changes, source offset and the last time signature, preserving existing notes and never shrinking the chart. Song exposes + Bar/- Bar beside Bar/Meter; the existing protected empty-bar removal remains. Bar/Meter also offers Extend to Audio after timeline changes.
+- Edit Mixer adds Music Mute, Drums Mute, per-instrument Mute and a Metronome switch. Mute preserves fader values and ongoing transport, cancels muted tails, and applies only to Edit monitoring. Monitoring switches persist with the project and support Undo. The existing metronome is reused, remains independent of drum mute, persists its setting and starts from the current position when enabled. Performance playback is unaffected by Edit monitor switches.
+
+Windows and WebGL share Unity 6000.3.25f1 source. Core regressions, native runtime checks, audio drop routing, folder refresh, save/MIDI bridge checks and independent MIDI parsing were run. Browser UI verification uses synthetic audio and generated file-drop events, not an Explorer gesture. OS-native file-dialog gestures and listening through physical audio devices are not verified. The earlier Chrome ZIP download-completion issue remains unresolved. No private projects or recordings are included. Production root and WordPress content are unchanged.

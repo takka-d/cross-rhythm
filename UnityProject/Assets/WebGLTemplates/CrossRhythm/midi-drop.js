@@ -16,7 +16,7 @@
       document.body.appendChild(overlay);
     }
     overlay.hidden = false;
-    overlay.textContent = text('MIDIをドロップして読込', 'Drop MIDI to import');
+    overlay.textContent = text('MIDI・音声をドロップして読込', 'Drop MIDI or audio to import');
   };
   window.CrossRhythmMidiDrop = {
     set(target, enabled, english) {
@@ -41,17 +41,17 @@
   window.addEventListener('drop', async event => {
     if (!filesDrag(event)) return;
     event.preventDefault(); hide();
-    if (!state.enabled || state.active) { error(text('Editの読込完了後にMIDIをドロップしてください', 'Drop MIDI after Edit is ready')); return; }
+    if (!state.enabled || state.active) { error(text('Editの読込完了後にMIDI・音声をドロップしてください', 'Drop MIDI or audio after Edit is ready')); return; }
     const files = Array.from(event.dataTransfer.files || []);
-    if (files.length !== 1 || !/\.(mid|midi)$/i.test(files[0].name)) { error(text('MIDIファイル(.mid / .midi)を1つドロップしてください', 'Drop one MIDI file (.mid / .midi)')); return; }
-    const file = files[0], epoch = state.epoch, target = state.target;
-    if (file.size <= 0 || file.size > 32 * 1024 * 1024) { error(text('MIDIは空でない32 MB以下のファイルを選んでください', 'Choose a nonempty MIDI file up to 32 MB')); return; }
+    if (files.length !== 1 || !/\.(mid|midi|wav|mp3|m4a|ogg|flac|aac)$/i.test(files[0].name)) { error(text('MIDIまたは音声ファイルを1つドロップしてください', 'Drop one MIDI or audio file')); return; }
+    const file = files[0], epoch = state.epoch, target = state.target, midi = /\.midi?$/i.test(file.name), limit = (midi ? 32 : 128) * 1024 * 1024;
+    if (file.size <= 0 || file.size > limit) { error(text('空でないファイルを選択: MIDI 32 MB / 音声128 MB以下', 'Choose a nonempty file: MIDI up to 32 MB / audio up to 128 MB')); return; }
     state.active = true;
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
       await window.CRFiles.serialized(async () => {
         if (!state.enabled || state.epoch !== epoch) throw Error(text('Editで読込をやり直してください', 'Import again in Edit'));
-        await window.CRFiles.send(target, bytes, file.name, '', 'midi-drop');
+        await window.CRFiles.send(target, bytes, file.name, '', midi ? 'midi-drop' : 'audio-drop');
       });
     } catch (e) { error(e.message || String(e)); }
     finally { state.active = false; }

@@ -58,11 +58,11 @@ public sealed partial class RhythmAudio : MonoBehaviour {
         streamed=true;
 #endif
         if(streamed){Preparing=true;stretchWork=StartCoroutine(StreamPitch(beat,Rate,playGeneration));return;}
-        Backing.clip=Song;Backing.pitch=1;Backing.volume=BackingGain;double wait=Math.Max(0,-sec);
+        Backing.clip=Song;Backing.pitch=1;Backing.volume=EffectiveBackingGain;double wait=Math.Max(0,-sec);
         Backing.timeSamples=(int)Math.Max(0,Math.Min(Song.samples-1,Math.Round(Math.Max(0,sec)*Song.frequency)));Backing.PlayScheduled(ToUnityDSP(AnchorDSP+wait));
     }
-    public void Preview(){Stop();Rate=1;Backing.pitch=1;if(Song==null)return;Backing.clip=Song;Backing.volume=BackingGain;Backing.timeSamples=(int)Math.Min(Song.samples-1,Math.Max(0,Offset)*Song.frequency);Backing.Play();}
-    void Update(){if(Backing!=null)Backing.volume=BackingGain;UpdateStretch();}
+    public void Preview(){Stop();Rate=1;Backing.pitch=1;if(Song==null)return;Backing.clip=Song;Backing.volume=EffectiveBackingGain;Backing.timeSamples=(int)Math.Min(Song.samples-1,Math.Max(0,Offset)*Song.frequency);Backing.Play();}
+    void Update(){ApplyMonitor();}
     public void Load(ChartProject p){
         decodeCancellation?.Cancel();decodeCancellation?.Dispose();decodeCancellation=new CancellationTokenSource();
         Stop();Rate=1;Backing.pitch=1;foreach(var c in gainClips.Values)Destroy(c);gainClips.Clear();gainScales.Clear();loadGeneration++;Project=p;BPM=p.BPM;Offset=p.Offset;AnchorBeat=CountIn.Start(p);
@@ -193,7 +193,7 @@ public sealed partial class RhythmAudio : MonoBehaviour {
     [DllImport("__Internal")]static extern void CRHatStop();
     [DllImport("__Internal")]static extern void CRHatCancelFuture();
 #endif
-    public void CancelFutureDrums(){foreach(var pair in voiceStarts)if(pair.Value>Clock)pair.Key.Stop();
+    public void CancelFutureDrums(){foreach(var pair in voiceStarts)if(pair.Value>Clock&&(!voiceChannels.TryGetValue(pair.Key,out var channel)||channel!="click"))pair.Key.Stop();
 #if UNITY_WEBGL && !UNITY_EDITOR
         CRHatCancelFuture();
 #else
@@ -201,7 +201,7 @@ public sealed partial class RhythmAudio : MonoBehaviour {
 #endif
     }
     public void Drum(ChartNote n,bool closed,double when=-1){
-        string key=KeyFor(n,closed);float pitch=1;
+        string key=KeyFor(n,closed);if(MonitorSilenced(n.Instrument)){if(key=="HH"||key=="HH_PEDAL")Choke(when);return;}float pitch=1;
         if(n.Instrument=="HT")pitch=n.Articulation=="rimshot"?1.34f:n.Articulation=="high"?1.18f:1;
         if(n.Instrument=="MT")pitch=n.Articulation=="rimshot"?1.16f:n.Articulation=="high"?1:.84f;
         if(n.Instrument=="FT"&&n.Articulation=="high")pitch=1.18f;
@@ -209,10 +209,10 @@ public sealed partial class RhythmAudio : MonoBehaviour {
         float kitGain=1,kitRate=1;string kit=(string)Project?.Chart["drumKit"]??"studio";
         // Preset maps are copied from the HTML reference without altering project values.
         var preset=KitPreset.Get(kit,key);kitGain=preset.x;kitRate=preset.y;
-        PlayKey(key,ChartProject.Gains[n.Velocity]*mix*kitGain,pitch*kitRate,when,n.Articulation=="buzz"?(ChartSeconds(n.Beat+n.Duration)-ChartSeconds(n.Beat))/Rate:0);
+        PlayKey(key,ChartProject.Gains[n.Velocity]*mix*kitGain,pitch*kitRate,when,n.Articulation=="buzz"?(ChartSeconds(n.Beat+n.Duration)-ChartSeconds(n.Beat))/Rate:0,n.Instrument);
     }
-    public void Pedal(double when=-1){PlayKey("HH_PEDAL",Project?.InstrumentGain("HH")??1,1,when,0);}
-    public void Click(bool accent,double when){PlayKey("SIDE",accent?.5f:.25f,accent?1.7f:1.4f,when,0);}
+    public void Pedal(double when=-1){if(MonitorSilenced("HH")){Choke(when);return;}PlayKey("HH_PEDAL",Project?.InstrumentGain("HH")??1,1,when,0,"HH");}
+    public void Click(bool accent,double when){PlayKey("SIDE",accent?.5f:.25f,accent?1.7f:1.4f,when,0,"click");}
     void PrepareDrums(){
         // Reserve the whole editor fader range once; live mixing must not allocate
         // or rebuild clips while the music is playing.
@@ -230,7 +230,7 @@ public sealed partial class RhythmAudio : MonoBehaviour {
             gainScales[key]=level;gainClips[key]=prepared;
         }
     }
-    void PlayKey(string key,float gain,float pitch,double when,double duration){
+    void PlayKey(string key,float gain,float pitch,double when,double duration,string channel){
         if(!clips.TryGetValue(key,out var clip)||clip==null)return;
         float level=DrumGain*gain*SampleGains[Array.IndexOf(SampleKeys,key)];
         if(gainClips.TryGetValue(key,out var prepared)){clip=prepared;level/=gainScales[key];}
@@ -238,7 +238,7 @@ public sealed partial class RhythmAudio : MonoBehaviour {
         if(key=="OHH"){PlayHat(clip,level,pitch,when);return;}
         var s=voices[voice++%voices.Count];openHats.Remove(s);s.Stop();s.clip=clip;s.pitch=pitch;s.volume=level;s.loop=duration>0;
         double start=when<0?Clock:Math.Max(Clock,when);
-        voiceStarts[s]=start;
+        voiceStarts[s]=start;voiceChannels[s]=channel;
         if(when<0)s.Play();else s.PlayScheduled(ToUnityDSP(start));
         if(duration>0)s.SetScheduledEndTime(ToUnityDSP(start+duration));
         if(key=="OHH")openHats.Add(s);

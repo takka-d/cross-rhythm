@@ -76,7 +76,9 @@ public partial class CrossRhythmApp {
             offsetField=EditField("offset",new Rect(x,y+91,cw-90,30),offsetField);
             if(Button(new Rect(x+cw-80,y+91,68,30),"Set",false,true,14)&&double.TryParse(offsetField,out var sec)&&!double.IsNaN(sec)&&!double.IsInfinity(sec)){PushUndo();Audio.Pause();Project.Chart["audioOffsetSec"]=sec;Edited();}
             x+=cw+12;var meter=Project.Meter(editMeasure);Text(new Rect(x,y,cw,26),$"Bar {editMeasure+1} · {meter.Item1}/{meter.Item2}",17,mint);
-            if(Button(new Rect(x,y+30,280,32),"Bar / Meter",false,true,15))showMeterPanel=true;
+            if(Button(new Rect(x,y+30,144,32),"Bar / Meter",false,true,14))showMeterPanel=true;
+            if(Button(new Rect(x+152,y+30,62,32),"+ Bar",false,true,13))InsertEditorMeasure();
+            if(Button(new Rect(x+222,y+30,62,32),"- Bar",false,Project.CanRemoveMeasure(editMeasure),13))RemoveEditorMeasure();
             Text(new Rect(x,y+76,cw,26),"Difficulty "+Project.Difficulty+" · Auto",18,mint,true);
             Text(new Rect(x,y+106,cw,24),Project.NotesPerSecond.ToString("0.00")+" "+T("ノーツ/秒","notes/sec"),12,muted);
         }else if(editorPanel==3)EditorTempoControls(x,y,cw);else if(editorPanel==4)EditorMixer(x,y);else DraftControls(x,y,cw);

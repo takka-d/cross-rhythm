@@ -67,9 +67,9 @@ public sealed partial class RhythmAudio {
     void StretchFailure(string error){double beat=Beat;Stop();AnchorBeat=beat;PlaybackError=error;Debug.LogError("Practice audio: "+error);}
     void UpdateStretch(){
 #if UNITY_WEBGL && !UNITY_EDITOR
-        CRStretchAudioGain(BackingGain);
+        CRStretchAudioGain(EffectiveBackingGain);
 #else
-        foreach(var source in stretchSources)source.volume=BackingGain;
+        foreach(var source in stretchSources)source.volume=EffectiveBackingGain;
 #endif
     }
     float[] ReadSongFrames(AudioClip song,long start,int count,float[] reuse=null){
@@ -139,10 +139,10 @@ public sealed partial class RhythmAudio {
             if(when<Clock+.015){if(clip!=null)Destroy(clip);StretchFailure("Audio preparation fell behind playback");yield break;}
             var sourcePlayer=stretchSources[slot];
 #if UNITY_WEBGL && !UNITY_EDITOR
-            if(CRStretchAudioSchedule(pcm,frames,ch,sr,emitted/(double)sr,when,start/(double)sr,rate,BackingGain)==0){StretchFailure("Audio preparation fell behind playback");yield break;}
+            if(CRStretchAudioSchedule(pcm,frames,ch,sr,emitted/(double)sr,when,start/(double)sr,rate,EffectiveBackingGain)==0){StretchFailure("Audio preparation fell behind playback");yield break;}
 #else
             // Stop plus a new clip resets the position. Avoid an extra Web audio seek before scheduling.
-            sourcePlayer.Stop();sourcePlayer.clip=clip;sourcePlayer.pitch=1;sourcePlayer.volume=BackingGain;sourcePlayer.PlayScheduled(when);
+            sourcePlayer.Stop();sourcePlayer.clip=clip;sourcePlayer.pitch=1;sourcePlayer.volume=EffectiveBackingGain;sourcePlayer.PlayScheduled(when);
 #endif
             stretchSegments.Add(new StretchSegment{Source=sourcePlayer,Clip=clip,Start=when,End=when+frames/(double)sr,SongStart=(start+emitted*rate)/sr,Rate=rate});
             emitted+=frames;index++;yield return null;watch.Restart();

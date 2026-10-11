@@ -5,7 +5,8 @@ using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 namespace CrossRhythm {
 public static class MidiDropFiles {
-    public const long MaxBytes=32L*1024*1024;
+    public const long MaxBytes=32L*1024*1024,MaxAudioBytes=128L*1024*1024;
+    public static bool IsAudio(string path){string ext=Path.GetExtension(path).ToLowerInvariant();return ext==".wav"||ext==".mp3"||ext==".m4a"||ext==".ogg"||ext==".flac"||ext==".aac";}
     public static bool IsMidi(string path){string ext=Path.GetExtension(path);return string.Equals(ext,".mid",StringComparison.OrdinalIgnoreCase)||string.Equals(ext,".midi",StringComparison.OrdinalIgnoreCase);}
 }
 // The window callback only copies paths. Unity state and file IO run in Update.
