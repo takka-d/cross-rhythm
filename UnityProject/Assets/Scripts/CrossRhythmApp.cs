@@ -21,7 +21,8 @@ public partial class CrossRhythmApp : MonoBehaviour {
     public ScoreResult Result=new ScoreResult();
     Dictionary<int,HitRecord> judged=new Dictionary<int,HitRecord>();
     int previewCursor;
-    void ResetScheduled(){scheduled.Clear();previewCursor=0;}
+    readonly HashSet<double> previewPedalOnsets=new HashSet<double>();
+    void ResetScheduled(){scheduled.Clear();previewPedalOnsets.Clear();previewCursor=0;}
     HashSet<int> scheduled=new HashSet<int>();
     HashSet<Key> held=new HashSet<Key>();
     Dictionary<Key,string> footRoles=new Dictionary<Key,string>();
@@ -128,7 +129,7 @@ public partial class CrossRhythmApp : MonoBehaviour {
         if(n==null)return;
         double ms=NoteSeconds(n.Beat,beat)*1000;Judge(n,ms,Math.Abs(ms)<=45?"JUST":ms<0?"FAST":"LATE");Audio.Drum(n,closed);
     }
-    void SetPedal(bool value,double beat){if(value==closed)return;closed=value;if(value){pedalStart=beat;Audio.Pedal();}else if(pedalStart.HasValue){heldPedal.Add(new PedalRange{Start=pedalStart.Value,End=beat});pedalStart=null;}}
+    void SetPedal(bool value,double beat,bool sound=true){if(value==closed)return;closed=value;if(value){pedalStart=beat;if(sound)Audio.Pedal();}else if(pedalStart.HasValue){heldPedal.Add(new PedalRange{Start=pedalStart.Value,End=beat});pedalStart=null;}}
     void Judge(ChartNote n,double ms,string kind){if(judged.ContainsKey(n.Index))return;var r=new HitRecord{Index=n.Index,Beat=n.Beat,Instrument=n.Instrument,Ms=ms,Judge=kind};judged[n.Index]=r;AddReferenceEffect(n,kind);if(Current==Page.Play)Records.Add(r);lastJudge=kind+(kind=="MISS"?"":$"  {ms:+0.0;-0.0;0.0} ms");lastJudgeTime=Time.realtimeSinceStartupAsDouble;}
     void Update(){
         if(Project==null)return;
@@ -144,9 +145,9 @@ public partial class CrossRhythmApp : MonoBehaviour {
         double b=Audio.Beat;
         bool preview=Current==Page.Edit||auto;
         if(preview){
-            bool nextClosed=Project.ClosedAt(b);SetPedal(nextClosed,b);
+            bool nextClosed=Project.ClosedAt(b);SetPedal(nextClosed,b,false);
             double until=BeatAfter(b,.35);
-            while(previewCursor<Project.Notes.Count){var n=Project.Notes[previewCursor];if(n.Beat>until)break;previewCursor++;if(n.Pedal||n.Beat<Audio.AnchorBeat-1e-8||scheduled.Contains(n.Index))continue;scheduled.Add(n.Index);Audio.Drum(n,Project.ClosedAt(n.Beat),Audio.DSPAt(n.Beat));}
+            while(previewCursor<Project.Notes.Count){var n=Project.Notes[previewCursor];if(n.Beat>until)break;previewCursor++;if(n.Beat<Audio.AnchorBeat-1e-8||scheduled.Contains(n.Index))continue;scheduled.Add(n.Index);if(n.Pedal&&!previewPedalOnsets.Add(Math.Round(n.Beat,8)))continue;Audio.Drum(n,Project.ClosedAt(n.Beat),Audio.DSPAt(n.Beat));}
         }
         if(Current!=Page.Edit){foreach(var n in Project.Notes){if(n.Pedal||judged.ContainsKey(n.Index)||n.Beat<Audio.AnchorBeat-1e-8)continue;if(auto&&n.Beat<=b)Judge(n,0,"JUST");else if(!auto&&NoteSeconds(n.Beat,b)>.12)Judge(n,double.NaN,"MISS");}}
         if(!pro&&!preview&&Project.ClosedAt(b)&&!closed){var releasedKick=footRoles.FirstOrDefault(kv=>kv.Value=="kick"&&held.Contains(kv.Key));if(!releasedKick.Equals(default(KeyValuePair<Key,string>))){bool near=Project.Notes.Any(n=>n.Instrument=="BD"&&Math.Abs(NoteSeconds(n.Beat,b))<.12);if(!near){footRoles[releasedKick.Key]="pedal";SetPedal(true,b);}}}

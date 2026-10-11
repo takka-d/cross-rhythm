@@ -12,6 +12,7 @@ public partial class CrossRhythmApp {
     void RoundFill(Rect r,Color c,float radius=6){GUI.DrawTexture(r,Texture2D.whiteTexture,ScaleMode.StretchToFill,true,0,c,0,radius);}
     void RoundBorder(Rect r,Color c,float width=1,float radius=6){GUI.DrawTexture(r,Texture2D.whiteTexture,ScaleMode.StretchToFill,true,0,c,width,radius);}
     void Glyph(ChartNote n,float x,float y,float alpha=1,bool outline=false,float sizeScale=1,bool missed=false){
+        if(n.Instrument=="RD"){var tint=GUI.color;GUI.color=new Color(1,1,1,alpha);GUI.DrawTexture(new Rect(x-40*sizeScale,y-40*sizeScale,80*sizeScale,80*sizeScale),CymbalVisuals.Ride(n.Velocity,outline,missed));GUI.color=tint;return;}
         string name=n.Instrument+"-"+(outline?"outline":missed?"miss":"normal");
         if(!glyphTextures.TryGetValue(name,out var texture)){texture=Resources.Load<Texture2D>("NoteGlyphs/"+name);glyphTextures[name]=texture;}
         if(texture==null)return;

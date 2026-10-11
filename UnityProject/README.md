@@ -94,7 +94,7 @@ and saved controller preferences are unchanged. Connected device names remain
 as supplied by the operating system/browser to identify actual hardware.
 
 
-0.3.28 development
+0.3.29 development
 
 - Songs: Start, Practice and Edit accept input while preview audio is loading. Start/Practice enter their screen immediately and start the count-in only after the selected audio is ready. Back cancels the pending start. Open Folder stays available while audio loads.
 - Practice: a 0.25 to 2.00 speed slider is restored alongside the existing fine-step/reset controls. The displayed value changes during a drag; audio speed is applied on release to avoid repeatedly restarting preparation. Pitch preservation remains enabled.
@@ -196,3 +196,12 @@ Native file-dialog interaction is not verified by these checks. Browser-private 
 - Edit Mixer adds Music Mute, Drums Mute, per-instrument Mute and a Metronome switch. Mute preserves fader values and ongoing transport, cancels muted tails, and applies only to Edit monitoring. Monitoring switches persist with the project and support Undo. The existing metronome is reused, remains independent of drum mute, persists its setting and starts from the current position when enabled. Performance playback is unaffected by Edit monitor switches.
 
 Windows and WebGL share Unity 6000.3.25f1 source. Core regressions, native runtime checks, audio drop routing, folder refresh, save/MIDI bridge checks and independent MIDI parsing were run. Browser UI verification uses synthetic audio and generated file-drop events, not an Explorer gesture. OS-native file-dialog gestures and listening through physical audio devices are not verified. The earlier Chrome ZIP download-completion issue remains unresolved. No private projects or recordings are included. Production root and WordPress content are unchanged.
+
+
+0.3.29 development
+
+- Ride and Crash notes are visually distinct in Play and Practice. Crash retains the inherited raised-bell silhouette. Ride uses a turquoise, tilted disc with a visible rim; its shape remains distinct for outline and grey MISS states. All six strength heights, onset positions, lanes and sound mappings are preserved. Edit retains its existing separate colours and CR/RD/RC/BL type badges.
+- MIDI pedal hi-hat (44) now uses its matched Note Off or zero-velocity release on the same track/channel. A missing or zero-length release uses a short cell (up to a quarter beat), not the empty gap to the next hat. Explicit long durations remain supported and extend imported bars; a later open hat or pedal retrigger bounds the hold. Closed/open stick-hat inference and the zero-strength option for other drums remain. Existing project holds are unchanged; this repair applies when MIDI is imported again.
+- Edit and Auto playback schedule each pedal onset, including short and touching strikes, without double-triggering coincident pedal events. Manual pedal sound, mute/mixer support and exclusion from scoring remain.
+
+Windows and Web share Unity 6000.3.25f1 source. Tests cover pedal release pairing, repeated strikes, long holds, import Undo/Redo, save/load, sound scheduling and existing regressions. Browser verification uses synthetic fixtures; physical MIDI hardware, OS-native drag/file chooser gestures and listening through physical audio devices are not verified. The earlier Chrome ZIP download-completion issue remains unresolved. No private projects or recordings are included. Production root and WordPress content are unchanged.

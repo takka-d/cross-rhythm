@@ -15,7 +15,7 @@ public static partial class MidiImport {
         public void Skip(int n){if(n<0||n>End-At)throw new InvalidDataException("Truncated MIDI chunk");At+=n;}
         public void Chunk(string name){foreach(char c in name)if(Byte()!=c)throw new InvalidDataException("Missing "+name);}
     }
-    sealed class Note {public int Id,Track,Channel,Pitch,Velocity;public long Tick;public string Instrument,Type,Hat;public double Beat,Step;}
+    sealed class Note {public int Id,Track,Channel,Pitch,Velocity;public long Tick;public string Instrument,Type,Hat;public double Beat,Step;public long EndTick=-1;}
     sealed class Meter {public long Tick;public int N,D;}
     public sealed class Result {public JObject Chart;public int Hits,ZeroKept,ZeroDropped,TempoChanges,OverlapsRemoved;public Overlap[] Overlaps=Array.Empty<Overlap>();}
     public static int Strength(int v)=>v<=12?0:v<=37?1:v<=62?2:v<=87?3:v<=113?4:5;
@@ -45,7 +45,7 @@ public static partial class MidiImport {
         var notes=new List<Note>();var off80=new HashSet<int>();var meters=new List<Meter>();var tempos=new List<Tuple<long,double>>();
         for(int track=0;track<tracks;track++){
             r.Chunk("MTrk");int length=r.Number(4);if(length>r.End-r.At)throw new InvalidDataException("Truncated MIDI track");int end=r.At+length,fileEnd=r.End;r.End=end;
-            long tick=0;int running=0;
+            long tick=0;int running=0;var pedalOns=new Dictionary<int,Queue<Note>>();
             while(r.At<end){
                 tick+=r.Variable();int status=r.Byte();if(status<128){r.At--;status=running;if(status==0)throw new InvalidDataException("Missing MIDI running status");}else if(status<0xF0)running=status;
                 if(status==0xFF){int type=r.Byte(),size=r.Variable(),at=r.At;r.Skip(size);
@@ -56,13 +56,18 @@ public static partial class MidiImport {
                 if(status==0xF0||status==0xF7){int size=r.Variable();r.Skip(size);running=0;continue;}
                 if(status>=0xF0)throw new InvalidDataException("Unsupported MIDI status");
                 int kind=status&0xF0,d1=r.Byte(),d2=kind==0xC0||kind==0xD0?0:r.Byte();if(d1>=128||d2>=128)throw new InvalidDataException("Invalid MIDI data");
-                if(kind==0x90){var n=new Note{Id=notes.Count,Track=track,Channel=status&15,Pitch=d1,Velocity=d2,Tick=tick,Beat=(double)tick/ppq};Map(n);notes.Add(n);}
+                // A pedal strike is not a latch. Match its release within this track/channel.
+                int channelKey=status&15;
+                if(d1==44&&(kind==0x80||(kind==0x90&&d2==0))&&pedalOns.TryGetValue(channelKey,out var active)&&active.Count>0)active.Dequeue().EndTick=tick;
+                if(kind==0x90){var n=new Note{Id=notes.Count,Track=track,Channel=channelKey,Pitch=d1,Velocity=d2,Tick=tick,Beat=(double)tick/ppq};Map(n);notes.Add(n);
+                    if(d1==44&&d2>0){if(!pedalOns.TryGetValue(channelKey,out var pending))pedalOns[channelKey]=pending=new Queue<Note>();pending.Enqueue(n);}
+                }
                 if(kind==0x80)off80.Add(track);
             }
             r.End=fileEnd;
         }
         var result=new Result();var resolved=new List<Note>();
-        foreach(var n in notes){bool keep=n.Velocity>0||zeroMode==ZeroMode.Mute||(zeroMode==ZeroMode.Auto&&off80.Contains(n.Track));if(n.Velocity==0){if(keep)result.ZeroKept++;else result.ZeroDropped++;}if(keep&&n.Instrument!=null)resolved.Add(n);}
+        foreach(var n in notes){bool keep=!(n.Pitch==44&&n.Velocity==0)&&(n.Velocity>0||zeroMode==ZeroMode.Mute||(zeroMode==ZeroMode.Auto&&off80.Contains(n.Track)));if(n.Velocity==0){if(keep)result.ZeroKept++;else result.ZeroDropped++;}if(keep&&n.Instrument!=null)resolved.Add(n);}
         if(resolved.Count==0)throw new InvalidDataException("No drum notes found in MIDI");
         int channel=resolved.Any(n=>n.Channel==9)?9:resolved.GroupBy(n=>n.Channel).OrderByDescending(g=>g.Count()).First().Key;
         var hits=resolved.Where(n=>n.Channel==channel).OrderBy(n=>n.Tick).ThenBy(n=>n.Pitch).ToArray();
@@ -73,6 +78,7 @@ public static partial class MidiImport {
         if(bpm<20||bpm>600)throw new InvalidDataException("BPM must be 20–600");
         var time=meters.GroupBy(m=>m.Tick).Select(g=>g.Last()).OrderBy(m=>m.Tick).ToList();if(time.Count==0||time[0].Tick>0)time.Insert(0,new Meter{Tick=0,N=4,D=4});
         double lastEvent=Math.Max(hits.Last().Beat,Math.Max(tempos.Count==0?0:tempos.Max(t=>t.Item1)/(double)ppq,meters.Count==0?0:meters.Max(m=>m.Tick)/(double)ppq));
+        lastEvent=Math.Max(lastEvent,hits.Where(n=>n.Pitch==44&&n.EndTick>n.Tick).Select(n=>n.EndTick/(double)ppq).DefaultIfEmpty(0).Max());
         double total=Math.Max(4,Math.Ceiling((lastEvent+1e-8)/source.Grid)*source.Grid+source.Grid*2),cursor=0;int ti=0;
         var bars=new JArray();var signatures=new JArray();
         while(cursor<total-1e-8){
@@ -105,9 +111,18 @@ public static partial class MidiImport {
         Action<Note,double> add=(n,duration)=>{int bar=p.BarAt(n.Beat);var e=new JObject{{"id","midi-"+id++},{"measure",bar},{"beat",n.Beat-p.Starts[bar]},{"instrument",n.Instrument},{"velocity",Strength(n.Velocity)},{"source","midi"}};if(n.Type!=null)e["articulation"]=n.Type;if(duration>0)e["durationBeats"]=duration;e["gridStepBeats"]=n.Step>0?n.Step:ChartProject.EventStep(e,tolerance);p.Events.Add(e);};
         foreach(var n in hits.Where(n=>n.Instrument!="HHSTATE"))add(n,0);
         var hats=hits.Where(n=>n.Hat!=null).ToArray();var ranges=new List<Tuple<Note,double>>();
-        for(int i=0;i<hats.Length;i++){var n=hats[i];if(n.Hat=="open")continue;double end=i+1<hats.Length&&hats[i+1].Beat>n.Beat+1e-8?hats[i+1].Beat:n.Beat+source.Grid;
-            var state=new Note{Beat=n.Beat,Instrument="HHSTATE",Velocity=n.Velocity};var last=ranges.LastOrDefault();
-            if(last!=null&&n.Beat<=last.Item2+1e-8){last.Item1.Velocity=Math.Max(last.Item1.Velocity,n.Velocity);ranges[ranges.Count-1]=Tuple.Create(last.Item1,Math.Max(last.Item2,end));}else ranges.Add(Tuple.Create(state,end));
+        for(int i=0;i<hats.Length;i++){var n=hats[i];if(n.Hat=="open")continue;
+            if(n.Hat=="pedal"){
+                // Preserve explicit duration (including exported holds). Missing/zero-length
+                // releases get one short cell, never the gap to a later hi-hat.
+                double end=n.EndTick>n.Tick?n.EndTick/(double)ppq:n.Beat+Math.Min(.25,source.Grid);
+                var next=hats.Skip(i+1).FirstOrDefault(h=>h.Beat>n.Beat+1e-8&&(h.Hat=="open"||h.Hat=="pedal"));
+                if(next!=null)end=Math.Min(end,next.Beat);
+                add(n,Math.Max(1.0/ppq,Math.Min(end,p.Length)-n.Beat));continue;
+            }
+            double endClosed=i+1<hats.Length&&hats[i+1].Beat>n.Beat+1e-8?hats[i+1].Beat:n.Beat+source.Grid;
+            var state=new Note{Beat=n.Beat,Instrument="HHSTATE",Velocity=n.Velocity,Step=n.Step};var last=ranges.LastOrDefault();
+            if(last!=null&&n.Beat<=last.Item2+1e-8){last.Item1.Velocity=Math.Max(last.Item1.Velocity,n.Velocity);ranges[ranges.Count-1]=Tuple.Create(last.Item1,Math.Max(last.Item2,endClosed));}else ranges.Add(Tuple.Create(state,endClosed));
         }
         foreach(var range in ranges)add(range.Item1,range.Item2-range.Item1.Beat);
         foreach(var tempo in orderedTempos.Where(t=>t.Item1>0)){double beat=tempo.Item1/(double)ppq;int bar=p.BarAt(beat);((JArray)chart["tempoChanges"]).Add(new JObject{{"measure",bar},{"beat",beat-p.Starts[bar]},{"bpm",tempo.Item2}});}

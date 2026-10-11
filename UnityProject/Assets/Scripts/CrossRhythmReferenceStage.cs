@@ -14,6 +14,10 @@ public partial class CrossRhythmApp {
     double ReferencePosition(double b){int bar=Project.BarAt(b);double start=bar<0?bar*CountIn.Length(Project):Project.Starts[bar],length=bar<0?CountIn.Length(Project):Project.Measures[bar];return bar+Math.Max(0,Math.Min(1,(b-start)/length));}
     float ReferenceTop(int bar,double b)=>520+(float)(bar-ReferencePosition(b))*204;
     void ReferenceGlyph(ChartNote note,float x,float y,float z,float alpha,bool outline=false,bool missed=false){
+        if(note.Instrument=="RD"){
+            var old=GUI.color;GUI.color=new Color(1,1,1,alpha);
+            GUI.DrawTexture(new Rect((x-40)*z,(y-40)*z,80*z,80*z),CymbalVisuals.Ride(note.Velocity,outline,missed));GUI.color=old;return;
+        }
         if(note.Articulation=="tambourine"){
             float radius=(12+note.Velocity*2)*z;var center=new Vector2(x*z,y*z);
             Color color=(missed?muted:C("#e3c18c"))*new Color(1,1,1,alpha);

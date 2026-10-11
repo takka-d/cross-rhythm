@@ -6,7 +6,7 @@ namespace CrossRhythm {
 // Geometry shared by rendering and picking. Matches v175 score geometry and the inherited HTML editor.
 public static class ChartVisuals {
     public static Color Hex(string hex){ColorUtility.TryParseHtmlString(hex,out var color);return color;}
-    public static Color PlayColor(string inst)=>Hex(inst=="CR"||inst=="RD"?"#bf9b48":inst=="HH"?"#9ba9b8":inst=="SN"?"#5678c8":inst=="HT"||inst=="MT"||inst=="FT"?"#c8874a":inst=="BD"?"#2f8f9d":"#8162bd");
+    public static Color PlayColor(string inst)=>Hex(inst=="CR"?"#bf9b48":inst=="RD"?"#63d8c7":inst=="HH"?"#9ba9b8":inst=="SN"?"#5678c8":inst=="HT"||inst=="MT"||inst=="FT"?"#c8874a":inst=="BD"?"#2f8f9d":"#8162bd");
     public static Color EditColor(ChartProject p,ChartNote n){
         string hex=n.Articulation=="tambourine"?"#e3c18c":n.Instrument=="HH"?(p.ClosedAt(n.Beat)?"#f7d25f":"#ffad4f"):n.Instrument=="SN"?"#ff6f7d":n.Instrument=="CR"?"#7ee787":n.Instrument=="RD"?"#63d8c7":n.Instrument=="HT"?"#ff9f68":n.Instrument=="MT"?"#ff8b68":n.Instrument=="FT"?"#ff7468":n.Instrument=="BD"?"#59a9ff":"#c084fc";
         Color c=Hex(hex);c.a=.45f+.55f*Mathf.Clamp((float?)n.Source?["confidence"]??.8f,.15f,1);return c;

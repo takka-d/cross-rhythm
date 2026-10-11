@@ -1,0 +1,25 @@
+{
+  "version": "0.3.29",
+  "browser": "Codex in-app browser",
+  "localUrl": "http://127.0.0.1:8788/?qa=0329",
+  "syntheticFixture": true,
+  "normalRideCrashDistinct": true,
+  "proRideCrashDistinct": true,
+  "sixStrengthsVisible": true,
+  "generatedMidiDrop": true,
+  "twoShortPedalNotesVisible": true,
+  "inferredClosedHatHoldPreserved": true,
+  "importUndoRedoObserved": true,
+  "saveWriteVerifiedUi": true,
+  "savedProjectReopenedUi": true,
+  "finalVersionLabelObserved": true,
+  "applicationConsoleErrors": 0,
+  "nativeFilePickerGestureVerified": false,
+  "explorerDropGestureVerified": false,
+  "physicalAudioListeningVerified": false,
+  "pickerNote": "Local QA uses origin-private file handles as picker responses. Application buttons perform real read/write; OS picker gestures were not tested.",
+  "screenshots": [
+    "browser-cymbal-normal.png",
+    "browser-pedal-save.png"
+  ]
+}
