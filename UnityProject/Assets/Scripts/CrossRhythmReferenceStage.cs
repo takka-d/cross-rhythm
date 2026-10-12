@@ -58,7 +58,7 @@ public partial class CrossRhythmApp {
             if(q<4)ReferenceSprite("count-numbers",rect,z,uv:AtlasUV(q,4,1));
             else Text(new Rect(rect.x*z,(top-24)*z,40*z,32*z),(q+1).ToString(),Mathf.RoundToInt(10*z),muted);
         }return;}
-        var visible=Project.Notes.Where(n=>n.Measure==m&&!n.Pedal&&NoteVisible(n)).ToArray();var offsets=ChartVisuals.SimultaneousOffsets(visible);
+        var visible=Project.NotesInBar(m).Where(n=>!n.Pedal&&NoteVisible(n)).ToArray();var offsets=ChartVisuals.SimultaneousOffsets(visible);
         foreach(var n in visible){bool missed=judged.TryGetValue(n.Index,out var hit)&&hit.Judge=="MISS";ReferenceGlyph(n,ChartVisuals.CellX(Project,m,n.Local,220,970)+offsets[n.Index],LaneY(n.Lane,top,42),z,(missed?.66f:.98f)*alpha,false,missed);}
         DrawPedalRanges(m,start,length,b,top*z,42*z,220*z,970*z,z,alpha);
     }
@@ -69,20 +69,22 @@ public partial class CrossRhythmApp {
     }
     void ReferenceGuide(double b,float z){
         float top=ReferenceTop(Math.Max(0,Project.BarAt(b)),b);if(top+168<-90||top>1030)return;
-        ReferenceSprite(pro?"guide-pro":"guide-normal",new Rect(0,top,220,168),z);
+        string guide=pro?"guide-pro":"guide-normal";
+        if(!feetAbove)ReferenceSprite(guide,new Rect(0,top,220,168),z);
+        else {ReferenceSprite(guide,new Rect(0,top,220,84),z,uv:new Rect(0,0,1,.5f));ReferenceSprite(guide,new Rect(0,top+84,220,84),z,uv:new Rect(0,.5f,1,.5f));}
         if(!pro){DrawKey(0,0,72,top+42,Key.Digit4,true);DrawKey(0,1,128,top+42,Key.Digit9,true);DrawKey(1,0,72,top+126,Key.V,true);DrawKey(1,1,128,top+126,Key.M,true);}
         else{
             var keys=new[]{new[]{Key.R,Key.O},new[]{Key.E,Key.P},new[]{Key.Digit4,Key.Digit9},new[]{Key.Digit3,Key.Digit0},new[]{Key.V,Key.M},new[]{Key.C,Key.Comma}};
             for(int i=0;i<6;i++){float x=14+(i%2)*88,cy=top+(i<4?2+(i/2)*43+25:122);DrawKey(i+2,0,x+31,cy,keys[i][0],false);DrawKey(i+2,1,x+64,cy,keys[i][1],false);}
         }
-        void DrawKey(int group,int key,float x,float y,Key code,bool large){float w=large?72:53,h=large?62:46;ReferenceSprite($"key-{group}-{key}-"+(held.Contains(code)?1:0),new Rect(x-w/2,y-h/2,w,h),z);string text=BoundLabel(code);if(text!=ControlBindings.KeyName(code)){var box=new Rect((x-(large?20:14))*z,(y-11)*z,(large?40:28)*z,22*z);RectFill(box,held.Contains(code)?C("#31546b"):C("#141e27"));FittedText(box,text,Math.Max(9,Mathf.RoundToInt(15*z)),Color.white);}}
+        void DrawKey(int group,int key,float x,float y,Key code,bool large){if(feetAbove)y+=(y-top<84?84:-84);float w=large?72:53,h=large?62:46;ReferenceSprite($"key-{group}-{key}-"+(held.Contains(code)?1:0),new Rect(x-w/2,y-h/2,w,h),z);string text=BoundLabel(code);if(text!=ControlBindings.KeyName(code)){var box=new Rect((x-(large?20:14))*z,(y-11)*z,(large?40:28)*z,22*z);RectFill(box,held.Contains(code)?C("#31546b"):C("#141e27"));FittedText(box,text,Math.Max(9,Mathf.RoundToInt(15*z)),Color.white);}}
     }
     void AddReferenceEffect(ChartNote note,string judge){double b=Audio.Beat;stageEffects.Add(new StageEffect{X=ChartVisuals.CellX(Project,note.Measure,note.Local,220,970),Y=LaneY(note.Lane,ReferenceTop(note.Measure,b),42),Time=Time.realtimeSinceStartupAsDouble,Judge=judge});}
     void ReferencePlayfield(Rect area,double b){
         float z=Math.Min(area.width/1260,area.height/940);var canvas=new Rect(area.x+(area.width-1260*z)/2,area.y+(area.height-940*z)/2,1260*z,940*z);
         GUI.BeginGroup(canvas);ReferenceSprite("backdrop",new Rect(0,0,1260,940),z);
         int current=Project.BarAt(b);for(int m=Math.Max(-2,current-2);m<=Math.Min(Project.Measures.Length-1,current+3);m++)ReferenceMeasure(m,b,z);
-        if(b>=0){var visible=Project.Notes.Where(n=>!n.Pedal&&n.Lane!="F2"&&NoteVisible(n)&&n.Beat>=b-1e-8&&n.Beat<=b+1.02).ToArray();var offsets=ChartVisuals.SimultaneousOffsets(visible);foreach(var n in visible){double d=n.Beat-b;float t=Mathf.Clamp01((float)(1-d));t=t*t*(3-2*t);float a=Mathf.Clamp01((float)(d/.14));if(a<=.01)continue;ReferenceGlyph(n,ChartVisuals.CellX(Project,n.Measure,n.Local,220,970)+offsets[n.Index],58+(LaneY(n.Lane,ReferenceTop(n.Measure,b),42)-58)*t,z,.98f*a,true);}}
+        if(b>=0){var visible=Project.NotesBetween(b-1e-8,b+1.02).Where(n=>!n.Pedal&&n.Lane!="F2"&&NoteVisible(n)).ToArray();var offsets=ChartVisuals.SimultaneousOffsets(visible);foreach(var n in visible){double d=n.Beat-b;float t=Mathf.Clamp01((float)(1-d));t=t*t*(3-2*t);float a=Mathf.Clamp01((float)(d/.14));if(a<=.01)continue;ReferenceGlyph(n,ChartVisuals.CellX(Project,n.Measure,n.Local,220,970)+offsets[n.Index],58+(LaneY(n.Lane,ReferenceTop(n.Measure,b),42)-58)*t,z,.98f*a,true);}}
         ReferenceGuide(b,z);
         stageEffects.RemoveAll(e=>Time.realtimeSinceStartupAsDouble-e.Time>=.7);foreach(var effect in stageEffects){int frame=Math.Min(69,(int)((Time.realtimeSinceStartupAsDouble-effect.Time)*100));ReferenceSprite("fx-"+effect.Judge,new Rect(effect.X-64,effect.Y-100,128,160),z,uv:AtlasUV(frame,10,7));}
         GUI.EndGroup();

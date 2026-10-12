@@ -19,7 +19,7 @@ public partial class CrossRhythmApp {
         if(MidiPromptOpen||LaneTypeOpen||gridMenuOpen||bindingsOpen||discardPrompt)return;
         if(Event.current.type==EventType.Repaint)PlatformFiles.CRProjectButton(fileButtonCount++,r.x/W,r.y/H,r.width/W,r.height/H,saveAs?4:3,english?1:0,enabled?1:0,saveAs?0:1,16*scale);
 #else
-        if(Button(r,caption,!saveAs,enabled,16))Save(saveAs);
+        if(Button(r,caption,!saveAs,enabled,16,kind:saveAs?ControlKind.Dialog:ControlKind.Action))Save(saveAs);
 #endif
     }
     void SaveStatusLine(Rect r){

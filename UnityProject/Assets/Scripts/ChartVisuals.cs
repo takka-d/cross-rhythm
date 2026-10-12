@@ -6,7 +6,7 @@ namespace CrossRhythm {
 // Geometry shared by rendering and picking. Matches v175 score geometry and the inherited HTML editor.
 public static class ChartVisuals {
     public static Color Hex(string hex){ColorUtility.TryParseHtmlString(hex,out var color);return color;}
-    public static Color PlayColor(string inst)=>Hex(inst=="CR"?"#bf9b48":inst=="RD"?"#63d8c7":inst=="HH"?"#9ba9b8":inst=="SN"?"#5678c8":inst=="HT"||inst=="MT"||inst=="FT"?"#c8874a":inst=="BD"?"#2f8f9d":"#8162bd");
+    public static Color PlayColor(string inst)=>Hex(inst=="CR"?"#bf9b48":inst=="RD"?"#bf9b48":inst=="HH"?"#9ba9b8":inst=="SN"?"#5678c8":inst=="HT"||inst=="MT"||inst=="FT"?"#c8874a":inst=="BD"?"#2f8f9d":"#8162bd");
     public static Color EditColor(ChartProject p,ChartNote n){
         string hex=n.Articulation=="tambourine"?"#e3c18c":n.Instrument=="HH"?(p.ClosedAt(n.Beat)?"#f7d25f":"#ffad4f"):n.Instrument=="SN"?"#ff6f7d":n.Instrument=="CR"?"#7ee787":n.Instrument=="RD"?"#63d8c7":n.Instrument=="HT"?"#ff9f68":n.Instrument=="MT"?"#ff8b68":n.Instrument=="FT"?"#ff7468":n.Instrument=="BD"?"#59a9ff":"#c084fc";
         Color c=Hex(hex);c.a=.45f+.55f*Mathf.Clamp((float?)n.Source?["confidence"]??.8f,.15f,1);return c;
@@ -26,7 +26,7 @@ public static class ChartVisuals {
         float rawH=rh*ChartProject.Heights[n.Velocity],h=Math.Max(10,Mathf.Round(rawH)-1);
         return new Rect(x,Mathf.Round(row*rh+rh/2-rawH/2)+.5f,w,h);
     }
-    public static double DisplayStep(ChartProject p,int bar)=>bar<0?.25:p.Notes.Where(n=>n.Measure==bar).Select(n=>n.Step).Append(.25).Min();
+    public static double DisplayStep(ChartProject p,int bar)=>p.DisplayStep(bar);
     public static double BeatUnit(ChartProject p,int bar)=>bar<0?CountIn.Unit(p):4.0/p.Meter(bar).Item2;
     public static bool IsBeatLine(ChartProject p,int bar,double local){double beat=local/BeatUnit(p,bar);return Math.Abs(beat-Math.Round(beat))<1e-7;}
     public static void EditGridPoints(ChartProject p,int bar,SortedSet<double> points){
@@ -34,10 +34,10 @@ public static class ChartVisuals {
         foreach(double step in new[]{BeatUnit(p,bar),p.Grid})for(int i=0;i*step<p.Measures[bar]-1e-8;i++)points.Add(i*step);
         // Imported and mixed-grid onsets remain visible even when the placement
         // grid differs. Guides use their actual timing, including MIDI tick rounding.
-        foreach(var n in p.Notes)if(n.Measure==bar)points.Add(n.Local);
+        foreach(var n in p.NotesInBar(bar))points.Add(n.Local);
     }
     public static double[] GridPoints(ChartProject p,int bar){
-        double length=bar<0?CountIn.Length(p):p.Measures[bar];var notes=p.Notes.Where(n=>n.Measure==bar).ToArray();var points=new SortedSet<double>{0,length};
+        double length=bar<0?CountIn.Length(p):p.Measures[bar];var notes=p.NotesInBar(bar).ToArray();var points=new SortedSet<double>{0,length};
         foreach(double step in notes.Select(n=>n.Step).Concat(new[]{.25,BeatUnit(p,bar)}).Distinct())for(int i=0;i*step<length-1e-8;i++)points.Add(Math.Round(i*step,9));
         foreach(var n in notes)points.Add(Math.Round(n.Local,9));return points.ToArray();
     }

@@ -11,7 +11,7 @@ public static class CymbalVisuals {
         if(rides.TryGetValue(key,out var texture))return texture;
         const int size=240;var pixels=new Color32[size*size];float sy=ChartProject.Heights[strength]/.5f;
         float angle=14*Mathf.Deg2Rad,ca=Mathf.Cos(angle),sa=Mathf.Sin(angle);
-        Color baseColor=ChartVisuals.Hex(missed?"#91a3af":"#63d8c7"),edge=Color.Lerp(baseColor,Color.white,.45f);
+        Color baseColor=ChartVisuals.Hex(missed?"#91a3af":"#bf9b48"),edge=Color.Lerp(baseColor,Color.white,.16f);
         for(int py=0;py<size;py++)for(int px=0;px<size;px++){
             float u=(px+.5f-size/2f)/3,v=(py+.5f-size/2f)/(3*sy);
             float x=ca*u+sa*v,y=-sa*u+ca*v;

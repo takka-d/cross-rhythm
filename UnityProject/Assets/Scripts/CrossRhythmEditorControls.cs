@@ -16,7 +16,7 @@ public partial class CrossRhythmApp {
         bool enabled=GUI.enabled;GUI.enabled=enabled&&!showMeterPanel&&!Editor.ContextOpen&&!discardPrompt&&!draftRunning&&!editorFileOpen;
         Text(new Rect(24,87,75,38),"Edit",26,Color.white,true);
         GUI.enabled=enabled&&!showMeterPanel&&!Editor.ContextOpen&&!discardPrompt&&!draftRunning;
-        if(Button(EditorFileButtonRect,"File",editorFileOpen,true,15,"editor-file")){EndSongInfoEdit();editorFileOpen=!editorFileOpen;GUI.FocusControl(null);}
+        if(Button(EditorFileButtonRect,"File",editorFileOpen,true,15,"editor-file",ControlKind.Menu)){EndSongInfoEdit();editorFileOpen=!editorFileOpen;GUI.FocusControl(null);}
         GUI.enabled=enabled&&!showMeterPanel&&!Editor.ContextOpen&&!discardPrompt&&!draftRunning&&!editorFileOpen;
         FittedText(new Rect(214,91,Math.Max(100,W-887),32),Project.Title+(Project.Dirty?" *":""),18,muted);
         if(Button(new Rect(W-660,86,96,38),Audio.Running?"Pause":"Play",true,loaded&&!busy,16)){if(Audio.Running)Audio.Pause();else{ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}
@@ -27,12 +27,13 @@ public partial class CrossRhythmApp {
         SaveButton(new Rect(W-134,86,110,38),true);
         SaveStatusLine(new Rect(24,128,W-48,25));
         RectFill(new Rect(24,160,W-48,34),panel);
-        if(Button(new Rect(36,162,82,30),"Grid",Project.SnapToGrid,true,14)&&!Project.SnapToGrid){PushUndo();Project.Chart["editorSnapToGrid"]=true;QueueEditorRecovery();Project.Dirty=true;}
-        if(Button(new Rect(126,162,82,30),"Free",!Project.SnapToGrid,true,14)&&Project.SnapToGrid){PushUndo();Project.Chart["editorSnapToGrid"]=false;QueueEditorRecovery();Project.Dirty=true;}
+        if(Button(new Rect(36,162,82,30),"Grid",Project.SnapToGrid,true,14,kind:ControlKind.Choice)&&!Project.SnapToGrid){PushUndo();Project.Chart["editorSnapToGrid"]=true;QueueEditorRecovery();Project.Dirty=true;}
+        if(Button(new Rect(126,162,82,30),"Free",!Project.SnapToGrid,true,14,kind:ControlKind.Choice)&&Project.SnapToGrid){PushUndo();Project.Chart["editorSnapToGrid"]=false;QueueEditorRecovery();Project.Dirty=true;}
         Text(new Rect(236,166,42,24),"Grid",13,muted);int q=(int?)Project.Chart["quantize"]??16;
-        if(Button(GridButtonRect,GridLabel(q)+"  v",gridMenuOpen,true,14)){EndSongInfoEdit();Editor.Cancel();gridMenuOpen=true;gridMenuIndex=Math.Max(0,Array.IndexOf(Grids,q));gridMenuScroll.y=Math.Max(0,gridMenuIndex*32-128);gridField=q.ToString();GUI.FocusControl(null);}
+        if(Button(GridButtonRect,GridLabel(q),gridMenuOpen,true,14,kind:ControlKind.Menu)){EndSongInfoEdit();Editor.Cancel();gridMenuOpen=true;gridMenuIndex=Math.Max(0,Array.IndexOf(Grids,q));gridMenuScroll.y=Math.Max(0,gridMenuIndex*32-128);gridField=q.ToString();GUI.FocusControl(null);}
         Text(new Rect(510,166,66,24),"Zoom X",13,muted);float previousZoom=zoom;zoom=GUI.HorizontalSlider(new Rect(580,174,160,18),zoom,30f/56f,20);if(Math.Abs(zoom-previousZoom)>.00001f)editScroll.x*=zoom/previousZoom;
-        Text(new Rect(763,166,W-787,24),$"Bar {editMeasure+1} / {Project.Measures.Length}   ·   {selection.Count} "+T("選択","selected"),13,muted);
+        if(Button(new Rect(760,162,190,30),"Metronome",metronome,true,13,kind:ControlKind.Toggle))SetMetronome(!metronome);
+        Text(new Rect(972,166,W-996,24),$"Bar {editMeasure+1} / {Project.Measures.Length}   ·   {selection.Count} "+T("選択","selected"),13,muted);
         EditorTimeline();EditorInspector();TrackSongInfoFocus();
         if(Event.current.rawType==EventType.MouseUp||Event.current.rawType==EventType.KeyUp||editorPanel!=4)mixerEditing="";
         Text(new Rect(24,H-50,W-48,22),T("Shift + 左クリック/ドラッグ: 範囲選択 / Ctrl + 左: 複数選択 / 右: メニュー / 左ダブルクリック: 削除 / 矢印: 移動","Shift + Left click/drag: range · Ctrl + Left: toggle · Right: menu · Double click: delete · Arrows: move"),12,muted);
@@ -43,18 +44,18 @@ public partial class CrossRhythmApp {
         var r=EditorFileMenuRect;float menuX=r.x,menuY=r.y;RectFill(r,panel);Border(r,mint);
         ProjectButton(new Rect(menuX+12,menuY+12,256,34),false,true);
         if(Button(new Rect(menuX+12,menuY+54,256,34),"New Project",false,true,15)){editorFileOpen=false;NewProject();}
-        if(Button(new Rect(menuX+12,menuY+96,256,34),"Audio",false,true,15))PickAudio();
-        if(Button(new Rect(menuX+12,menuY+138,256,34),"Import MIDI",false,true,15)){editorFileOpen=false;PickMidi();}
+        if(Button(new Rect(menuX+12,menuY+96,256,34),"Audio",false,true,15,kind:ControlKind.Dialog))PickAudio();
+        if(Button(new Rect(menuX+12,menuY+138,256,34),"Import MIDI",false,true,15,kind:ControlKind.Dialog)){editorFileOpen=false;PickMidi();}
         MidiExportButton(new Rect(menuX+12,menuY+180,256,34));
         if(Button(new Rect(menuX+12,menuY+222,256,34),"Auto Draft",false,true,15)){editorPanel=2;editorFileOpen=false;}
     }
     void EditorInspector(){
         float top=EditorBottom,x=40,y=top+55,cw=(W-104)/3;
         RectFill(new Rect(24,top,W-48,H-top-52),panel);Border(new Rect(24,top,W-48,H-top-52),line);
-        string[] tabs={"Note","Song","Tempo","Mixer","Analyze"};int[] panels={0,1,3,4,2};for(int i=0;i<tabs.Length;i++)if(Button(new Rect(36+i*102,top+10,92,32),tabs[i],editorPanel==panels[i],true,14)){editorPanel=panels[i];if(editorPanel==3)SelectTempoPosition(Math.Max(0,Audio.Beat));GUI.FocusControl(null);}
+        string[] tabs={"Note","Song","Tempo","Mixer","Analyze"};int[] panels={0,1,3,4,2};for(int i=0;i<tabs.Length;i++)if(Button(new Rect(36+i*102,top+10,92,32),tabs[i],editorPanel==panels[i],true,14,kind:ControlKind.Tab)){editorPanel=panels[i];if(editorPanel==3)SelectTempoPosition(Math.Max(0,Audio.Beat));GUI.FocusControl(null);}
         if(editorPanel==0){
             Text(new Rect(x,y,cw,24),LaneNames[instrument]+" · "+T("種別","Type"),14,mint,true);
-            var types=Types[instrument];for(int i=0;i<types.Length;i++){int ix=i;if(Button(new Rect(x+i%2*(cw/2),y+32+i/2*35,cw/2-8,29),EditorTypeLabel(types[i]),kind==i,true,13)){kind=ix;ChangeSelected(e=>{if((string)e["instrument"]==Instruments[instrument])e["articulation"]=types[ix];});}}
+            var types=Types[instrument];for(int i=0;i<types.Length;i++){int ix=i;if(Button(new Rect(x+i%2*(cw/2),y+32+i/2*35,cw/2-8,29),EditorTypeLabel(types[i]),kind==i,true,13,kind:ControlKind.Choice)){kind=ix;ChangeSelected(e=>{if((string)e["instrument"]==Instruments[instrument])e["articulation"]=types[ix];});}}
             x+=cw+12;Text(new Rect(x,y,cw,24),T("強弱","Velocity"),14,muted);
             for(int i=0;i<6;i++){int v=i;if(Button(new Rect(x+i*43,y+32,37,30),i.ToString(),selection.Count==0?velocity==i:Project.Notes.Where(n=>selection.Contains(n.Index)).All(n=>n.Velocity==i),true,14)){velocity=v;ChangeSelected(e=>e["velocity"]=v);}}
             Text(new Rect(x,y+78,130,22),T("長さ(拍)","Length (beats)"),13,muted);
@@ -76,7 +77,7 @@ public partial class CrossRhythmApp {
             offsetField=EditField("offset",new Rect(x,y+91,cw-90,30),offsetField);
             if(Button(new Rect(x+cw-80,y+91,68,30),"Set",false,true,14)&&double.TryParse(offsetField,out var sec)&&!double.IsNaN(sec)&&!double.IsInfinity(sec)){PushUndo();Audio.Pause();Project.Chart["audioOffsetSec"]=sec;Edited();}
             x+=cw+12;var meter=Project.Meter(editMeasure);Text(new Rect(x,y,cw,26),$"Bar {editMeasure+1} · {meter.Item1}/{meter.Item2}",17,mint);
-            if(Button(new Rect(x,y+30,144,32),"Bar / Meter",false,true,14))showMeterPanel=true;
+            if(Button(new Rect(x,y+30,144,32),"Bar / Meter",false,true,14,kind:ControlKind.Dialog))OpenMeterPanel();
             if(Button(new Rect(x+152,y+30,62,32),"+ Bar",false,true,13))InsertEditorMeasure();
             if(Button(new Rect(x+222,y+30,62,32),"- Bar",false,Project.CanRemoveMeasure(editMeasure),13))RemoveEditorMeasure();
             Text(new Rect(x,y+76,cw,26),"Difficulty "+Project.Difficulty+" · Auto",18,mint,true);

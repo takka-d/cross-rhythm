@@ -15,7 +15,7 @@ public sealed class ChartNote {
     public string Instrument, Articulation, Lane, Id;
     public bool Pedal => Instrument == "HHSTATE";
 }
-public sealed class PedalRange { public double Start, End; }
+public sealed class PedalRange { public double Start, End; public bool HasKick; }
 public sealed partial class ChartProject {
     public JObject Manifest, Chart;
     public Dictionary<string, byte[]> Files = new Dictionary<string, byte[]>();
@@ -39,6 +39,13 @@ public sealed partial class ChartProject {
     public JArray Events => (JArray)Chart["events"];
     public bool SnapToGrid => (bool?)Chart["editorSnapToGrid"] ?? true;
     public double Grid => 4.0 / Math.Max(1, Math.Min(1024, (double?)Chart["quantize"] ?? 16));
+    // Freeze legacy implicit lengths before changing the placement grid.
+    // Their old effective duration remains part of the chart, including pedal holds.
+    public bool SetGrid(int quantize){
+        if(quantize<1||quantize>1024||(int?)Chart["quantize"]==quantize)return false;
+        foreach(var note in Notes)if(!((double?)note.Source["durationBeats"]>0))note.Source["durationBeats"]=note.Duration;
+        Chart["quantize"]=quantize;Dirty=true;Rebuild();return true;
+    }
     public static string Hash(byte[] bytes) { using (var sha = SHA256.Create()) return BitConverter.ToString(sha.ComputeHash(bytes)); }
     public static int Strength(JToken v) { double n; return v == null || v.Type == JTokenType.Null || !double.TryParse(v.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n) ? 4 : (int)Math.Max(0, Math.Min(5, Math.Floor(n + .5))); }
     public static readonly float[] Gains = { 0, .25f, .5f, .75f, 1, 1.27f };
@@ -99,10 +106,13 @@ public sealed partial class ChartProject {
         foreach(var n in Notes.Where(n=>n.Instrument=="BD"))n.Lane=ClosedAt(n.Beat)?"F1":"FANY";
         foreach(var n in Notes.Where(n=>n.Pedal))n.Lane="F2";
         Notes=Notes.OrderBy(n=>n.Beat).ThenBy(n=>n.Index).ToList();
-        PlayableNoteCount=Notes.Count(n=>!n.Pedal);
+        PlayableNoteCount=Notes.Count(n=>!n.Pedal);RebuildNoteIndex();
     }
     public static double EventStep(JObject e,double tolerance=.00051){double explicitStep=(double?)e["gridStepBeats"]??0;if(explicitStep>=1.0/256&&explicitStep<=4)return explicitStep;double b=(double?)e["beat"]??0;if(Math.Abs(b-Math.Round(b*4)/4)<=tolerance)return .25;foreach(int n in new[]{8,3,6,12,5,10,7,14,9,11,13,15,16,18,20,21,22,24,26,28,30,32,64})if(Math.Abs(b-Math.Round(b*n)/n)<=tolerance)return 1.0/n;return .25;}
-    public bool ClosedAt(double beat)=>Pedals.Any(p=>beat>=p.Start-1e-8&&beat<p.End-1e-8);
+    public bool ClosedAt(double beat){
+        int lo=0,hi=Pedals.Count;while(lo<hi){int mid=lo+(hi-lo)/2;if(Pedals[mid].Start-1e-8<=beat)lo=mid+1;else hi=mid;}
+        return lo>0&&beat<Pedals[lo-1].End-1e-8;
+    }
     public int BarAt(double beat){if(beat<0)return CountIn.BarAt(this,beat);int i=Array.BinarySearch(Starts,beat);return i>=0?i:Math.Max(0,Math.Min(Starts.Length-1,~i-1));}
     public double SnapBeat(double beat){
         int m=Math.Max(0,BarAt(Math.Max(0,Math.Min(Length-1e-9,beat))));
@@ -137,8 +147,9 @@ public sealed partial class ChartProject {
     }
     public void InsertMeasure(int after){
         int at=Math.Max(0,Math.Min(Measures.Length,after+1));var meters=MeterArray();
-        meters.Insert(at,new JObject{{"numerator",4},{"denominator",4}});Chart["timeSignatures"]=meters;
-        ((JArray)Chart["measures"]).Insert(at,4);foreach(JObject e in Events.OfType<JObject>().Concat(TempoChanges))if(((int?)e["measure"]??0)>=at)e["measure"]=(int)e["measure"]+1;
+        int inherit=Math.Max(0,Math.Min(Measures.Length-1,after));var signature=Meter(inherit);
+        meters.Insert(at,new JObject{{"numerator",signature.Item1},{"denominator",signature.Item2}});Chart["timeSignatures"]=meters;
+        ((JArray)Chart["measures"]).Insert(at,Measures[inherit]);foreach(JObject e in Events.OfType<JObject>().Concat(TempoChanges))if(((int?)e["measure"]??0)>=at)e["measure"]=(int)e["measure"]+1;
         Dirty=true;Rebuild();
     }
     public bool CanRemoveMeasure(int m)=>Measures.Length>1&&m>=0&&m<Measures.Length&&!Events.OfType<JObject>().Concat(TempoChanges).Any(e=>(int?)e["measure"]==m);

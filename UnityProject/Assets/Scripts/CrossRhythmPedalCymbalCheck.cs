@@ -32,7 +32,7 @@ public partial class CrossRhythmApp {
         for(int v=0;v<6;v++){
             var t=CymbalVisuals.Ride(v);var colors=t.GetPixels32();var occupied=Enumerable.Range(0,colors.Length).Where(i=>colors[i].a>100).ToArray();int height=occupied.Max(i=>i/t.width)-occupied.Min(i=>i/t.width);
             check(occupied.Length>0&&height>maxHeight,"ride velocity keeps increasing silhouette height "+v);maxHeight=height;
-            check(colors.Any(c=>c.a>200&&c.g>c.r*1.3)&&!colors.Take(t.width).Any(c=>c.a>0),"ride has distinct turquoise colour and unclipped bounds "+v);
+            check(colors.Any(c=>c.a>200&&c.r>c.b*1.3&&c.g>c.b*1.2)&&!colors.Take(t.width).Any(c=>c.a>0),"ride uses the cymbal gold palette and unclipped bounds "+v);
             var outline=CymbalVisuals.Ride(v,true);var miss=CymbalVisuals.Ride(v,false,true);check(outline!=t&&miss!=t&&CymbalVisuals.Ride(v)==t,"normal outline miss use cached distinct ride textures "+v);
             File.WriteAllBytes(Path.Combine(workspaceCheckRoot,"ride-normal-"+v+".png"),t.EncodeToPNG());
         }

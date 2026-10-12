@@ -50,7 +50,7 @@ public partial class CrossRhythmApp {
         Button(r,"",primary,enabled,fontSize,"file:"+(folder?1:editor?2:0));
         if(Event.current.type==EventType.Repaint)PlatformFiles.CRProjectButton(fileButtonCount++,r.x/W,r.y/H,r.width/W,r.height/H,folder?1:editor?2:0,english?1:0,enabled?1:0,primary?1:0,fontSize*scale);
 #else
-        if(Button(r,caption,primary,enabled,fontSize))PickProject(folder,editor);
+        if(Button(r,caption,primary,enabled,fontSize,kind:ControlKind.Dialog))PickProject(folder,editor);
 #endif
     }
     float VolumeRow(float x,float y,string caption,float value,string key){Text(new Rect(x,y,145,28),caption,17);float next=GUI.HorizontalSlider(new Rect(x+150,y+11,290,20),value,0,1);Text(new Rect(x+456,y,70,28),Mathf.RoundToInt(next*100)+"%",17,mint);if(Math.Abs(next-value)>.0001){PlayerPrefs.SetFloat(key,next);PlayerPrefs.Save();}return next;}

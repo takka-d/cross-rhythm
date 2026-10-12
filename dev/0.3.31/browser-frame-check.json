@@ -1,0 +1,7 @@
+{
+  "maxMs": 33.39999999999418,
+  "medianMs": 16.699999999982538,
+  "p95Ms": 16.79999999998836,
+  "samples": 180,
+  "scope": "Browser animation frame intervals during large-chart Practice; not audio listening or a long-session freeze guarantee"
+}

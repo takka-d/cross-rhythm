@@ -20,8 +20,8 @@ public partial class CrossRhythmApp {
     }
     void PracticeControls(){
         float y=H-114;RectFill(new Rect(12,y,W-24,46),panel);
-        if(Button(new Rect(28,y+6,104,32),"Normal",!pro,true,14))ChangePractice(practiceSpeed,false);
-        if(Button(new Rect(140,y+6,80,32),"Pro",pro,true,14))ChangePractice(practiceSpeed,true);
+        if(Button(new Rect(28,y+6,104,32),"Normal",!pro,true,14,kind:ControlKind.Choice))ChangePractice(practiceSpeed,false);
+        if(Button(new Rect(140,y+6,80,32),"Pro",pro,true,14,kind:ControlKind.Choice))ChangePractice(practiceSpeed,true);
         Text(new Rect(242,y+11,132,26),$"Speed ×{(pendingPracticeSpeed??practiceSpeed):0.00}",15,mint);
         if(Button(new Rect(390,y+6,68,32),"×1",false,true,14)){pendingPracticeSpeed=null;ChangePractice(1,pro);}
         GUI.SetNextControlName("practice-speed");

@@ -14,7 +14,7 @@ public partial class CrossRhythmApp {
         Button(r,"",false,enabled,15);
         if(Event.current.type==EventType.Repaint)PlatformFiles.CRProjectButton(fileButtonCount++,r.x/W,r.y/H,r.width/W,r.height/H,6,english?1:0,enabled?1:0,0,15*scale);
 #else
-        if(Button(r,"Export MIDI",false,enabled,15))OnMidiExportButton("");
+        if(Button(r,"Export MIDI",false,enabled,15,kind:ControlKind.Dialog))OnMidiExportButton("");
 #endif
     }
     public void OnMidiExportButton(string unused){
