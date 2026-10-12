@@ -6,7 +6,7 @@ namespace CrossRhythm {
 // Geometry shared by rendering and picking. Matches v175 score geometry and the inherited HTML editor.
 public static class ChartVisuals {
     public static Color Hex(string hex){ColorUtility.TryParseHtmlString(hex,out var color);return color;}
-    public static Color PlayColor(string inst)=>Hex(inst=="CR"?"#bf9b48":inst=="RD"?"#bf9b48":inst=="HH"?"#9ba9b8":inst=="SN"?"#5678c8":inst=="HT"||inst=="MT"||inst=="FT"?"#c8874a":inst=="BD"?"#2f8f9d":"#8162bd");
+    public static Color PlayColor(string inst)=>Hex(inst=="CR"?"#bf9b48":inst=="RD"?"#bf9b48":inst=="HH"?"#9ba9b8":inst=="SN"?"#5678c8":inst=="HT"?"#e9bb62":inst=="MT"?"#c8874a":inst=="FT"?"#be626b":inst=="BD"?"#2f8f9d":"#8162bd");
     public static Color EditColor(ChartProject p,ChartNote n){
         string hex=n.Articulation=="tambourine"?"#e3c18c":n.Instrument=="HH"?(p.ClosedAt(n.Beat)?"#f7d25f":"#ffad4f"):n.Instrument=="SN"?"#ff6f7d":n.Instrument=="CR"?"#7ee787":n.Instrument=="RD"?"#63d8c7":n.Instrument=="HT"?"#ff9f68":n.Instrument=="MT"?"#ff8b68":n.Instrument=="FT"?"#ff7468":n.Instrument=="BD"?"#59a9ff":"#c084fc";
         Color c=Hex(hex);c.a=.45f+.55f*Mathf.Clamp((float?)n.Source?["confidence"]??.8f,.15f,1);return c;
@@ -36,10 +36,22 @@ public static class ChartVisuals {
         // grid differs. Guides use their actual timing, including MIDI tick rounding.
         foreach(var n in p.NotesInBar(bar))points.Add(n.Local);
     }
+    public static bool TripletStep(double step){
+        if(step<=0)return false;double power=Math.Log(step*3,2);
+        return Math.Abs(power-Math.Round(power))<.003;
+    }
     public static double[] GridPoints(ChartProject p,int bar){
-        double length=bar<0?CountIn.Length(p):p.Measures[bar];var notes=p.NotesInBar(bar).ToArray();var points=new SortedSet<double>{0,length};
-        foreach(double step in notes.Select(n=>n.Step).Concat(new[]{.25,BeatUnit(p,bar)}).Distinct())for(int i=0;i*step<length-1e-8;i++)points.Add(Math.Round(i*step,9));
-        foreach(var n in notes)points.Add(Math.Round(n.Local,9));return points.ToArray();
+        double length=bar<0?CountIn.Length(p):p.Measures[bar];var points=new SortedSet<double>{0,length};
+        foreach(double step in new[]{.25,BeatUnit(p,bar)})for(int i=0;i*step<length-1e-8;i++)points.Add(Math.Round(i*step,9));
+        // Add only the triplet group occupied by a note. Quintuplets and higher
+        // keep the sixteenth-note guides, without altering their actual onsets.
+        foreach(var n in p.NotesInBar(bar)){
+            if(n.Pedal||!TripletStep(n.Step))continue;
+            double step=Math.Pow(2,Math.Round(Math.Log(n.Step*3,2)))/3,span=step*3;
+            double start=Math.Floor((n.Local+.00051)/span)*span;
+            for(int i=0;i<=3;i++){double at=start+i*step;if(at>=0&&at<=length+1e-8)points.Add(Math.Round(Math.Min(length,at),9));}
+        }
+        return points.ToArray();
     }
     public static float CellX(ChartProject p,int bar,double local,float left,float width){double len=bar<0?CountIn.Length(p):p.Measures[bar];return left+(float)((local+Math.Min(DisplayStep(p,bar),len-local)/2)/len)*width;}
     static int Order(string inst){switch(inst){case "BD":return 0;case "HH":return 1;case "SN":return 2;case "HT":return 3;case "MT":return 4;case "FT":return 5;case "CR":return 6;case "RD":return 7;default:return 8;}}

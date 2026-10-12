@@ -24,7 +24,7 @@ public partial class CrossRhythmApp {
         if(!loaded){File.WriteAllText(Path.Combine(folder,"FAILED.txt"),"Audio/project not loaded: "+status);Application.Quit(2);yield break;}
         bool editorActions=EditorSmokeChecks(folder);
         foreach(var page in new[]{Page.Title,Page.Songs,Page.Config,Page.Edit}){Current=page;yield return new WaitForEndOfFrame();ScreenCapture.CaptureScreenshot(Path.Combine(folder,page+".png"));yield return new WaitForSeconds(.2f);}
-        Begin(true);auto=true;Seek(208);yield return new WaitForSeconds(2);bool playingAudio=Audio.Backing.isPlaying;int practiceRecords=Records.Count;Audio.Pause();yield return new WaitForEndOfFrame();ScreenCapture.CaptureScreenshot(Path.Combine(folder,"Practice.png"));
+        Begin(true);auto=true;Seek(208);Audio.Play(Audio.Beat);yield return new WaitForSeconds(2);bool playingAudio=Audio.Backing.isPlaying;int practiceRecords=Records.Count;Audio.Pause();yield return new WaitForEndOfFrame();ScreenCapture.CaptureScreenshot(Path.Combine(folder,"Practice.png"));
         double before=Audio.Beat;Seek(before-4);bool seek=Math.Abs(Audio.Beat-(before-4))<.0001;bool strengths=Project.Notes.Where(n=>n.Instrument=="HH").Select(n=>n.Velocity).Distinct().Count()>1;
         Begin(false);Audio.Pause();Seek(208);yield return new WaitForEndOfFrame();ScreenCapture.CaptureScreenshot(Path.Combine(folder,"Play.png"));
         var ns=Project.Notes.Where(n=>!n.Pedal).ToArray();Records=ns.Select(n=>new HitRecord{Index=n.Index,Beat=n.Beat,Instrument=n.Instrument,Ms=0,Judge="JUST"}).ToList();Result=RhythmScore.Calculate(ns,Records);Current=Page.Result;yield return new WaitForEndOfFrame();ScreenCapture.CaptureScreenshot(Path.Combine(folder,"Result.png"));yield return new WaitForSeconds(.3f);

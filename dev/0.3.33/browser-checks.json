@@ -1,0 +1,28 @@
+{
+  "version": "0.3.33",
+  "origin": "http://127.0.0.1:8790/",
+  "fixture": "Synthetic Practice Visual QA in browser origin private storage",
+  "checks": [
+    "Title displays Unity Preview 0.3.33",
+    "Songs Open Folder imports synthetic project through actual folder action",
+    "Songs details no longer show Preview OFF; the preview toggle remains available",
+    "Practice opens stopped at Count 2; position stays stationary until explicit playback",
+    "Vertical seek moves to M1 while preserving stopped state",
+    "Closed hi-hat touches; open hi-hat shows two separated cymbals",
+    "High, middle and floor toms retain shapes and show gold, orange and rose colours",
+    "Play starts from selected position; Space pauses",
+    "6/8 position shows meter beat out of six",
+    "Triplet supplemental lines are visible; later quintuplets use sixteenth lines",
+    "Pro mode switches without starting playback",
+    "Mouse wheel seeks backward while stopped",
+    "Speed slider reaches 0.25 and 2.00 without starting playback"
+  ],
+  "songEndFixVerified": true,
+  "finalBuildReloaded": true,
+  "pickerOverrideCleared": true,
+  "consoleErrors": 0,
+  "nativeOSPickerVerified": false,
+  "nativeWindowsVisualVerified": false,
+  "browserDownloadResolved": false,
+  "notes": "Folder picker was replaced with a local synthetic OPFS handle for QA. Reload removes the override. No private project or music was uploaded. Native runtime screenshot was black and is not visual evidence."
+}

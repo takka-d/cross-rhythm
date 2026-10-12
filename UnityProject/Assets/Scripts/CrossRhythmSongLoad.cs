@@ -19,7 +19,8 @@ public partial class CrossRhythmApp {
     }
     void StartPreparedPerformance(){
         pendingPerformance=null;Audio.Rate=Current==Page.Practice?practiceSpeed:1;
-        Audio.Play(CountIn.Start(Project));
+        if(Current==Page.Practice){Audio.Stop();Audio.AnchorBeat=CountIn.Start(Project);}
+        else Audio.Play(CountIn.Start(Project));
     }
 }
 }

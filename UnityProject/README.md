@@ -94,7 +94,7 @@ and saved controller preferences are unchanged. Connected device names remain
 as supplied by the operating system/browser to identify actual hardware.
 
 
-0.3.32 development
+0.3.33 development
 
 - Songs: Start, Practice and Edit accept input while preview audio is loading. Start/Practice enter their screen immediately and start the count-in only after the selected audio is ready. Back cancels the pending start. Open Folder stays available while audio loads.
 - Practice: a 0.25 to 2.00 speed slider is restored alongside the existing fine-step/reset controls. The displayed value changes during a drag; audio speed is applied on release to avoid repeatedly restarting preparation. Pitch preservation remains enabled.
@@ -229,3 +229,15 @@ Cross Rhythm 0.3.32 development
 - Private MIDI fixture verification: PPQ 480, meter change at tick 73440 = beat 153 = bar 52. One-bar disagreement with intended music position remains under investigation; import does not silently shift source timing.
 
 Development release only. Production and the WordPress draft were not changed. Physical listening and native file-dialog gestures are not verified. Browser ZIP download completion remains unresolved; the ZIP is also provided as a verified local copy.
+
+
+Cross Rhythm 0.3.33 development
+
+- Practice opens paused after both cached and asynchronous audio preparation. Play / Space starts from the selected position. Normal Play retains automatic count-in.
+- Practice seek control is vertical beside the score; its position is shown in bars and meter beats. The bottom control row retains Normal / Pro and speed.
+- Play / Practice add guides within occupied triplet groups. Quintuplets and higher use ordinary sixteenth guides while retaining exact note timing; meter beat lines remain unchanged.
+- Hi-hat notes show separated or touching cymbals according to the chart pedal state, including strength and outline / MISS variants. Tambourine remains distinct.
+- High / Mid / Floor toms use distinct gold / orange / rose colours while preserving the v175 shapes and strength heights.
+- Removed the redundant Preview OFF text from Songs details; preview settings still work.
+
+Development release only. Production and the WordPress draft were not changed. Native file-dialog gestures and physical listening are not verified. Browser ZIP completion remains unresolved; the verified ZIP is also provided locally.

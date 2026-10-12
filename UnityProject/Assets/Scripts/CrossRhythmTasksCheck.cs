@@ -80,7 +80,7 @@ public partial class CrossRhythmApp {
                 Begin(false);Audio.Stop();Audio.AnchorBeat=0;
                 foreach(var n in Project.Notes)HandleKey(UnityEngine.InputSystem.Key.Digit9,n.Beat);
                 Check(Records.Count==14&&Records.All(r=>r.Judge=="JUST"&&Math.Abs(r.Ms)<1e-9),"Play judges all imported tuplet onsets at zero error");
-                Begin(true);
+                Begin(true);Audio.Play(Audio.Beat);
                 foreach(var n in Project.Notes)Check(Math.Abs(Audio.BeatAt(Audio.DSPAt(n.Beat))-n.Beat)<1e-8,"Practice audio clock preserves tuplet onset "+n.Index);
                 Audio.Stop();
             }finally{pro=oldPro;}
@@ -98,7 +98,8 @@ public partial class CrossRhythmApp {
             yield return GridMeterRuntimeCheck(Check);
             yield return MeterSoundRuntimeCheck(Check);
             yield return IndexAndLaneRuntimeCheck(Check);
-            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.32"},{"checks",new JArray(checks)}}.ToString());
+            yield return PracticeVisualRuntimeCheck(Check);
+            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.33"},{"checks",new JArray(checks)}}.ToString());
             Debug.Log("CROSS_RHYTHM_TASKS_CHECK_PASS");
         }finally{if(hadPreview)PlayerPrefs.SetInt("songPreview",originalPreview);else PlayerPrefs.DeleteKey("songPreview");PlayerPrefs.Save();allowApplicationQuit=true;}
         Application.Quit();

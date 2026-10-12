@@ -26,6 +26,10 @@ public partial class CrossRhythmApp {
             for(int i=0;i<4;i++){float a=i*Mathf.PI/2;RectFill(new Rect(center.x+Mathf.Cos(a)*radius-3*z,center.y+Mathf.Sin(a)*radius-2*z,6*z,4*z),color);}
             return;
         }
+        if(note.Instrument=="HH"||DrumNoteVisuals.IsTom(note.Instrument)){
+            var texture=note.Instrument=="HH"?DrumNoteVisuals.HiHat(note.Velocity,Project.ClosedAt(note.Beat),outline,missed):DrumNoteVisuals.Tom(note.Instrument,note.Velocity,outline,missed);
+            var old=GUI.color;GUI.color=new Color(1,1,1,alpha);GUI.DrawTexture(new Rect((x-40)*z,(y-40)*z,80*z,80*z),texture);GUI.color=old;return;
+        }
         ReferenceSprite(note.Instrument+"-"+(outline?"outline":missed?"miss":"normal")+"-"+note.Velocity,new Rect(x-40,y-40,80,80),z,alpha);}
     void ReferenceLine(float x,float y,float width,float height,float z,Color color)=>RectFill(new Rect(x*z,y*z,width*z,height*z),color);
     void ReferenceBeat(float x,float top,float width,float z,float alpha){
@@ -41,7 +45,8 @@ public partial class CrossRhythmApp {
         foreach(double q in StageGrid(m)){
             double subdivision=q/ChartVisuals.BeatUnit(Project,m)*2;
             bool beat=ChartVisuals.IsBeatLine(Project,m,q),eighth=Math.Abs(subdivision-Math.Round(subdivision))<1e-8,edge=Math.Abs(q)<1e-8||Math.Abs(q-length)<1e-8;
-            float w=beat?(edge?1.2f:1.05f):eighth?.9f:.75f,a=alpha*(beat?(edge?.13f:.10f)*.94f:eighth?.055f*.82f:.032f*.72f);
+            bool triplet=Math.Abs(q*4-Math.Round(q*4))>1e-7;
+            float w=beat?(edge?1.2f:1.05f):triplet?1f:eighth?.9f:.75f,a=alpha*(beat?(edge?.13f:.10f)*.94f:triplet?.15f:eighth?.055f*.82f:.032f*.72f);
             float x=220+(float)(q/length)*970;ReferenceLine(x-w/2,top,w,168,z,new Color(1,1,1,a));
         }
         if(current){double unit=ChartVisuals.BeatUnit(Project,m),beat=Math.Floor(Math.Max(0,Math.Min(length-1e-8,b-start))/unit)*unit;ReferenceBeat(220+(float)(beat/length)*970,top,Math.Min(970,(float)(970*unit/length)),z,alpha);}

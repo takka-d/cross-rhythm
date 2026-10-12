@@ -19,7 +19,7 @@ public partial class CrossRhythmApp {
         ApplyDraft();Check(Project.PlayableNoteCount>0&&Project.Length==16,"apply creates notes and extends bars");string generated=Project.Chart.ToString();Restore(false);Check(Project.Chart.ToString()==original,"Undo restores exact chart");Restore(true);Check(Project.Chart.ToString()==generated,"Redo restores generated chart");
         var restored=ChartProject.Read(Project.Write(),"qa.crproj");Check(JToken.DeepEquals(restored.Chart,Project.Chart),"draft saves and reloads losslessly");
         foreach(double rate in new[]{.25,2.0}){
-            Begin(true);Seek(1);ChangePractice(rate,rate==2);auto=true;
+            Begin(true);Seek(1);ChangePractice(rate,rate==2);auto=true;Audio.Play(Audio.Beat);
             while(Audio.Preparing)yield return null;yield return new WaitForSeconds(.3f);double startBeat=Audio.Beat,startDSP=AudioSettings.dspTime;
             yield return new WaitForSeconds(.5f);double dt=AudioSettings.dspTime-startDSP;
             Check(Math.Abs((Audio.Beat-startBeat)-dt*Project.BPM/60*rate)<.003,"live DSP clock ×"+rate);

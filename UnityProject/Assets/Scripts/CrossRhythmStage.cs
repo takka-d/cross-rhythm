@@ -13,6 +13,10 @@ public partial class CrossRhythmApp {
     void RoundBorder(Rect r,Color c,float width=1,float radius=6){GUI.DrawTexture(r,Texture2D.whiteTexture,ScaleMode.StretchToFill,true,0,c,width,radius);}
     void Glyph(ChartNote n,float x,float y,float alpha=1,bool outline=false,float sizeScale=1,bool missed=false){
         if(n.Instrument=="RD"){var tint=GUI.color;GUI.color=new Color(1,1,1,alpha);GUI.DrawTexture(new Rect(x-40*sizeScale,y-40*sizeScale,80*sizeScale,80*sizeScale),CymbalVisuals.Ride(n.Velocity,outline,missed));GUI.color=tint;return;}
+        if((n.Instrument=="HH"&&n.Articulation!="tambourine")||DrumNoteVisuals.IsTom(n.Instrument)){
+            var t=n.Instrument=="HH"?DrumNoteVisuals.HiHat(n.Velocity,Project.ClosedAt(n.Beat),outline,missed):DrumNoteVisuals.Tom(n.Instrument,n.Velocity,outline,missed);
+            var tint=GUI.color;GUI.color=new Color(1,1,1,alpha);GUI.DrawTexture(new Rect(x-40*sizeScale,y-40*sizeScale,80*sizeScale,80*sizeScale),t);GUI.color=tint;return;
+        }
         string name=n.Instrument+"-"+(outline?"outline":missed?"miss":"normal");
         if(!glyphTextures.TryGetValue(name,out var texture)){texture=Resources.Load<Texture2D>("NoteGlyphs/"+name);glyphTextures[name]=texture;}
         if(texture==null)return;
@@ -34,15 +38,15 @@ public partial class CrossRhythmApp {
         else{if(Button(new Rect(W-438,16,118,42),Audio.Running?"Pause":"Play",true,loaded&&!busy)){if(Audio.Running)Audio.Pause();else {ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}if(Button(new Rect(W-308,16,118,42),"Auto",auto,kind:ControlKind.Toggle)){auto=!auto;ResetScheduled();}if(Button(new Rect(W-178,16,100,42),"Back"))NavigateNow(Page.Songs);}
         int revision=Project.Revision;
         if(gridProject!=Project||gridRevision!=revision){stageGrids.Clear();gridProject=Project;gridRevision=revision;}
-        Rect area=new Rect(8,74,W-16,H-74-(practice?124:8));RoundFill(area,C("#090d13"));RoundBorder(area,line);
+        Rect area=new Rect(8,74,W-16-(practice?76:0),H-74-(practice?72:8));RoundFill(area,C("#090d13"));RoundBorder(area,line);
         if(Event.current.type==EventType.Repaint)ReferencePlayfield(area,b);
         if(pendingPerformance!=null||!string.IsNullOrEmpty(stageLoadError)){
             var wait=new Rect(W/2-260,H/2-70,520,140);RectFill(wait,panel);Border(wait,mint);
             Text(new Rect(wait.x+22,wait.y+18,476,36),pendingPerformance!=null?T("音源を準備中…","Preparing audio…"):T("音源を読み込めませんでした","Audio could not load"),22,mint);
-            if(pendingPerformance!=null)Text(new Rect(wait.x+22,wait.y+66,476,28),T("準備が終わるとカウントを開始します。Backで戻れます。","Count-in starts when ready. Back returns to Songs."),14,muted);
+            if(pendingPerformance!=null)Text(new Rect(wait.x+22,wait.y+66,476,28),practice?T("準備後、Playで開始します。Backで戻れます。","Press Play when ready. Back returns to Songs."):T("準備が終わるとカウントを開始します。Backで戻れます。","Count-in starts when ready. Back returns to Songs."),14,muted);
             else {FittedText(new Rect(wait.x+22,wait.y+57,476,25),stageLoadError,14,muted);if(Button(new Rect(wait.x+180,wait.y+91,160,34),"Retry",true))Begin(practice);}
         }
-        if(practice){PracticeControls();RectFill(new Rect(12,H-67,W-24,53),panel);Text(new Rect(28,H-56,180,28),$"{Project.SecondsAtBeat(Math.Max(0,b)):0.0} / {Project.DurationSeconds:0.0}s",16,muted);float next=GUI.HorizontalSlider(new Rect(230,H-48,W-550,20),(float)b,(float)CountIn.Start(Project),(float)Project.Length);if(Math.Abs(next-b)>.01)Seek(next);Text(new Rect(W-295,H-56,270,30),"Wheel: ±4 beats · Space",14,muted);if(Event.current.type==EventType.ScrollWheel){Seek(b+Event.current.delta.y*4);Event.current.Use();}}
+        if(practice){PracticeControls();PracticeSeekBar(b,area);if(Event.current.type==EventType.ScrollWheel){Seek(b+Event.current.delta.y*4);Event.current.Use();}}
     }
     void DrawPedalRanges(int bar,double start,double length,double b,float y,float rh,float left,float width,float z,float alpha){
         foreach(var p in Project.PedalsOverlapping(start,start+length)){
