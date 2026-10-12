@@ -27,7 +27,7 @@ public partial class CrossRhythmApp {
         if(InputBlocked)return;
         if(Current!=Page.Edit||showMeterPanel||discardPrompt||MidiPromptOpen||LaneTypeOpen||gridMenuOpen||draftRunning||editorFileOpen||(editTextFocused&&command!="Save"&&command!="SaveAs"))return;
         Editor.ContextOpen=false;
-        switch(command){case "SelectAll":Editor.SelectAll();break;case "Copy":Copy();break;case "Paste":Paste();break;case "Undo":Restore(false);break;case "Redo":Restore(true);break;case "Save":Save(false);break;case "SaveAs":Save(true);break;case "Open":PickProject(false,true);break;}
+        switch(command){case "SelectAll":Editor.SelectAll();break;case "Copy":Copy();break;case "Paste":Paste();break;case "Undo":RequestRestore(false);break;case "Redo":RequestRestore(true);break;case "Save":Save(false);break;case "SaveAs":Save(true);break;case "Open":PickProject(false,true);break;}
         SyncEditorNote();
     }
     void EditorKeys(){
@@ -35,7 +35,7 @@ public partial class CrossRhythmApp {
         bool mod=ev.control||ev.command,text=GUI.GetNameOfFocusedControl().StartsWith("edit-");
         if(mod&&ev.keyCode==KeyCode.S){Save(ev.shift);ev.Use();return;}
         if(text)return;
-        if(mod){switch(ev.keyCode){case KeyCode.O:PickProject(false,true);break;case KeyCode.A:Editor.SelectAll();break;case KeyCode.Z:Restore(ev.shift);break;case KeyCode.Y:Restore(true);break;case KeyCode.C:Copy();break;case KeyCode.V:Paste();break;default:return;}}
+        if(mod){switch(ev.keyCode){case KeyCode.O:PickProject(false,true);break;case KeyCode.A:Editor.SelectAll();break;case KeyCode.Z:RequestRestore(ev.shift);break;case KeyCode.Y:RequestRestore(true);break;case KeyCode.C:Copy();break;case KeyCode.V:Paste();break;default:return;}}
         else {switch(ev.keyCode){case KeyCode.Space:EditorPlayback();break;case KeyCode.Escape:Editor.ContextOpen=false;Editor.Clear();Editor.Cancel();GUIUtility.hotControl=0;break;case KeyCode.Delete:case KeyCode.Backspace:DeleteSelected();break;case KeyCode.LeftArrow:Editor.Nudge(-(Project.SnapToGrid?Project.Grid:1/(EditorPPB*zoom)),0);break;case KeyCode.RightArrow:Editor.Nudge(Project.SnapToGrid?Project.Grid:1/(EditorPPB*zoom),0);break;case KeyCode.UpArrow:Editor.Nudge(0,-1);break;case KeyCode.DownArrow:Editor.Nudge(0,1);break;default:return;}}
         SyncEditorNote();ev.Use();
     }

@@ -1,0 +1,43 @@
+{
+  "version": "0.3.34",
+  "browser": "Codex in-app browser",
+  "viewport": [1280, 720],
+  "origin": "http://127.0.0.1:8791/",
+  "checks": [
+    "Title shows Unity Preview 0.3.34 after a fresh load",
+    "Config has Folder, Audio, Timing, Controls and Display categories",
+    "Config Folder imports two synthetic project files from an OPFS folder and displays its name",
+    "Audio shows music, drum and UI sound volume percentages",
+    "Timing displays the input offset and slider",
+    "Controls has one unclipped heading and opens and closes Key Bindings in the final build",
+    "Display switches to English and shares the persistent lane order with Songs and Practice",
+    "Songs displays the new lane-order choices without overlapping Start or Practice",
+    "Practice starts paused with Pro and lane-order preferences restored after reload",
+    "Slim right-side slider can be dragged without an adjacent position label",
+    "Practice shows original closed hi-hat silhouettes and separated open variants with surrounding bars",
+    "Triplet subdivisions are visually lighter than meter beat lines",
+    "Practice Quit confirmation preserves the stopped position and Escape resumes the existing paused state",
+    "Play Quit offers Resume, Practice and Quit; Right and Enter enter paused Practice",
+    "Practice Edit opens the current song at the selected position",
+    "Edit end and start icons move the playhead, selected bar and horizontal viewport",
+    "Edit Undo and Redo restore a changed title via the actual buttons",
+    "Save reports verified writing for the synthetic OPFS file; Songs rescans and displays the saved title",
+    "Final normal-speed browser session has zero captured console errors",
+    "Temporary file-picker override is absent after reload"
+  ],
+  "syntheticFilesOnly": true,
+  "nativeFilePickerVerified": false,
+  "nativeWindowsVisualVerified": false,
+  "physicalControllerVerified": false,
+  "browserZipCompletionVerified": false,
+  "slowHistoryVisualProbe": {
+    "status": "stopped",
+    "reason": "CPU-throttled browser control timed out and the subsequent screenshot had zero width",
+    "cpuThrottlingReset": true,
+    "testTabClosed": true,
+    "continuousSpinnerAnimationVerified": false,
+    "historyBehaviourVerified": "Windows frame-yield/input-block tests and ordinary Web Undo/Redo operations"
+  },
+  "productionChanged": false,
+  "wordPressChanged": false
+}

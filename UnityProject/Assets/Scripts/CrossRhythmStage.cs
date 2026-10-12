@@ -24,6 +24,11 @@ public partial class CrossRhythmApp {
         GUI.DrawTexture(new Rect(x-40*sizeScale,y-40*sizeScale*sy,80*sizeScale,80*sizeScale*sy),texture);GUI.color=old;
     }
     bool feetAbove;
+    void LaneOrderControls(Rect r,int size=16){
+        float width=(r.width-10)/2;
+        if(Button(new Rect(r.x,r.y,width,r.height),T("腕が上","Hands Above"),!feetAbove,true,size,kind:ControlKind.Choice))SetFeetAbove(false);
+        if(Button(new Rect(r.x+width+10,r.y,width,r.height),T("脚が上","Feet Above"),feetAbove,true,size,kind:ControlKind.Choice))SetFeetAbove(true);
+    }
     void SetFeetAbove(bool value){feetAbove=value;stageEffects.Clear();PlayerPrefs.SetInt("feetAbove",value?1:0);PlayerPrefs.Save();}
     float LaneY(string lane,float top,float rh){float row=lane=="H1"?.5f:lane=="H2"?1.5f:lane=="HANY"?1:lane=="F1"?2.5f:lane=="F2"?3.5f:3;return top+(feetAbove?(row<2?row+2:row-2):row)*rh;}
     bool NoteVisible(ChartNote n)=>!judged.TryGetValue(n.Index,out var hit)||hit.Judge=="MISS";
@@ -34,19 +39,19 @@ public partial class CrossRhythmApp {
         RoundFill(new Rect(8,8,W-16,58),panel);RoundBorder(new Rect(8,8,W-16,58),line);
         Text(new Rect(22,18,W*.32f,36),Project.Title,19,Color.white,true);
         Text(new Rect(W*.35f,24,175,28),$"{Project.Tempo.BPMAt(Audio.Beat):0.##} BPM · "+(pro?"PRO":"NORMAL"),13,muted);
-        if(!practice){var live=RhythmScore.Calculate(Project.Notes,Records);Text(new Rect(W*.51f,16,210,40),$"Score {live.Score:0.0}",24,mint,true);if(Button(new Rect(W-178,16,100,42),"Back"))NavigateNow(Page.Songs);}
-        else{if(Button(new Rect(W-438,16,118,42),Audio.Running?"Pause":"Play",true,loaded&&!busy)){if(Audio.Running)Audio.Pause();else {ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}if(Button(new Rect(W-308,16,118,42),"Auto",auto,kind:ControlKind.Toggle)){auto=!auto;ResetScheduled();}if(Button(new Rect(W-178,16,100,42),"Back"))NavigateNow(Page.Songs);}
+        if(!practice){var live=RhythmScore.Calculate(Project.Notes,Records);Text(new Rect(W*.51f,16,210,40),$"Score {live.Score:0.0}",24,mint,true);if(Button(new Rect(W-178,16,100,42),"Quit",kind:ControlKind.Dialog))RequestStageExit();}
+        else{if(Button(new Rect(W-554,16,104,42),"Edit",false,loaded&&!busy))RequestPracticeEdit();if(Button(new Rect(W-438,16,118,42),Audio.Running?"Pause":"Play",true,loaded&&!busy)){if(Audio.Running)Audio.Pause();else {ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}if(Button(new Rect(W-308,16,118,42),"Auto",auto,kind:ControlKind.Toggle)){auto=!auto;ResetScheduled();}if(Button(new Rect(W-178,16,100,42),"Quit",kind:ControlKind.Dialog))RequestStageExit();}
         int revision=Project.Revision;
         if(gridProject!=Project||gridRevision!=revision){stageGrids.Clear();gridProject=Project;gridRevision=revision;}
-        Rect area=new Rect(8,74,W-16-(practice?76:0),H-74-(practice?72:8));RoundFill(area,C("#090d13"));RoundBorder(area,line);
+        Rect area=new Rect(8,74,W-16-(practice?27:0),H-74-(practice?72:8));RoundFill(area,C("#090d13"));RoundBorder(area,line);
         if(Event.current.type==EventType.Repaint)ReferencePlayfield(area,b);
         if(pendingPerformance!=null||!string.IsNullOrEmpty(stageLoadError)){
             var wait=new Rect(W/2-260,H/2-70,520,140);RectFill(wait,panel);Border(wait,mint);
             Text(new Rect(wait.x+22,wait.y+18,476,36),pendingPerformance!=null?T("音源を準備中…","Preparing audio…"):T("音源を読み込めませんでした","Audio could not load"),22,mint);
-            if(pendingPerformance!=null)Text(new Rect(wait.x+22,wait.y+66,476,28),practice?T("準備後、Playで開始します。Backで戻れます。","Press Play when ready. Back returns to Songs."):T("準備が終わるとカウントを開始します。Backで戻れます。","Count-in starts when ready. Back returns to Songs."),14,muted);
+            if(pendingPerformance!=null)Text(new Rect(wait.x+22,wait.y+66,476,28),practice?T("準備後、Playで開始します。Quitで戻れます。","Press Play when ready. Quit returns to Songs."):T("準備が終わるとカウントを開始します。Quitで戻れます。","Count-in starts when ready. Quit returns to Songs."),14,muted);
             else {FittedText(new Rect(wait.x+22,wait.y+57,476,25),stageLoadError,14,muted);if(Button(new Rect(wait.x+180,wait.y+91,160,34),"Retry",true))Begin(practice);}
         }
-        if(practice){PracticeControls();PracticeSeekBar(b,area);if(Event.current.type==EventType.ScrollWheel){Seek(b+Event.current.delta.y*4);Event.current.Use();}}
+        if(practice){PracticeControls();PracticeSeekBar(b,area);if(GUI.enabled&&Event.current.type==EventType.ScrollWheel){Seek(b+Event.current.delta.y*4);Event.current.Use();}}
     }
     void DrawPedalRanges(int bar,double start,double length,double b,float y,float rh,float left,float width,float z,float alpha){
         foreach(var p in Project.PedalsOverlapping(start,start+length)){

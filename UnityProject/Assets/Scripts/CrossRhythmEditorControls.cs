@@ -20,9 +20,10 @@ public partial class CrossRhythmApp {
         GUI.enabled=enabled&&!showMeterPanel&&!Editor.ContextOpen&&!discardPrompt&&!draftRunning&&!editorFileOpen;
         FittedText(new Rect(214,91,Math.Max(100,W-887),32),Project.Title+(Project.Dirty?" *":""),18,muted);
         if(Button(new Rect(W-660,86,96,38),Audio.Running?"Pause":"Play",true,loaded&&!busy,16)){if(Audio.Running)Audio.Pause();else{ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}
-        if(Button(new Rect(W-552,86,52,38),"|<",false,true,15)){Audio.Stop();Audio.AnchorBeat=0;SelectMeasure(0);editScroll.x=0;ResetScheduled();}
-        if(Button(new Rect(W-472,86,90,38),"Undo",false,undo.Count>0,15))Restore(false);
-        if(Button(new Rect(W-372,86,90,38),"Redo",false,redo.Count>0,15))Restore(true);
+        if(EditorTransportButton(new Rect(W-558,86,36,38),false))EditorBoundary(false);
+        if(EditorTransportButton(new Rect(W-514,86,36,38),true))EditorBoundary(true);
+        if(Button(new Rect(W-472,86,90,38),"Undo",false,undo.Count>0,15))RequestRestore(false);
+        if(Button(new Rect(W-372,86,90,38),"Redo",false,redo.Count>0,15))RequestRestore(true);
         SaveButton(new Rect(W-250,86,104,38),false);
         SaveButton(new Rect(W-134,86,110,38),true);
         SaveStatusLine(new Rect(24,128,W-48,25));

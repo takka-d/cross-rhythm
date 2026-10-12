@@ -42,20 +42,20 @@ public partial class CrossRhythmApp {
     void OnGUI(){
         Styles();scale=Mathf.Min(Screen.width/1280f,Screen.height/800f);W=Screen.width/scale;H=Screen.height/scale;GUI.matrix=Matrix4x4.Scale(new Vector3(scale,scale,1));RectFill(new Rect(0,0,W,H),bg);
         if(InputBlocked){LoadingBackground();LoadingPage();return;}
-        if(Project==null)return;DismissEditorFileMenu();DismissLaneTypeMenu();DismissGridMenu();BindingKeys();MenuKeys();if(Event.current.type==EventType.Repaint)menuItems.Clear();
+        if(Project==null)return;DismissEditorFileMenu();DismissLaneTypeMenu();DismissGridMenu();BindingKeys();StageExitKeys();MenuKeys();if(Event.current.type==EventType.Repaint)menuItems.Clear();
 #if UNITY_WEBGL && !UNITY_EDITOR
         if(Event.current.type==EventType.Repaint){fileButtonCount=0;PlatformFiles.CRProjectButtonsBegin();}
 #endif
         bool stage=Current==Page.Play||Current==Page.Practice;
-        bool uiEnabled=GUI.enabled;GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen&&!(Current==Page.Edit&&(showMeterPanel||draftRunning||editorFileOpen));
+        bool uiEnabled=GUI.enabled;GUI.enabled=uiEnabled&&!stageExitPrompt&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen&&!(Current==Page.Edit&&(showMeterPanel||draftRunning||editorFileOpen));
         if(!stage)Header();
-        GUI.enabled=uiEnabled&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen;
+        GUI.enabled=uiEnabled&&!stageExitPrompt&&!bindingsOpen&&!discardPrompt&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen;
         switch(Current){case Page.Title:TitlePage();break;case Page.Songs:SongsPage();break;case Page.Config:ConfigPage();break;case Page.Result:ResultPage();break;case Page.Play:case Page.Practice:Stage();break;case Page.Edit:EditorPage();break;}
         editTextFocused=Current==Page.Edit&&GUI.GetNameOfFocusedControl().StartsWith("edit-");
         DisplaySizeButton();
         GUI.enabled=uiEnabled;
         if(bindingsOpen)BindingSettings();
-        UnsavedPrompt();MidiOverlapPrompt();EditorLaneTypeMenu();EditorGridMenu();
+        StageExitDialog();UnsavedPrompt();MidiOverlapPrompt();EditorLaneTypeMenu();EditorGridMenu();
 #if UNITY_WEBGL && !UNITY_EDITOR
         if(Event.current.type==EventType.Repaint){PlatformFiles.CRProjectButtonsEnd();PlatformFiles.CRKeyboardFileMode(keyboardMenu&&menuFocus.StartsWith("file:")?int.Parse(menuFocus.Substring(5)):-1);}
 #endif
@@ -116,31 +116,12 @@ public partial class CrossRhythmApp {
         Text(new Rect(right+28,421,400,25),busy?T("音源を準備中…","Preparing audio…"):!songPreviewEnabled?"":Audio.Backing.isPlaying?"Preview ♪":Audio.Song==null?T("音源なし","No audio"):"",14,mint);
         float best=PlayerPrefs.GetFloat("best:"+Project.Title,-1);Text(new Rect(right+28,387,295,32),"Best   "+(best<0?"—":best.ToString("0.0")+" / 100"),18,muted);
         if(Button(new Rect(right+28,452,198,44),"Normal",!pro,kind:ControlKind.Choice)){pro=false;PlayerPrefs.SetInt("pro",0);}if(Button(new Rect(right+238,452,198,44),"Pro",pro,kind:ControlKind.Choice)){pro=true;PlayerPrefs.SetInt("pro",1);}
+        LaneOrderControls(new Rect(right+28,504,408,32),14);
         if(Button(new Rect(right+28,H-256,408,62),"Start",true,SongActionsAvailable,18,"start"))RequestBegin(false);
         if(Button(new Rect(right+28,H-180,198,48),"Practice",false,SongActionsAvailable,18,"practice"))RequestBegin(true);
         if(Button(new Rect(right+238,H-180,198,48),"Edit",false,SongActionsAvailable,18,"edit-selected"))RequestEditSelected();
         if(libraryRefreshFailure!="")FittedText(new Rect(x,H-73,1150,30),LibraryRefreshMessage(),14,C("#edc779"));
         else Text(new Rect(x,H-73,1150,30),!HasExternalProjects?T("Open Folderで曲を開けます。Rhythm Checkは動作確認用です。","Open a folder to add tracks. Rhythm Check is a test track."):T("Open Folderで対象フォルダーを変更できます。","Change the project folder with Open Folder."),14,muted);
-    }
-    void ConfigPage(){float x=(W-1160)/2;Text(new Rect(x,102,800,50),"Config",38,Color.white,true);
-        RectFill(new Rect(x,174,1160,204),panel);Text(new Rect(x+24,190,1000,32),"Project Folder",22,Color.white,true);
-        ProjectFolderRow(new Rect(x+24,236,1112,35));
-        Text(new Rect(x+24,286,1100,22),T("Songsに表示する曲のフォルダー","Folder containing the tracks shown in Songs"),14,muted);
-        FittedText(new Rect(x+24,323,1100,26),CurrentFileLine(),14,muted);
-        float y=398;RectFill(new Rect(x,y,556,304),panel);Text(new Rect(x+24,y+16,500,32),"Audio & Timing",22,Color.white,true);
-        Audio.BackingGain=VolumeRow(x+24,y+62,"Music",Audio.BackingGain,"musicVolume");
-        Audio.DrumGain=VolumeRow(x+24,y+106,"Drums",Audio.DrumGain,"drumsVolume");
-        float old=uiFeedback.Gain;uiFeedback.Gain=VolumeRow(x+24,y+150,T("効果音","UI Sounds"),old,"uiVolume");
-        if(Math.Abs(old-uiFeedback.Gain)>.001&&Event.current.type==EventType.MouseUp)uiFeedback.Confirm();
-        Text(new Rect(x+24,y+199,500,28),$"Input offset   {inputOffset:+0;-0;0} ms",17);float shift=GUI.HorizontalSlider(new Rect(x+24,y+241,470,20),(float)inputOffset,-200,200);
-        if(Math.Abs(shift-inputOffset)>.5){inputOffset=Math.Round(shift);PlayerPrefs.SetFloat("offset",(float)inputOffset);}
-        Text(new Rect(x+24,y+272,500,24),T("＋: 入力を早い時刻として補正","＋: compensate delayed input"),14,muted);
-        BindingPanel(new Rect(x+580,y,580,304));
-        if(Button(new Rect(x,718,180,42),english?"Language: EN":"Language: JA")){english=!english;status="";PlayerPrefs.SetInt("language",english?1:0);PlayerPrefs.Save();}
-        if(Button(new Rect(x+200,718,220,42),"Metronome",metronome,kind:ControlKind.Toggle))SetMetronome(!metronome);
-        Text(new Rect(x+454,721,188,36),T("レーンの上下","Lane Order"),16,muted);
-        if(Button(new Rect(x+648,718,244,42),T("腕が上","Hands Above"),!feetAbove,true,16,kind:ControlKind.Choice))SetFeetAbove(false);
-        if(Button(new Rect(x+906,718,254,42),T("脚が上","Feet Above"),feetAbove,true,16,kind:ControlKind.Choice))SetFeetAbove(true);
     }
     void ResultPage(){float x=(W-1160)/2;Text(new Rect(x,106,700,55),"Result",38,Color.white,true);Text(new Rect(x,170,1080,36),Project.Title,22,muted);RectFill(new Rect(x,240,275,345),panel);Text(new Rect(x+28,266,230,115),Result.Rank,92,mint,true);Text(new Rect(x+28,395,240,102),Result.Score.ToString("0.0"),64,Color.white,true);Text(new Rect(x+28,500,230,35),"/ 100",22,muted);
         string[] names={T("ノーツ判定","Accuracy"),T("打点の安定性","Hit stability"),T("拍の安定性","Beat stability")};double[] vals={Result.Accuracy*.4,Result.Hits*.3,Result.Beats*.3};for(int i=0;i<3;i++){float xx=x+299+i*290;RectFill(new Rect(xx,240,274,190),panel);Text(new Rect(xx+20,261,240,35),names[i],20);Text(new Rect(xx+20,316,240,66),vals[i].ToString("0.0"),44,mint,true);Text(new Rect(xx+20,385,240,30),"/ "+(i==0?40:30),16,muted);}

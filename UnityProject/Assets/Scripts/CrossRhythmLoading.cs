@@ -7,7 +7,7 @@ public partial class CrossRhythmApp {
     bool transitioning,nativeProjectLoading,webPickerOpen;
     string transitionLabel="",loadingFile="";
     bool LoadingIsDialog=>!transitioning&&pendingPerformance==null;
-    bool InputBlocked=>libraryRefreshing||exportingMidi||savingProject!=null||transitioning||nativeProjectLoading||nativePickerOpen||webPickerOpen||importBatch||incoming!=null||pendingPerformance!=null||(Current==Page.Edit&&busy);
+    bool InputBlocked=>restoringHistory||libraryRefreshing||exportingMidi||savingProject!=null||transitioning||nativeProjectLoading||nativePickerOpen||webPickerOpen||importBatch||incoming!=null||pendingPerformance!=null||(Current==Page.Edit&&busy);
 
     public void OnPickerState(string state){webPickerOpen=state=="open";if(webPickerOpen)PrepareExclusiveOperation();}
     void PrepareExclusiveOperation(){
@@ -51,17 +51,21 @@ public partial class CrossRhythmApp {
         if(!LoadingIsDialog)Text(new Rect(box.x,box.y-56,620,36),"CROSS RHYTHM",23,mint,true);
         RectFill(box,panel);Border(box,line);
         bool save=savingProject!=null;
-        string heading=exportingMidi?T("MIDIを書き出し中…","Exporting MIDI…"):save?T("保存中…","Saving…"):nativePickerOpen?T("フォルダーを選択してください","Choose a folder"):T("読み込み中…","Loading…");
+        string heading=restoringHistory?historyLabel+T(" 処理中…"," in progress…"):exportingMidi?T("MIDIを書き出し中…","Exporting MIDI…"):save?T("保存中…","Saving…"):nativePickerOpen?T("フォルダーを選択してください","Choose a folder"):T("読み込み中…","Loading…");
         Text(new Rect(box.x+28,box.y+25,564,38),heading,30,Color.white,true);
-        string detail=save?savingProject.FileName:transitioning?transitionLabel:incoming!=null?incomingName:importBatch?T("プロジェクトフォルダー","Project folder")+" · "+importedCount:!string.IsNullOrEmpty(loadingFile)?loadingFile:Project.FileName;
+        string detail=restoringHistory?Project.Title:save?savingProject.FileName:transitioning?transitionLabel:incoming!=null?incomingName:importBatch?T("プロジェクトフォルダー","Project folder")+" · "+importedCount:!string.IsNullOrEmpty(loadingFile)?loadingFile:Project.FileName;
         FittedText(new Rect(box.x+28,box.y+78,564,30),detail,18,mint);
-        string message=save?T("書き込みの確認が終わるまでお待ちください。","Please wait while the file is saved and verified."):pendingPerformance!=null?T("準備が終わるとカウントを開始します。","Count-in starts when the audio is ready."):T("準備が終わるまでお待ちください。","Please wait while the content is prepared.");
+        string message=restoringHistory?T("編集内容を復元しています。","Restoring the edit history."):save?T("書き込みの確認が終わるまでお待ちください。","Please wait while the file is saved and verified."):pendingPerformance!=null?(Current==Page.Practice?T("準備後、Playで開始できます。","Press Play when the audio is ready."):T("準備が終わるとカウントを開始します。","Count-in starts when the audio is ready.")):T("準備が終わるまでお待ちください。","Please wait while the content is prepared.");
         Text(new Rect(box.x+28,box.y+123,564,26),message,16,muted);
         var bar=new Rect(box.x+28,box.y+175,564,4);RectFill(bar,line);
         float phase=(float)(Time.realtimeSinceStartupAsDouble*.6%1);
         RectFill(new Rect(bar.x+phase*(bar.width-112),bar.y,112,4),mint);
+        if(restoringHistory){
+            double angle=Time.realtimeSinceStartupAsDouble*5;
+            for(int i=0;i<10;i++){float a=(float)(angle+i*Math.PI/5);RoundFill(new Rect(box.xMax-53+Mathf.Cos(a)*12,box.y+39+Mathf.Sin(a)*12,4,4),new Color(mint.r,mint.g,mint.b,(i+1)/10f),2);}
+        }
         if(pendingPerformance!=null){
-            if(Button(new Rect(box.x+210,box.yMax+24,200,44),"Back"))NavigateNow(Page.Songs);
+            if(Button(new Rect(box.x+210,box.yMax+24,200,44),"Cancel"))NavigateNow(Page.Songs);
             if(Event.current.type==EventType.KeyDown&&Event.current.keyCode==KeyCode.Escape)NavigateNow(Page.Songs);
         }
         if(Event.current.isKey||Event.current.isMouse||Event.current.type==EventType.ScrollWheel||Event.current.type==EventType.ContextClick)Event.current.Use();

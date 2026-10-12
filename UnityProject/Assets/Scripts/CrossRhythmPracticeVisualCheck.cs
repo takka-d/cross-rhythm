@@ -33,6 +33,11 @@ public partial class CrossRhythmApp {
         }}
         var open=DrumNoteVisuals.HiHat(4,false).GetPixels32();var closedPixels=DrumNoteVisuals.HiHat(4,true).GetPixels32();
         check(open[120*240+120].a==0&&closedPixels[120*240+120].a>127,"open hat has a central gap while closed hat touches");
+        foreach(int v in Enumerable.Range(0,6))foreach(string state in new[]{"normal","outline","miss"}){
+            var original=new Texture2D(2,2);original.LoadImage(Resources.Load<TextAsset>("Stage175/HH-"+state+"-"+v).bytes,false);
+            check(original.GetPixels32().SequenceEqual(DrumNoteVisuals.HiHat(v,true,state=="outline",state=="miss").GetPixels32()),"closed hi-hat retains every v175 pixel: "+state+" "+v);
+            UnityEngine.Object.Destroy(original);
+        }
         foreach(string state in new[]{"normal","outline","miss"}){var ht=DrumNoteVisuals.Tom("HT",4,state=="outline",state=="miss");var mt=DrumNoteVisuals.Tom("MT",4,state=="outline",state=="miss");var ft=DrumNoteVisuals.Tom("FT",4,state=="outline",state=="miss");
             check(ht!=null&&mt!=null&&ft!=null,"all three tom textures render in "+state);
             if(state!="miss")check(!ht.GetPixels32().SequenceEqual(mt.GetPixels32())&&!mt.GetPixels32().SequenceEqual(ft.GetPixels32()),"tom colours distinguish pitch in "+state);

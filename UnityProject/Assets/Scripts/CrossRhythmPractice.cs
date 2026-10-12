@@ -26,11 +26,10 @@ public partial class CrossRhythmApp {
         return (bar<0?"Count "+(-bar):"M"+(bar+1))+"\n"+Math.Min(beats,Math.Floor(local+1e-7)+1).ToString("0")+" / "+beats;
     }
     void PracticeSeekBar(double beat,Rect area){
-        Rect rail=new Rect(W-76,area.y,68,area.height);RoundFill(rail,panel);RoundBorder(rail,line);
-        Text(new Rect(rail.x+6,rail.y+10,60,50),PracticePosition(beat),14,mint);
+        Rect rail=new Rect(W-27,area.y+4,19,area.height-8);
         bool enabled=GUI.enabled;GUI.enabled=enabled&&loaded&&!busy&&pendingPerformance==null;
         GUI.SetNextControlName("practice-position");
-        float next=GUI.VerticalSlider(new Rect(rail.x+23,rail.y+66,22,rail.height-92),(float)beat,(float)CountIn.Start(Project),(float)Project.Length);
+        float next=GUI.VerticalSlider(rail,(float)beat,(float)CountIn.Start(Project),(float)Project.Length);
         if(Math.Abs(next-beat)>.01)Seek(next);GUI.enabled=enabled;
     }
     void PracticeControls(){
@@ -46,7 +45,8 @@ public partial class CrossRhythmApp {
         float thumb=GUI.skin.horizontalSliderThumb.fixedWidth;
         float normal=slider.x+thumb/2+(slider.width-thumb)*(1f-.25f)/(2f-.25f);
         RectFill(new Rect(normal,y+8,1,7),mint);RectFill(new Rect(normal,y+28,1,7),mint);
-        if(Audio.Preparing||!string.IsNullOrEmpty(Audio.PlaybackError))Text(new Rect(940,y+13,W-962,24),Audio.Preparing?T("音源を準備中…","Preparing audio…"):T("音源の準備に失敗しました。再生し直してください","Audio preparation failed. Press Play to retry."),12,muted);
+        LaneOrderControls(new Rect(W-342,y+6,310,32),14);
+        if(Audio.Preparing||!string.IsNullOrEmpty(Audio.PlaybackError))FittedText(new Rect(242,y-23,670,22),Audio.Preparing?T("音源を準備中…","Preparing audio…"):T("音源の準備に失敗しました。再生し直してください","Audio preparation failed. Press Play to retry."),12,muted);
     }
 }
 }
