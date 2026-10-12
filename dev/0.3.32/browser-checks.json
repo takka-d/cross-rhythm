@@ -1,0 +1,22 @@
+{
+  "version": "0.3.32",
+  "browser": "Codex in-app browser",
+  "localUrl": "http://127.0.0.1:8790/?qa=0332",
+  "syntheticFixturesOnly": true,
+  "instrumentNamesVisible": true,
+  "meterModeJA": true,
+  "meterModeEN": true,
+  "occupiedBarShortenedByUI": true,
+  "savedFileReadBack": {
+    "bar1": "1/8",
+    "savedNoteCount": 5,
+    "absoluteNotesAndTempoUnchanged": true,
+    "realOriginPrivateFileReadBack": true
+  },
+  "consoleErrors": 0,
+  "pickerOverrideClearedByReload": true,
+  "pickerNote": "Real origin-private file handles supplied during local QA; no OS picker gesture tested.",
+  "nativeVisualVerified": false,
+  "physicalAudioListeningVerified": false,
+  "browserDownloadResolved": false
+}

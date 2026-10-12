@@ -13,13 +13,13 @@ public partial class CrossRhythmApp {
     void SetLaneInputType(int row,string type){
         if(EditorNoteTypes.Get(Project,row)==type)return;
         PushUndo();EditorNoteTypes.Set(Project,row,type);Project.Dirty=true;QueueEditorRecovery();
-        status=LaneNames[row]+" · "+T("入力する種別: ","Input Type: ")+EditorTypeLabel(type);
+        status=LaneNames[row]+" · "+T("入力する種別: ","Input Type: ")+EditorNoteTypes.Label(Instruments[row],type);
     }
     void EditorLaneTypeMenu(){
         if(!LaneTypeOpen||Current!=Page.Edit)return;
         var r=LaneTypeMenuRect;RectFill(r,panel);Border(r,mint);
         Text(new Rect(r.x+12,r.y+9,r.width-24,25),Instruments[laneTypeRow]+" · Input Type",15,mint,true);
-        var types=Types[laneTypeRow];for(int i=0;i<types.Length;i++)if(Button(new Rect(r.x+10,r.y+39+i*36,r.width-20,30),EditorTypeLabel(types[i]),EditorNoteTypes.Get(Project,laneTypeRow)==types[i],true,14,kind:ControlKind.Choice)){
+        var types=Types[laneTypeRow];for(int i=0;i<types.Length;i++)if(Button(new Rect(r.x+10,r.y+39+i*36,r.width-20,30),EditorNoteTypes.Label(Instruments[laneTypeRow],types[i]),EditorNoteTypes.Get(Project,laneTypeRow)==types[i],true,14,kind:ControlKind.Choice)){
             SetLaneInputType(laneTypeRow,types[i]);laneTypeRow=-1;GUI.FocusControl(null);return;
         }
     }

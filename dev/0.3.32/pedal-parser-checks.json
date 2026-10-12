@@ -1,0 +1,13 @@
+{
+  "parser": "mido 1.3.3",
+  "checks": [
+    "Independent parser reads PPQ 960 type 0 fixture",
+    "Note Off and zero-velocity release both pair with the intended pedal",
+    "Open and closed stick-hat events remain separate",
+    "Saved pedal 0 exactly matches external MIDI parser duration",
+    "Saved pedal 1 exactly matches external MIDI parser duration",
+    "Two explicit strikes and one inferred closed interval; no release ghost",
+    "Inferred closed stick-hat interval still ends at the open hat",
+    "All stick strikes survive import"
+  ]
+}

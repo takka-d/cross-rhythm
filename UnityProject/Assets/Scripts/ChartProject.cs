@@ -135,6 +135,21 @@ public sealed partial class ChartProject {
     }
     public bool IsBarStart(double beat){int m=BarAt(beat);return Math.Abs(beat-(m<0?m*CountIn.Length(this):Starts[m]))<1e-7;}
     JArray MeterArray(){return new JArray(Enumerable.Range(0,Measures.Length).Select(m=>{var s=Meter(m);return new JObject{{"numerator",s.Item1},{"denominator",s.Item2}};}));}
+    public bool ValidMeter(int m,int numerator,int denominator)=>m>=0&&m<Measures.Length&&numerator>=1&&numerator<=64&&new[]{1,2,4,8,16,32,64}.Contains(denominator)&&numerator*4.0/denominator<=64;
+    // Rebar the existing timeline without shifting music, notes, holds or tempo events.
+    public bool SetMeterKeepingTiming(int m,int numerator,int denominator){
+        if(!ValidMeter(m,numerator,denominator))return false;
+        foreach(var note in Notes)note.Source["gridStepBeats"]=note.Step;
+        var positions=Events.OfType<JObject>().Concat(TempoChanges).Select(e=>new {Event=e,Bar=(int?)e["measure"]??0,Local=(double?)e["beat"]??0}).Where(e=>e.Bar>=0&&e.Bar<Measures.Length).Select(e=>new {e.Event,Beat=Starts[e.Bar]+e.Local}).ToArray();
+        double required=Math.Max(Length,positions.Select(e=>e.Beat+Math.Max(Grid,(double?)e.Event["durationBeats"]??0)).DefaultIfEmpty(0).Max());
+        var meters=MeterArray();meters[m]=new JObject{{"numerator",numerator},{"denominator",denominator}};
+        var bars=(JArray)Chart["measures"];bars[m]=numerator*4.0/denominator;
+        double end=bars.Sum(b=>(double)b);double last=(double)bars.Last;
+        while(end<required-1e-8){bars.Add(last);meters.Add(meters.Last.DeepClone());end+=last;}
+        var starts=new double[bars.Count];for(int i=1;i<starts.Length;i++)starts[i]=starts[i-1]+(double)bars[i-1];
+        foreach(var item in positions){int bar=Array.BinarySearch(starts,item.Beat);if(bar<0)bar=Math.Max(0,~bar-1);item.Event["measure"]=bar;item.Event["beat"]=item.Beat-starts[bar];}
+        Chart["timeSignatures"]=meters;Dirty=true;Rebuild();return true;
+    }
     public bool CanSetMeter(int m,int numerator,int denominator){
         if(m<0||m>=Measures.Length||numerator<1||numerator>64||!new[]{1,2,4,8,16,32,64}.Contains(denominator))return false;
         double length=numerator*4.0/denominator;

@@ -94,7 +94,7 @@ and saved controller preferences are unchanged. Connected device names remain
 as supplied by the operating system/browser to identify actual hardware.
 
 
-0.3.31 development
+0.3.32 development
 
 - Songs: Start, Practice and Edit accept input while preview audio is loading. Start/Practice enter their screen immediately and start the count-in only after the selected audio is ready. Back cancels the pending start. Open Folder stays available while audio loads.
 - Practice: a 0.25 to 2.00 speed slider is restored alongside the existing fine-step/reset controls. The displayed value changes during a drag; audio speed is applied on release to avoid repeatedly restarting preparation. Pitch preservation remains enabled.
@@ -219,3 +219,13 @@ Windows and Web share Unity 6000.3.25f1 source. Tests cover pedal release pairin
 - Title copy is English in both language modes: Play the music you own to the fullest / Feel the groove through drums.
 
 Windows and Web share Unity 6000.3.25f1 source. Verification uses synthetic fixtures; OS-native file picker gestures and Windows rendered layout remain unverified. The earlier browser ZIP download-completion issue remains unresolved. No private projects or recordings are included. Production root and WordPress content are unchanged.
+
+
+Cross Rhythm 0.3.32 development
+
+- Bar / Meter can keep absolute note, pedal and tempo timing while changing occupied bar boundaries. Overflow notes are reassigned, with end bars retained. Undo, Redo and saved projects preserve the result. Existing shift-following-bars mode remains available.
+- Default editor Type labels now use instrument names (Hi-hat, Snare, High/Mid/Floor tom, Kick); Ride crash is explicit. Lane menu, note inspector and context menu share the same labels.
+- Rebalanced quiet hi-hat, ride and ride-bell sample gains without changing MIDI strengths, per-project mixer values, strength ratios or Ride Crash gain.
+- Private MIDI fixture verification: PPQ 480, meter change at tick 73440 = beat 153 = bar 52. One-bar disagreement with intended music position remains under investigation; import does not silently shift source timing.
+
+Development release only. Production and the WordPress draft were not changed. Physical listening and native file-dialog gestures are not verified. Browser ZIP download completion remains unresolved; the ZIP is also provided as a verified local copy.

@@ -15,13 +15,13 @@ public partial class CrossRhythmApp {
     static readonly string[] LaneNames={"CRASH (CR)","RIDE (RD)","HI-HAT (HH)","SNARE (SN)","HIGH TOM (HT)","MID TOM (MT)","FLOOR TOM (FT)","KICK (BD)","HH PEDAL STATE"};
     void OpenMeterPanel(){
         EndSongInfoEdit();Audio.Pause();Editor.Cancel();Editor.ContextOpen=false;editorFileOpen=false;gridMenuOpen=false;
-        SelectMeasure(editMeasure);showMeterPanel=true;status="";GUI.FocusControl(null);
+        SelectMeasure(editMeasure);meterKeepTiming=true;showMeterPanel=true;status="";GUI.FocusControl(null);
     }
     void EditorMeterControls(){
         if(!showMeterPanel)return;
         RectFill(new Rect(0,0,W,H),new Color(0,0,0,.65f));
-        GUI.ModalWindow(701,new Rect(W/2-370,H/2-182,740,364),id=>{
-            RoundFill(new Rect(0,0,740,364),panel,10);RoundBorder(new Rect(0,0,740,364),line,1,10);
+        GUI.ModalWindow(701,new Rect(W/2-370,H/2-204,740,408),id=>{
+            RoundFill(new Rect(0,0,740,408),panel,10);RoundBorder(new Rect(0,0,740,408),line,1,10);
             Text(new Rect(24,16,580,34),"Bar / Meter",24,mint,true);
             if(Button(new Rect(632,16,84,32),"Close",false,true,14))showMeterPanel=false;
             Text(new Rect(24,70,390,30),$"Bar {editMeasure+1} / {Project.Measures.Length}",20);
@@ -32,13 +32,15 @@ public partial class CrossRhythmApp {
             Text(new Rect(359,119,24,28),"/",20,muted);
             meterDenominator=EditField("meter-d",new Rect(389,113,82,38),meterDenominator);
             if(Button(new Rect(494,113,222,38),T("拍子を適用","Apply Meter"),true,true,16))ApplyMeter();
-            Text(new Rect(24,165,690,26),T("後続の小節も移動します。ノーツがはみ出す変更は適用できません。","Following bars move with it. Notes beyond a shortened bar must be moved first."),13,muted);
-            RectFill(new Rect(24,205,692,1),line);
+            if(Button(new Rect(24,165,334,32),T("ノーツとテンポの時刻を維持","Keep note / tempo timing"),meterKeepTiming,true,14,kind:ControlKind.Choice))meterKeepTiming=true;
+            if(Button(new Rect(376,165,340,32),T("後続を小節ごと移動","Shift following bars"),!meterKeepTiming,true,14,kind:ControlKind.Choice))meterKeepTiming=false;
+            Text(new Rect(24,203,690,26),meterKeepTiming?T("小節の区切りだけ変更します。ノーツは次の小節へ繰り越します。","Only bar boundaries change. Overflow notes continue in the next bar."):T("後続のノーツも移動します。はみ出すノーツは先に移動してください。","Later notes move too. Move notes beyond a shortened bar first."),13,muted);
+            RectFill(new Rect(24,241,692,1),line);
             var meter=Project.Meter(editMeasure);
-            if(Button(new Rect(24,226,334,38),T("後ろに小節を追加","Insert Bar After")+"  ("+meter.Item1+"/"+meter.Item2+")",false,true,15))InsertEditorMeasure();
-            if(Button(new Rect(376,226,340,38),T("空の小節を削除","Remove Empty Bar"),false,Project.CanRemoveMeasure(editMeasure),15))RemoveEditorMeasure();
-            if(Button(new Rect(24,280,334,36),T("音源の長さまで追加","Extend to Audio"),false,Audio.Song!=null,15))ExtendEditorToAudio();
-            FittedText(new Rect(24,331,690,24),status,12,muted);
+            if(Button(new Rect(24,262,334,38),T("後ろに小節を追加","Insert Bar After")+"  ("+meter.Item1+"/"+meter.Item2+")",false,true,15))InsertEditorMeasure();
+            if(Button(new Rect(376,262,340,38),T("空の小節を削除","Remove Empty Bar"),false,Project.CanRemoveMeasure(editMeasure),15))RemoveEditorMeasure();
+            if(Button(new Rect(24,316,334,36),T("音源の長さまで追加","Extend to Audio"),false,Audio.Song!=null,15))ExtendEditorToAudio();
+            FittedText(new Rect(24,369,690,24),status,12,muted);
             if(Event.current.type==EventType.KeyDown&&Event.current.keyCode==KeyCode.Escape){showMeterPanel=false;Event.current.Use();}
         },"",GUIStyle.none);
     }
@@ -54,7 +56,7 @@ public partial class CrossRhythmApp {
             string[] names={"CRASH","RIDE","HI-HAT","SNARE","HIGH TOM","MID TOM","FLOOR TOM","KICK","PEDAL"};
             Text(new Rect(34,y+(rh-24)/2,96,25),names[row],12,selectedCount>0?C("#eef8ff"):C("#b6c5d3"));
             if(GUI.Button(new Rect(24,y,100,rh),GUIContent.none,GUIStyle.none)){instrument=row;kind=Math.Max(0,Array.IndexOf(Types[row],EditorNoteTypes.Get(Project,row)));Editor.SelectLane(row,Event.current.control||Event.current.command);GUI.FocusControl(null);}
-            string inputType=EditorTypeLabel(EditorNoteTypes.Get(Project,row));
+            string inputType=EditorNoteTypes.Label(Instruments[row],EditorNoteTypes.Get(Project,row));
             string monitor=row==8?"HH":Instruments[row];
             if(Button(new Rect(124,y+2,32,rh-4),"M",Project.MonitorMuted(monitor),true,11,"lane-mute-"+row,ControlKind.Toggle))ToggleMonitor(monitor);
             if(Button(new Rect(162,y+2,112,rh-4),inputType,false,Types[row].Length>1,11,"lane-type-"+row,ControlKind.Menu)){laneTypeRow=row;Editor.ContextOpen=false;Editor.Cancel();GUI.FocusControl(null);}

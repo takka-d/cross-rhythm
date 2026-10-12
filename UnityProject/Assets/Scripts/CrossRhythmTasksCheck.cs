@@ -96,8 +96,9 @@ public partial class CrossRhythmApp {
             yield return AudioImportRuntimeCheck(Check);
             yield return PedalCymbalRuntimeCheck(Check);
             yield return GridMeterRuntimeCheck(Check);
+            yield return MeterSoundRuntimeCheck(Check);
             yield return IndexAndLaneRuntimeCheck(Check);
-            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.31"},{"checks",new JArray(checks)}}.ToString());
+            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.32"},{"checks",new JArray(checks)}}.ToString());
             Debug.Log("CROSS_RHYTHM_TASKS_CHECK_PASS");
         }finally{if(hadPreview)PlayerPrefs.SetInt("songPreview",originalPreview);else PlayerPrefs.DeleteKey("songPreview");PlayerPrefs.Save();allowApplicationQuit=true;}
         Application.Quit();

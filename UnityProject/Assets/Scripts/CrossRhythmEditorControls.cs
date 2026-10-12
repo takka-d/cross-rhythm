@@ -55,7 +55,7 @@ public partial class CrossRhythmApp {
         string[] tabs={"Note","Song","Tempo","Mixer","Analyze"};int[] panels={0,1,3,4,2};for(int i=0;i<tabs.Length;i++)if(Button(new Rect(36+i*102,top+10,92,32),tabs[i],editorPanel==panels[i],true,14,kind:ControlKind.Tab)){editorPanel=panels[i];if(editorPanel==3)SelectTempoPosition(Math.Max(0,Audio.Beat));GUI.FocusControl(null);}
         if(editorPanel==0){
             Text(new Rect(x,y,cw,24),LaneNames[instrument]+" · "+T("種別","Type"),14,mint,true);
-            var types=Types[instrument];for(int i=0;i<types.Length;i++){int ix=i;if(Button(new Rect(x+i%2*(cw/2),y+32+i/2*35,cw/2-8,29),EditorTypeLabel(types[i]),kind==i,true,13,kind:ControlKind.Choice)){kind=ix;ChangeSelected(e=>{if((string)e["instrument"]==Instruments[instrument])e["articulation"]=types[ix];});}}
+            var types=Types[instrument];for(int i=0;i<types.Length;i++){int ix=i;if(Button(new Rect(x+i%2*(cw/2),y+32+i/2*35,cw/2-8,29),EditorNoteTypes.Label(Instruments[instrument],types[i]),kind==i,true,13,kind:ControlKind.Choice)){kind=ix;ChangeSelected(e=>{if((string)e["instrument"]==Instruments[instrument])e["articulation"]=types[ix];});}}
             x+=cw+12;Text(new Rect(x,y,cw,24),T("強弱","Velocity"),14,muted);
             for(int i=0;i<6;i++){int v=i;if(Button(new Rect(x+i*43,y+32,37,30),i.ToString(),selection.Count==0?velocity==i:Project.Notes.Where(n=>selection.Contains(n.Index)).All(n=>n.Velocity==i),true,14)){velocity=v;ChangeSelected(e=>e["velocity"]=v);}}
             Text(new Rect(x,y+78,130,22),T("長さ(拍)","Length (beats)"),13,muted);
@@ -85,7 +85,6 @@ public partial class CrossRhythmApp {
         }else if(editorPanel==3)EditorTempoControls(x,y,cw);else if(editorPanel==4)EditorMixer(x,y);else DraftControls(x,y,cw);
         if(draftRunning){bool enabled=GUI.enabled;GUI.enabled=true;Text(new Rect(W-430,top+15,240,26),$"Analyze {draftProgress*100:0}%",14,mint);if(Button(new Rect(W-166,top+10,126,32),"Cancel",false,true,14))draftCancel=true;GUI.enabled=enabled;}
     }
-    string EditorTypeLabel(string type){switch(type){case "center":case "normal":return "Normal";case "rim_closed":return "Closed rimshot";case "rim_open":return "Open rimshot";case "buzz":return "Buzz roll";case "auto":return "Auto";default:return char.ToUpperInvariant(type[0])+type.Substring(1);}}
     GUIStyle editFieldStyle;
     string EditField(string name,Rect rect,string value){if(editFieldStyle==null)editFieldStyle=new GUIStyle(field){fontSize=14,padding=new RectOffset(6,6,4,4)};GUI.SetNextControlName("edit-"+name);return GUI.TextField(rect,value,editFieldStyle);}
 }

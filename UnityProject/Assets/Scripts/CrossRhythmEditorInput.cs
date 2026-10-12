@@ -84,7 +84,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(x,y,230,32),"Copy",false,selection.Count>0,14)){Copy();Editor.ContextOpen=false;}y+=40;
         if(Button(new Rect(x,y,230,32),"Paste",false,Editor.HasClipboard,14)){Editor.Paste(Editor.ContextBeat);Editor.ContextOpen=false;}y+=40;
         if(Button(new Rect(x,y,230,32),"Delete",false,selection.Count>0,14)){DeleteSelected();Editor.ContextOpen=false;}y+=42;
-        if(types.Length>0){Text(new Rect(x,y,230,26),T("種別","Type"),14,mint);y+=28;foreach(string type in types){if(Button(new Rect(x,y,230,28),EditorTypeLabel(type),target.Articulation==type,true,13)){ChangeSelected(e=>{if((string)e["instrument"]==target.Instrument)e["articulation"]=type;});Editor.ContextOpen=false;SyncEditorNote();}y+=32;}}
+        if(types.Length>0){Text(new Rect(x,y,230,26),T("種別","Type"),14,mint);y+=28;foreach(string type in types){if(Button(new Rect(x,y,230,28),EditorNoteTypes.Label(target.Instrument,type),target.Articulation==type,true,13)){ChangeSelected(e=>{if((string)e["instrument"]==target.Instrument)e["articulation"]=type;});Editor.ContextOpen=false;SyncEditorNote();}y+=32;}}
         if(Button(new Rect(x,y+4,230,32),"Close",false,true,14))Editor.ContextOpen=false;
         if(r.Contains(ev.mousePosition)&&(ev.isMouse||ev.type==EventType.ScrollWheel))ev.Use();
     }
