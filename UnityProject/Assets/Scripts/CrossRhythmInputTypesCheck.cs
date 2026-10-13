@@ -35,7 +35,20 @@ public partial class CrossRhythmApp {
             check(lastPadId==device.deviceId&&lastPadPath=="buttonEast"&&ControllerInputStatus().Contains(PadName("buttonEast")),"actual InputSystem event reaches controller input monitor");
             InputSystem.QueueStateEvent(device,new GamepadState());yield return null;
             check(!device.buttonEast.isPressed,"controller monitor does not hold buttons after release");
-        }finally{SetButtonLayout(layout);bindingsOpen=oldOpen;InputSystem.RemoveDevice(device);InputSystem.settings.backgroundBehavior=background;lastPadPath="";lastPadId=0;bindingNotice="";}
+            bindingsOpen=false;Current=Page.Title;ResetControllerNavigationForPage();controllerPointerScreen=new Vector2(Screen.width*.5f,Screen.height*.5f);float pointerBefore=controllerPointerScreen.x;
+            InputSystem.QueueStateEvent(device,new GamepadState{leftStick=new Vector2(.8f,0)});yield return null;
+            check(controllerPointerVisible&&controllerPointerScreen.x>pointerBefore,"left stick moves the shared UI pointer outside performance");
+            InputSystem.QueueStateEvent(device,new GamepadState());yield return null;
+            Current=Page.Play;ResetControllerNavigationForPage();InputSystem.QueueStateEvent(device,new GamepadState{leftStick=new Vector2(.8f,0)});yield return null;
+            check(controllerStageUiMode&&controllerPointerVisible&&ControllerOwnsPerformance(device),"left stick enters isolated UI mode during performance");
+            var confirm=nintendo?GamepadButton.East:GamepadButton.South;InputSystem.QueueStateEvent(device,new GamepadState(confirm));yield return null;
+            check(physicalHeld.Count==0,"UI confirm is not also routed to a drum action");
+            InputSystem.QueueStateEvent(device,new GamepadState());yield return null;
+            check(!AllowedPad("start")&&!AllowedPad("select")&&!AllowedPad("leftStickPress")&&!AllowedPad("rightStickPress"),"navigation controls stay reserved from performance remapping");
+            bindingsOpen=true;bindingRow=0;bindingPad=true;InputSystem.QueueStateEvent(device,new GamepadState(GamepadButton.Start));yield return null;
+            check(bindingRow<0&&normalBindings.Save()==normal&&proBindings.Save()==proMap,"Start cancels controller binding capture without changing mappings");
+            Current=Page.Edit;ResetControllerNavigationForPage();
+        }finally{SetButtonLayout(layout);bindingsOpen=oldOpen;controllerStageUiMode=false;controllerPointerVisible=false;controllerDrag="";InputSystem.RemoveDevice(device);InputSystem.settings.backgroundBehavior=background;lastPadPath="";lastPadId=0;bindingNotice="";}
         NavigateNow(Page.Songs);yield return null;
     }
 }

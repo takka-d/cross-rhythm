@@ -7,7 +7,7 @@ public partial class CrossRhythmApp {
     bool practiceVolumeOpen,practiceVolumeDirty;
     void UpdatePracticeSpeed(){
         if(Current!=Page.Practice){pendingPracticeSpeed=null;ClosePracticeVolume();return;}
-        if(pendingPracticeSpeed.HasValue&&(UnityEngine.InputSystem.Mouse.current==null||!UnityEngine.InputSystem.Mouse.current.leftButton.isPressed)){
+        if(pendingPracticeSpeed.HasValue&&(UnityEngine.InputSystem.Mouse.current==null||!UnityEngine.InputSystem.Mouse.current.leftButton.isPressed)&&!controllerPrimaryHeld){
             double next=pendingPracticeSpeed.Value;pendingPracticeSpeed=null;ChangePractice(next,pro);
         }
     }
@@ -30,7 +30,7 @@ public partial class CrossRhythmApp {
         Rect rail=new Rect(W-27,area.y+4,19,area.height-8);
         bool enabled=GUI.enabled;GUI.enabled=enabled&&loaded&&!busy&&pendingPerformance==null;
         GUI.SetNextControlName("practice-position");
-        float next=GUI.VerticalSlider(rail,(float)beat,(float)CountIn.Start(Project),(float)Project.Length);
+        float next=ControllerVerticalSlider(rail,(float)beat,(float)CountIn.Start(Project),(float)Project.Length,"practice-position");
         if(Math.Abs(next-beat)>.01)Seek(next);GUI.enabled=enabled;
     }
     void PracticeControls(){
@@ -42,7 +42,7 @@ public partial class CrossRhythmApp {
         GUI.SetNextControlName("practice-speed");
         float laneX=W-342,volumeX=laneX-128;
         Rect slider=new Rect(480,y+17,Math.Max(56,volumeX-498),20);
-        float speed=GUI.HorizontalSlider(slider,(float)(pendingPracticeSpeed??practiceSpeed),.25f,2f);
+        float speed=ControllerHorizontalSlider(slider,(float)(pendingPracticeSpeed??practiceSpeed),.25f,2f,"practice-speed");
         if(Math.Abs(speed-(pendingPracticeSpeed??practiceSpeed))>.0001)pendingPracticeSpeed=Math.Round(speed,2);
         float thumb=GUI.skin.horizontalSliderThumb.fixedWidth;
         float normal=slider.x+thumb/2+(slider.width-thumb)*(1f-.25f)/(2f-.25f);
@@ -57,14 +57,14 @@ public partial class CrossRhythmApp {
             Text(new Rect(popup.x+18,popup.y+10,346,25),T("音量","Volume"),17,Color.white,true);
             PracticeVolumeRow(new Rect(popup.x+18,popup.y+43,346,28),"Music",Audio.BackingGain,true);
             PracticeVolumeRow(new Rect(popup.x+18,popup.y+82,346,28),"Drums",Audio.DrumGain,false);
-            if(Event.current.type==EventType.MouseUp)FlushPracticeVolume();
+            if(Event.current.type==EventType.MouseUp||controllerPrimaryReleased)FlushPracticeVolume();
         }
         if(Audio.Preparing||!string.IsNullOrEmpty(Audio.PlaybackError))FittedText(new Rect(242,y-23,670,22),Audio.Preparing?T("音源を準備中…","Preparing audio…"):T("音源の準備に失敗しました。再生し直してください","Audio preparation failed. Press Play to retry."),12,muted);
     }
     void PracticeVolumeRow(Rect r,string caption,float value,bool music){
         Text(new Rect(r.x,r.y,66,r.height),caption,14,muted);
         GUI.SetNextControlName(music?"practice-music-volume":"practice-drums-volume");
-        float next=GUI.HorizontalSlider(new Rect(r.x+70,r.y+7,212,18),value,0,1);
+        float next=ControllerHorizontalSlider(new Rect(r.x+70,r.y+7,212,18),value,0,1,music?"practice-music-volume":"practice-drums-volume");
         Text(new Rect(r.x+294,r.y,52,r.height),Mathf.RoundToInt(next*100)+"%",14,mint);
         if(Math.Abs(next-value)>.0001)SetPracticeVolume(music,next);
     }

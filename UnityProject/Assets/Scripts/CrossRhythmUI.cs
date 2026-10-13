@@ -12,10 +12,10 @@ public partial class CrossRhythmApp {
     void Text(Rect r,string s,int size=18,Color? color=null,bool bold=false){if(Event.current.type!=EventType.Repaint)return;var st=TextStyle(size,bold);st.normal.textColor=color??Color.white;GUI.Label(r,s,st);}
     enum ControlKind { Action, Menu, Dialog, Toggle, Tab, Choice }
     bool Button(Rect r,string text,bool primary=false,bool enabled=true,int fontSize=18,string focusKey=null,ControlKind kind=ControlKind.Action){
-        bool active=GUI.enabled&&enabled,hover=active&&r.Contains(Event.current.mousePosition);
+        bool active=GUI.enabled&&enabled,hover=active&&(r.Contains(Event.current.mousePosition)||ControllerContains(r));
         string id=focusKey??(Current+":"+text+":"+r.x+":"+r.y);RegisterMenu(id,r,active);bool focused=keyboardMenu&&menuFocus==id;
         if(Event.current.type==EventType.Repaint){if(hover&&hoverButton!=id){hoverButton=id;uiFeedback.Hover();}else if(!hover&&hoverButton==id)hoverButton="";}
-        bool pressed=hover&&UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.leftButton.isPressed;
+        bool pressed=hover&&((UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.leftButton.isPressed)||(controllerPointerVisible&&controllerPrimaryHeld));
         Color fill=primary?mint:panel;if(!active)fill=Color.Lerp(bg,fill,.45f);else if(pressed)fill=Color.Lerp(fill,Color.white,.25f);else if(hover)fill=Color.Lerp(fill,mint,primary?.14f:.24f);
         if(flashButton==id&&Time.unscaledTimeAsDouble<buttonFlashUntil)fill=Color.Lerp(fill,Color.white,.22f);
         bool stateControl=kind==ControlKind.Toggle||kind==ControlKind.Tab||kind==ControlKind.Choice;
@@ -27,7 +27,7 @@ public partial class CrossRhythmApp {
         int pad=kind==ControlKind.Action?Mathf.Min(14,Mathf.RoundToInt(r.width*.14f)):2,styleKey=fontSize*32+pad;if(!buttonStyles.TryGetValue(styleKey,out var style)){style=new GUIStyle(button){fontSize=fontSize,padding=new RectOffset(pad,pad,2,2)};buttonStyles[styleKey]=style;}
         style.normal.textColor=!active?muted:primary&&!stateControl?bg:Color.white;style.hover.textColor=style.active.textColor=style.normal.textColor;
         string hint=kind==ControlKind.Menu?T("メニューを開く","Open menu"):kind==ControlKind.Dialog?T("ダイアログを開く","Open dialog"):kind==ControlKind.Toggle?(primary?"ON":"OFF"):"";
-        bool previous=GUI.enabled;GUI.enabled=active;bool hit=GUI.Button(r,new GUIContent("",hint),GUIStyle.none);
+        bool previous=GUI.enabled;GUI.enabled=active;bool hit=GUI.Button(r,new GUIContent("",hint),GUIStyle.none);if(ControllerButtonHit(r,active))hit=true;
         var caption=r;
         if(kind==ControlKind.Menu||kind==ControlKind.Dialog){caption.width-=24;if(kind==ControlKind.Menu){for(int i=0;i<4;i++)RectFill(new Rect(r.xMax-18+i,r.center.y-2+i,8-2*i,1),style.normal.textColor);}else Text(new Rect(r.xMax-25,r.y,22,r.height),"…",fontSize+1,style.normal.textColor);}
         else if(kind==ControlKind.Toggle){
@@ -41,7 +41,7 @@ public partial class CrossRhythmApp {
 
     void OnGUI(){
         Styles();scale=Mathf.Min(Screen.width/1280f,Screen.height/800f);W=Screen.width/scale;H=Screen.height/scale;GUI.matrix=Matrix4x4.Scale(new Vector3(scale,scale,1));RectFill(new Rect(0,0,W,H),bg);
-        if(InputBlocked){LoadingBackground();LoadingPage();return;}
+        if(InputBlocked){LoadingBackground();LoadingPage();DrawControllerPointer();return;}
         if(Project==null)return;DismissEditorFileMenu();DismissLaneTypeMenu();DismissGridMenu();BindingKeys();StageExitKeys();MenuKeys();if(Event.current.type==EventType.Repaint)menuItems.Clear();
 #if UNITY_WEBGL && !UNITY_EDITOR
         if(Event.current.type==EventType.Repaint){fileButtonCount=0;PlatformFiles.CRProjectButtonsBegin();}
@@ -63,11 +63,12 @@ public partial class CrossRhythmApp {
         PlatformFiles.CREditorKeys(Current==Page.Edit&&!showMeterPanel&&!discardPrompt&&!draftRunning&&!editorFileOpen&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen?1:0,editTextFocused?1:0);
 #endif
         if(!stage&&Current!=Page.Result)Text(new Rect(26,H-28,W-52,24),busy?T("読込中…","Loading…"):status,13,muted);
+        DrawControllerPointer();
     }
     void Header(){
         Text(new Rect(26,18,250,42),"CROSS RHYTHM",21,mint,true);
         bool baseEnabled=GUI.enabled;
-        if(baseEnabled&&GUI.Button(new Rect(20,8,270,56),GUIContent.none,GUIStyle.none))Navigate(Page.Title);
+        var homeRect=new Rect(20,8,270,56);if(baseEnabled&&(GUI.Button(homeRect,GUIContent.none,GUIStyle.none)||ControllerButtonHit(homeRect,true)))Navigate(Page.Title);
         GUI.enabled=baseEnabled;
         float x=W-522;
         if(Button(new Rect(x,14,140,42),"Songs",Current==Page.Songs,kind:ControlKind.Tab))Navigate(Page.Songs);
@@ -99,9 +100,9 @@ public partial class CrossRhythmApp {
         ProjectFolderRow(new Rect(x,169,1160,35));
         Text(new Rect(x,212,680,25),Library.Count+" tracks",14,muted);
         if(Button(new Rect(x+934,210,226,32),"Preview "+(songPreviewEnabled?"ON":"OFF"),songPreviewEnabled,true,14,"song-preview",ControlKind.Toggle))SetSongPreview(!songPreviewEnabled);
-        var view=new Rect(x,254,660,H-344);songScroll=GUI.BeginScrollView(view,songScroll,new Rect(0,0,640,Library.Count*138));
+        var view=new Rect(x,254,660,H-344);songScroll=ControllerScrollView(view,songScroll,640,Library.Count*138);songScroll=GUI.BeginScrollView(view,songScroll,new Rect(0,0,640,Library.Count*138));
         for(int i=0;i<Library.Count;i++){
-            var p=Library[i];var r=new Rect(0,i*138,630,126);bool choose=Button(r,"",false,true,18,"song:"+i);bool hoverFocus=GUI.enabled&&Event.current.type==EventType.Repaint&&r.Contains(Event.current.mousePosition)&&UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.delta.ReadValue().sqrMagnitude>0;if(i==selected){RectFill(r,new Color(.09f,.19f,.18f));Border(r,mint,2);}
+            var p=Library[i];var r=new Rect(0,i*138,630,126);bool choose=Button(r,"",false,true,18,"song:"+i);bool mouseMoved=UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.delta.ReadValue().sqrMagnitude>0;bool hoverFocus=GUI.enabled&&Event.current.type==EventType.Repaint&&r.Contains(Event.current.mousePosition)&&mouseMoved||GUI.enabled&&Event.current.type==EventType.Repaint&&ControllerPointerMoved&&ControllerContains(r);if(i==selected){RectFill(r,new Color(.09f,.19f,.18f));Border(r,mint,2);}
             FittedText(new Rect(20,r.y+10,500,32),p.Title+(p.Dirty?" *":""),23,Color.white,true);
             FittedText(new Rect(20,r.y+46,490,25),ArtistDisplay(p),15,muted);
             FittedText(new Rect(20,r.y+70,510,21),p.FileName,12,muted);
@@ -113,10 +114,10 @@ public partial class CrossRhythmApp {
         FittedText(new Rect(right+28,268,408,43),Project.Title,26,Color.white,true);FittedText(new Rect(right+28,313,408,28),ArtistDisplay(Project),17,muted);
         Text(new Rect(right+28,337,315,32),$"{Project.TempoLabel} BPM    {(int)(Project.DurationSeconds/60)}:{(int)Project.DurationSeconds%60:00}",20,mint);
         Text(new Rect(right+341,332,70,22),"LEVEL",11,muted);Text(new Rect(right+352,355,70,50),Project.Difficulty,36,mint,true);
-        Text(new Rect(right+28,421,400,25),busy?T("音源を準備中…","Preparing audio…"):!songPreviewEnabled?"":Audio.Backing.isPlaying?"Preview ♪":Audio.Song==null?T("音源なし","No audio"):"",14,mint);
+        Text(new Rect(right+28,425,118,25),busy?T("準備中…","Preparing…"):!songPreviewEnabled?"":Audio.Backing.isPlaying?"Preview ♪":Audio.Song==null?T("音源なし","No audio"):"",14,mint);
+        LaneOrderControls(new Rect(right+154,418,282,32),13);
         float best=PlayerPrefs.GetFloat("best:"+Project.Title,-1);Text(new Rect(right+28,387,295,32),"Best   "+(best<0?"—":best.ToString("0.0")+" / 100"),18,muted);
         if(Button(new Rect(right+28,452,198,44),"Normal",!pro,kind:ControlKind.Choice)){pro=false;PlayerPrefs.SetInt("pro",0);}if(Button(new Rect(right+238,452,198,44),"Pro",pro,kind:ControlKind.Choice)){pro=true;PlayerPrefs.SetInt("pro",1);}
-        LaneOrderControls(new Rect(right+28,504,408,32),14);
         if(Button(new Rect(right+28,H-256,408,62),"Start",true,SongActionsAvailable,18,"start"))RequestBegin(false);
         if(Button(new Rect(right+28,H-180,198,48),"Practice",false,SongActionsAvailable,18,"practice"))RequestBegin(true);
         if(Button(new Rect(right+238,H-180,198,48),"Edit",false,SongActionsAvailable,18,"edit-selected"))RequestEditSelected();

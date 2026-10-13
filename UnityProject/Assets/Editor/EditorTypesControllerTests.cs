@@ -18,6 +18,8 @@ public static class EditorTypesControllerTests {
         p.Chart["editorInputTypes"]["RD"]="future-unknown";Check(EditorNoteTypes.Get(p,1)=="ride","unknown type falls back to its lane default");
         Check(ControllerIdentity.ReportedModel(new InputDeviceDescription{interfaceName="XInput",product="Xbox Controller"})=="","generic XInput name is not presented as physical model");
         Check(ControllerIdentity.ReportedModel(new InputDeviceDescription{interfaceName="WebGL",product="Xbox Controller"})=="","browser generic controller model is also unknown");
+        Check(ControllerIdentity.ReportedModel(new InputDeviceDescription{interfaceName="WebGL",product="Xbox 360 Controller (STANDARD GAMEPAD)"})=="","browser compatibility label does not misidentify an ABXY controller");
+        Check(ControllerIdentity.ReportedModel(new InputDeviceDescription{interfaceName="WebGL",product="Generic USB Gamepad"})=="","browser generic product is not presented as a physical model");
         Check(ControllerIdentity.ReportedModel(new InputDeviceDescription{interfaceName="HID",product="Pro Controller"})=="Pro Controller","device-reported product is retained when available");
         Check(ControllerIdentity.Label(new InputDeviceDescription(),2,true)=="Controller 2 · Model unavailable","English model unavailable label contains no Japanese");
         Debug.Log("CROSS_RHYTHM_EDITOR_TYPES_CONTROLLER_TESTS_PASS");

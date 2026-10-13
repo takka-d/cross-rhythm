@@ -65,7 +65,7 @@ public partial class CrossRhythmApp {
         float listTop=y+192+((shown+1)/2)*34;
         if(pageCount>1){if(Button(new Rect(x+24,listTop,width-48,26),T("他の音名 / Track ","More sounds / tracks ")+(midiSourcePage+1)+"/"+pageCount,false,true,12))midiSourcePage=(midiSourcePage+1)%pageCount;listTop+=32;}
         float listHeight=y+height-80-listTop,totalHeight=overlap.Collisions.Sum(c=>40+c.Candidates.Length*58);
-        midiOverlapScroll=GUI.BeginScrollView(new Rect(x+20,listTop,width-40,listHeight),midiOverlapScroll,new Rect(0,0,width-62,totalHeight),false,false);
+        var midiView=new Rect(x+20,listTop,width-40,listHeight);midiOverlapScroll=ControllerScrollView(midiView,midiOverlapScroll,width-62,totalHeight);midiOverlapScroll=GUI.BeginScrollView(midiView,midiOverlapScroll,new Rect(0,0,width-62,totalHeight),false,false);
         float row=0;
         foreach(var collision in overlap.Collisions){
             float rowHeight=40+collision.Candidates.Length*58;

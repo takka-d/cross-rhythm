@@ -22,7 +22,8 @@ public partial class CrossRhythmApp : MonoBehaviour {
     Dictionary<int,HitRecord> judged=new Dictionary<int,HitRecord>();
     int previewCursor;
     readonly HashSet<double> previewPedalOnsets=new HashSet<double>();
-    void ResetScheduled(){scheduled.Clear();previewPedalOnsets.Clear();previewCursor=0;}
+    readonly PlaybackJudgementCursor judgementCursor=new PlaybackJudgementCursor();
+    void ResetScheduled(){scheduled.Clear();previewPedalOnsets.Clear();previewCursor=0;judgementCursor.Reset();}
     HashSet<int> scheduled=new HashSet<int>();
     HashSet<Key> held=new HashSet<Key>();
     Dictionary<Key,string> footRoles=new Dictionary<Key,string>();
@@ -66,12 +67,7 @@ public partial class CrossRhythmApp : MonoBehaviour {
         PlatformFiles.CRInit();
         PlatformFiles.CRRestore(gameObject.name);
 #else
-        RestoreLibrary();RestoreEditorNative();
-        var args=Environment.GetCommandLineArgs();int at=Array.IndexOf(args,"--project-file");if(at>=0&&at+1<args.Length)ImportNative(args[at+1]);
-        if(!string.IsNullOrEmpty(workspaceCheckRoot)){Application.runInBackground=true;if(!args.Contains("--interactive-check"))StartCoroutine(args.Contains("--tasks-check")?TasksCheck():args.Contains("--practice-draft-check")?PracticeDraftCheck():WorkspaceCheck());}
-        if(args.Contains("--revision-check")){Application.runInBackground=true;StartCoroutine(RevisionCheck());}
-        if(args.Contains("--editor-audio-check")){Application.runInBackground=true;StartCoroutine(EditorAudioCheck());}
-        if(args.Contains("--smoke-test")){Application.runInBackground=true;StartCoroutine(SmokeTest());}
+        StartCoroutine(NativeStartupRoutine(Environment.GetCommandLineArgs()));
 #endif
     }
     void OnDestroy(){DisposeMidiDrop();InputSystem.onEvent-=OnInput;InputSystem.onDeviceChange-=InputDeviceChanged;Application.wantsToQuit-=ConfirmApplicationQuit;}
@@ -132,6 +128,7 @@ public partial class CrossRhythmApp : MonoBehaviour {
     void SetPedal(bool value,double beat,bool sound=true){if(value==closed)return;closed=value;if(value){pedalStart=beat;if(sound)Audio.Pedal();}else if(pedalStart.HasValue){heldPedal.Add(new PedalRange{Start=pedalStart.Value,End=beat});pedalStart=null;}}
     void Judge(ChartNote n,double ms,string kind){if(judged.ContainsKey(n.Index))return;var r=new HitRecord{Index=n.Index,Beat=n.Beat,Instrument=n.Instrument,Ms=ms,Judge=kind};judged[n.Index]=r;AddReferenceEffect(n,kind);if(Current==Page.Play)Records.Add(r);lastJudge=kind+(kind=="MISS"?"":$"  {ms:+0.0;-0.0;0.0} ms");lastJudgeTime=Time.realtimeSinceStartupAsDouble;}
     void Update(){
+        UpdateControllerNavigation();
         if(Project==null)return;
         Audio.EditorMonitoring=Current==Page.Edit;
         UpdateMidiDrop();
@@ -149,7 +146,7 @@ public partial class CrossRhythmApp : MonoBehaviour {
             double until=BeatAfter(b,.35);
             while(previewCursor<Project.Notes.Count){var n=Project.Notes[previewCursor];if(n.Beat>until)break;previewCursor++;if(n.Beat<Audio.AnchorBeat-1e-8||scheduled.Contains(n.Index))continue;scheduled.Add(n.Index);if(n.Pedal&&!previewPedalOnsets.Add(Math.Round(n.Beat,8)))continue;Audio.Drum(n,Project.ClosedAt(n.Beat),Audio.DSPAt(n.Beat));}
         }
-        if(Current!=Page.Edit){foreach(var n in Project.Notes){if(n.Pedal||judged.ContainsKey(n.Index)||n.Beat<Audio.AnchorBeat-1e-8)continue;if(auto&&n.Beat<=b)Judge(n,0,"JUST");else if(!auto&&NoteSeconds(n.Beat,b)>.12)Judge(n,double.NaN,"MISS");}}
+        if(Current!=Page.Edit){ChartNote due;while((due=judgementCursor.TakeNextDue(Project,Audio.AnchorBeat,b,auto,Audio.Rate))!=null)if(!judged.ContainsKey(due.Index))Judge(due,auto?0:double.NaN,auto?"JUST":"MISS");}
         if(!pro&&!preview&&Project.ClosedAt(b)&&!closed){var releasedKick=footRoles.FirstOrDefault(kv=>kv.Value=="kick"&&held.Contains(kv.Key));if(!releasedKick.Equals(default(KeyValuePair<Key,string>))){bool near=Project.NotesBetween(BeatAfter(b,-.12)-1e-8,BeatAfter(b,.12)+1e-8).Any(n=>n.Instrument=="BD"&&Math.Abs(NoteSeconds(n.Beat,b))<.12);if(!near){footRoles[releasedKick.Key]="pedal";SetPedal(true,b);}}}
         if(metronome||b<0){
             double from=Math.Max(Audio.AnchorBeat,lastClick+0.000001),until=BeatAfter(b,.12);

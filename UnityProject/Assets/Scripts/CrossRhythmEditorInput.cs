@@ -45,7 +45,20 @@ public partial class CrossRhythmApp {
         Vector2 screen=ev.mousePosition;if(ev.isMouse)editorPointer=screen;
         Vector2 Local(Vector2 p)=>new Vector2(Mathf.Clamp(p.x-viewport.x,0,viewport.width-17)+editScroll.x,p.y-viewport.y-notesTop);
         bool inside=new Rect(viewport.x,viewport.y,viewport.width-16,viewport.height-18).Contains(screen);
-        if(!can){CancelWaveMove();return;}
+        if(!can){controllerEditorPrimaryCapture=false;CancelWaveMove();return;}
+        Vector2 controllerScreen=ControllerGuiPointer();bool controllerInside=new Rect(viewport.x,viewport.y,viewport.width-16,viewport.height-18).Contains(controllerScreen);
+        if(controllerEditorPrimaryCapture&&Editor.Capturing){
+            editorPointer=controllerScreen;
+            if(controllerPrimaryReleased){Editor.Up(Local(controllerScreen));controllerEditorPrimaryCapture=false;SyncEditorNote();}
+            else if(controllerPrimaryHeld&&ControllerPointerMoved){Editor.Move(Local(controllerScreen));SyncEditorNote();}
+        }else controllerEditorPrimaryCapture=false;
+        if(controllerInside&&ControllerSecondaryHit(viewport)){
+            GUI.FocusControl(null);Editor.Down(Local(controllerScreen),1,1,false,false);Editor.Up(Local(controllerScreen));menuPosition=controllerScreen;SyncEditorNote();
+        }
+        if(controllerInside&&ControllerButtonHit(viewport,true)){
+            var pad=ControllerPad();bool shift=pad!=null&&pad.leftShoulder.isPressed,control=pad!=null&&pad.rightShoulder.isPressed;
+            GUI.FocusControl(null);editorPointer=controllerScreen;Editor.Down(Local(controllerScreen),0,1,shift,control);controllerEditorPrimaryCapture=Editor.Capturing;SyncEditorNote();
+        }
         if(!Editor.ContextOpen&&WavePointerInput(viewport,notesTop,Local(screen)))return;
         if(Editor.Capturing&&(ev.type==EventType.MouseDrag||ev.type==EventType.MouseUp)){
             if(ev.type==EventType.MouseUp){Editor.Up(Local(screen));GUIUtility.hotControl=0;if(Editor.ContextOpen)menuPosition=screen;}else Editor.Move(Local(screen));

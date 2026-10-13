@@ -18,6 +18,7 @@
     Object.assign(button.style,{left:(rect.left+frame[0]*rect.width)+'px',top:(rect.top+frame[1]*rect.height)+'px',width:(frame[2]*rect.width)+'px',height:(frame[3]*rect.height)+'px'});
   }
   window.CrossRhythmDisplay={
+    activate(){if(button&&!button.disabled){button.focus({preventScroll:true});button.click();}},
     layout(x,y,w,h,en,enabled) {
       if(button&&frame&&frame[0]===x&&frame[1]===y&&frame[2]===w&&frame[3]===h&&button.disabled===!enabled)return;
       frame=[x,y,w,h];

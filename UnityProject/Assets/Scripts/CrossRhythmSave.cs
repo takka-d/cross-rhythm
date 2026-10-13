@@ -15,7 +15,7 @@ public partial class CrossRhythmApp {
     void SaveButton(Rect r,bool saveAs){
         string caption=saveAs?"Save As":"Save";bool enabled=GUI.enabled&&savingProject==null&&!busy;
 #if UNITY_WEBGL && !UNITY_EDITOR
-        Button(r,"",!saveAs,enabled,16);
+        if(Button(r,"",!saveAs,enabled,16))PlatformFiles.CRProjectButtonActivate(saveAs?4:3);
         if(MidiPromptOpen||LaneTypeOpen||gridMenuOpen||bindingsOpen||discardPrompt)return;
         if(Event.current.type==EventType.Repaint)PlatformFiles.CRProjectButton(fileButtonCount++,r.x/W,r.y/H,r.width/W,r.height/H,saveAs?4:3,english?1:0,enabled?1:0,saveAs?0:1,16*scale);
 #else

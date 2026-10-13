@@ -31,7 +31,7 @@ public partial class CrossRhythmApp {
     }
     void MenuKeys(){
         if(InputBlocked||stageExitPrompt)return;
-        var e=Event.current;if(e.type==EventType.Repaint&&padMenu.Count>0)e=new Event{type=EventType.KeyDown,keyCode=padMenu.Dequeue()};if(e.type!=EventType.KeyDown||discardPrompt||(Current==Page.Edit&&!MidiPromptOpen)||Current==Page.Play||Current==Page.Practice||GUI.GetNameOfFocusedControl().StartsWith("config-")||GUI.GetNameOfFocusedControl()=="location-readonly"||bindingsOpen)return;
+        var e=Event.current;if(e.type==EventType.Repaint&&padMenu.Count>0)e=new Event{type=EventType.KeyDown,keyCode=padMenu.Dequeue()};if(e.type!=EventType.KeyDown||discardPrompt||(Current==Page.Edit&&!MidiPromptOpen)||((Current==Page.Play||Current==Page.Practice)&&!controllerStageUiMode)||GUI.GetNameOfFocusedControl().StartsWith("config-")||GUI.GetNameOfFocusedControl()=="location-readonly"||bindingsOpen)return;
         if(e.control||e.command||e.alt)return;
         if(e.keyCode==KeyCode.Escape){if(MidiPromptOpen)CancelMidi();else Navigate(Page.Title);e.Use();return;}
         bool enter=e.keyCode==KeyCode.Return||e.keyCode==KeyCode.KeypadEnter;

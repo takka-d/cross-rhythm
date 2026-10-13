@@ -11,7 +11,7 @@ public partial class CrossRhythmApp {
     void MidiExportButton(Rect r){
         bool enabled=GUI.enabled&&!InputBlocked;
 #if UNITY_WEBGL && !UNITY_EDITOR
-        Button(r,"",false,enabled,15);
+        if(Button(r,"",false,enabled,15))PlatformFiles.CRProjectButtonActivate(6);
         if(Event.current.type==EventType.Repaint)PlatformFiles.CRProjectButton(fileButtonCount++,r.x/W,r.y/H,r.width/W,r.height/H,6,english?1:0,enabled?1:0,0,15*scale);
 #else
         if(Button(r,"Export MIDI",false,enabled,15,kind:ControlKind.Dialog))OnMidiExportButton("");

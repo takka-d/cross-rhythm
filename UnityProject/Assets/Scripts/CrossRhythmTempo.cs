@@ -35,7 +35,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(x+184,y+66,98,30),"Remove",false,canRemove,13))ApplyTempo(true);
         Text(new Rect(x,y+104,cw,26),T("拍は1から。小節の途中にも設定できます","Beats start at 1; changes can be inside a bar"),11,muted);
         x+=cw+12;float width=W-x-46;Text(new Rect(x,y,width,22),T("テンポ変更一覧","Tempo changes"),14,mint);
-        tempoScroll=GUI.BeginScrollView(new Rect(x,y+26,width,102),tempoScroll,new Rect(0,0,width-20,Project.Tempo.Points.Length*34),false,false);
+        var tempoView=new Rect(x,y+26,width,102);tempoScroll=ControllerScrollView(tempoView,tempoScroll,width-20,Project.Tempo.Points.Length*34);tempoScroll=GUI.BeginScrollView(tempoView,tempoScroll,new Rect(0,0,width-20,Project.Tempo.Points.Length*34),false,false);
         for(int i=0;i<Project.Tempo.Points.Length;i++){var p=Project.Tempo.Points[i];string label=$"Bar {p.Measure+1}  ·  Beat {p.Local+1:0.######}     {p.BPM:0.###} BPM"+(p.Beat==0?"  ·  Initial":"");
             if(Button(new Rect(0,i*34,width-22,30),label,false,true,13)){SelectTempoPosition(p.Beat);Audio.Pause();EditorSeek(p.Beat);}
         }

@@ -24,7 +24,7 @@ public partial class CrossRhythmApp {
             if(e.keyCode==KeyCode.DownArrow||e.keyCode==KeyCode.UpArrow){gridMenuIndex=Mathf.Clamp(gridMenuIndex+(e.keyCode==KeyCode.DownArrow?1:-1),0,Grids.Length-1);gridMenuScroll.y=Mathf.Clamp(gridMenuIndex*32-64,0,Grids.Length*32-view.height);e.Use();}
             else if(e.keyCode==KeyCode.Return||e.keyCode==KeyCode.KeypadEnter){SetEditorGrid(Grids[gridMenuIndex]);e.Use();return;}
         }
-        gridMenuScroll=GUI.BeginScrollView(view,gridMenuScroll,new Rect(0,0,view.width-18,Grids.Length*32));int chosen=0;
+        gridMenuScroll=ControllerScrollView(view,gridMenuScroll,view.width-18,Grids.Length*32);gridMenuScroll=GUI.BeginScrollView(view,gridMenuScroll,new Rect(0,0,view.width-18,Grids.Length*32));int chosen=0;
         for(int i=0;i<Grids.Length;i++){if(Button(new Rect(0,i*32,view.width-22,28),GridLabel(Grids[i]),(int?)Project.Chart["quantize"]==Grids[i],true,14,kind:ControlKind.Choice))chosen=Grids[i];if(i==gridMenuIndex)Border(new Rect(1,i*32+1,view.width-24,26),Color.white,1);}
         GUI.EndScrollView();if(chosen>0){SetEditorGrid(chosen);return;}
         Text(new Rect(r.x+12,r.yMax-96,r.width-24,24),T("既存ノーツの長さ・位置は変わりません","Existing notes keep their length and position"),11,muted);

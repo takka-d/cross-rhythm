@@ -30,7 +30,7 @@ public partial class CrossRhythmApp {
             case ConfigSection.Timing:
                 Text(new Rect(left,top+89,width,32),T("入力タイミングの補正","Input offset"),19);
                 Text(new Rect(left,top+139,180,40),$"{inputOffset:+0;-0;0} ms",28,mint,true);
-                float shift=GUI.HorizontalSlider(new Rect(left+190,top+154,530,20),(float)inputOffset,-200,200);
+                float shift=ControllerHorizontalSlider(new Rect(left+190,top+154,530,20),(float)inputOffset,-200,200,"config-offset");
                 if(Math.Abs(shift-inputOffset)>.5){inputOffset=Math.Round(shift);PlayerPrefs.SetFloat("offset",(float)inputOffset);PlayerPrefs.Save();}
                 Text(new Rect(left,top+203,width,26),T("＋: 入力を早い時刻として補正","＋: compensate delayed input"),16,muted);
                 break;

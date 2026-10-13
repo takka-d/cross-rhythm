@@ -31,7 +31,8 @@ public static class ChartVisuals {
     public static bool IsBeatLine(ChartProject p,int bar,double local){double beat=local/BeatUnit(p,bar);return Math.Abs(beat-Math.Round(beat))<1e-7;}
     public static void EditGridPoints(ChartProject p,int bar,SortedSet<double> points){
         points.Clear();
-        foreach(double step in new[]{BeatUnit(p,bar),p.Grid})for(int i=0;i*step<p.Measures[bar]-1e-8;i++)points.Add(i*step);
+        double beat=BeatUnit(p,bar);for(int i=0;i*beat<p.Measures[bar]-1e-8;i++)points.Add(i*beat);
+        double grid=p.Grid;for(int i=0;i*grid<p.Measures[bar]-1e-8;i++)points.Add(i*grid);
         // Imported and mixed-grid onsets remain visible even when the placement
         // grid differs. Guides use their actual timing, including MIDI tick rounding.
         foreach(var n in p.NotesInBar(bar))points.Add(n.Local);
@@ -55,8 +56,22 @@ public static class ChartVisuals {
     }
     public static float CellX(ChartProject p,int bar,double local,float left,float width){double len=bar<0?CountIn.Length(p):p.Measures[bar];return left+(float)((local+Math.Min(DisplayStep(p,bar),len-local)/2)/len)*width;}
     static int Order(string inst){switch(inst){case "BD":return 0;case "HH":return 1;case "SN":return 2;case "HT":return 3;case "MT":return 4;case "FT":return 5;case "CR":return 6;case "RD":return 7;default:return 8;}}
+    static readonly Comparison<ChartNote> OffsetComparison=CompareOffsetNotes;
+    static int CompareOffsetNotes(ChartNote a,ChartNote b){
+        int lane=StringComparer.Ordinal.Compare(a.Lane,b.Lane);if(lane!=0)return lane;
+        int beat=Math.Round(a.Beat,3).CompareTo(Math.Round(b.Beat,3));if(beat!=0)return beat;
+        int instrument=Order(a.Instrument).CompareTo(Order(b.Instrument));if(instrument!=0)return instrument;
+        int id=StringComparer.Ordinal.Compare(a.Id,b.Id);return id!=0?id:a.Index.CompareTo(b.Index);
+    }
+    public static void FillSimultaneousOffsets(IList<ChartNote> notes,Dictionary<int,float> result,List<ChartNote> order){
+        result.Clear();order.Clear();for(int i=0;i<notes.Count;i++)order.Add(notes[i]);order.Sort(OffsetComparison);
+        for(int first=0;first<order.Count;){int end=first+1;double beat=Math.Round(order[first].Beat,3);string lane=order[first].Lane;
+            while(end<order.Count&&StringComparer.Ordinal.Equals(order[end].Lane,lane)&&Math.Round(order[end].Beat,3)==beat)end++;
+            for(int i=first;i<end;i++)result[order[i].Index]=(i-first-(end-first-1)*.5f)*16;first=end;
+        }
+    }
     public static Dictionary<int,float> SimultaneousOffsets(IEnumerable<ChartNote> notes){
-        var result=new Dictionary<int,float>();foreach(var group in notes.GroupBy(n=>n.Lane+"|"+Math.Round(n.Beat,3).ToString(System.Globalization.CultureInfo.InvariantCulture))){var same=group.OrderBy(n=>Order(n.Instrument)).ThenBy(n=>n.Id,StringComparer.Ordinal).ToArray();for(int i=0;i<same.Length;i++)result[same[i].Index]=(i-(same.Length-1)*.5f)*16;}return result;
+        var source=notes as IList<ChartNote>??notes.ToList();var result=new Dictionary<int,float>();FillSimultaneousOffsets(source,result,new List<ChartNote>(source.Count));return result;
     }
 }
 }

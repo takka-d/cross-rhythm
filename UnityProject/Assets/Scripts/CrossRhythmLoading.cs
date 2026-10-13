@@ -6,8 +6,8 @@ public partial class CrossRhythmApp {
     int loadingPaints;
     bool transitioning,nativeProjectLoading,webPickerOpen;
     string transitionLabel="",loadingFile="";
-    bool LoadingIsDialog=>!transitioning&&pendingPerformance==null;
-    bool InputBlocked=>restoringHistory||libraryRefreshing||exportingMidi||savingProject!=null||transitioning||nativeProjectLoading||nativePickerOpen||webPickerOpen||importBatch||incoming!=null||pendingPerformance!=null||(Current==Page.Edit&&busy);
+    bool LoadingIsDialog=>!nativeStartup&&!transitioning&&pendingPerformance==null;
+    bool InputBlocked=>nativeStartup||restoringHistory||libraryRefreshing||exportingMidi||savingProject!=null||transitioning||nativeProjectLoading||nativePickerOpen||webPickerOpen||importBatch||incoming!=null||pendingPerformance!=null||(Current==Page.Edit&&busy);
 
     public void OnPickerState(string state){webPickerOpen=state=="open";if(webPickerOpen)PrepareExclusiveOperation();}
     void PrepareExclusiveOperation(){
@@ -39,6 +39,7 @@ public partial class CrossRhythmApp {
         }finally{GUI.enabled=enabled;}
     }
     void LoadingPage(){
+        if(nativeStartup){NativeStartupPage();return;}
         if(Event.current.type==EventType.Repaint)loadingPaints++;
 #if UNITY_WEBGL && !UNITY_EDITOR
         PlatformFiles.CRProjectButtonsBegin();PlatformFiles.CRProjectButtonsEnd();

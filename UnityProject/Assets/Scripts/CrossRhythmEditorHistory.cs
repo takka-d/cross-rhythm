@@ -5,14 +5,24 @@ namespace CrossRhythm {
 public partial class CrossRhythmApp {
     bool restoringHistory;
     string historyLabel="";
+    int historyRequestFrame,historyRequestPaints;
+    bool HistoryPaintRequired=>string.IsNullOrEmpty(workspaceCheckRoot)&&!Application.isBatchMode;
     void RequestRestore(bool reverse){
         if(Current!=Page.Edit||InputBlocked||(reverse?redo:undo).Count==0)return;
-        PrepareExclusiveOperation();restoringHistory=true;historyLabel=reverse?"Redo":"Undo";
+        restoringHistory=true;historyLabel=reverse?"Redo":"Undo";
+        historyRequestFrame=Time.frameCount;historyRequestPaints=loadingPaints;
+        PrepareExclusiveOperation();
         StartCoroutine(RestoreHistoryRoutine(reverse,Project));
     }
     IEnumerator RestoreHistoryRoutine(bool reverse,ChartProject expected){
-        // Retain the editor behind a blocking progress dialog before cloning/rebuilding the chart.
-        yield return null;yield return null;
+        // Visible use waits for a real dialog repaint before clone/rebuild. Hidden
+        // workspace checks cannot repaint, so only that mode uses a bounded fallback.
+        if(HistoryPaintRequired){
+            while(loadingPaints<=historyRequestPaints)yield return null;
+        }else{
+            while(loadingPaints<=historyRequestPaints&&Time.frameCount<historyRequestFrame+4)yield return null;
+        }
+        yield return new WaitForEndOfFrame();
         try{if(Current==Page.Edit&&ReferenceEquals(Project,expected)){Restore(reverse);SyncEditorNote();}}
         catch(Exception e){status=historyLabel+": "+e.Message;}
         finally{restoringHistory=false;historyLabel="";}

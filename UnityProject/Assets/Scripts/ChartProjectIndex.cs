@@ -5,6 +5,7 @@ public sealed partial class ChartProject {
     public int Revision {get;private set;}
     int[] barNoteStarts=Array.Empty<int>();
     double[] barDisplaySteps=Array.Empty<double>(),noteEndPrefix=Array.Empty<double>();
+    Tuple<int,int>[] meterIndex=Array.Empty<Tuple<int,int>>();
     readonly Dictionary<int,ChartNote> noteByIndex=new Dictionary<int,ChartNote>();
     readonly Dictionary<string,int> instrumentCounts=new Dictionary<string,int>();
     void RebuildNoteIndex(){
@@ -22,6 +23,7 @@ public sealed partial class ChartProject {
         foreach(var p in Pedals){p.HasKick=false;for(int i=NoteLowerBound(p.Start);i<Notes.Count&&Notes[i].Beat<p.End;i++)if(Notes[i].Instrument=="BD"){p.HasKick=true;break;}}
         Revision++;
     }
+    void RebuildMeterIndex(){meterIndex=new Tuple<int,int>[Measures.Length];for(int i=0;i<meterIndex.Length;i++)meterIndex[i]=ComputeMeter(i);}
     public int NoteLowerBound(double beat){int lo=0,hi=Notes.Count;while(lo<hi){int mid=lo+(hi-lo)/2;if(Notes[mid].Beat<beat)lo=mid+1;else hi=mid;}return lo;}
     public IEnumerable<ChartNote> NotesBetween(double from,double to){for(int i=NoteLowerBound(from);i<Notes.Count&&Notes[i].Beat<=to;i++)yield return Notes[i];}
     public IEnumerable<ChartNote> NotesInBar(int bar){if(bar<0||bar>=Measures.Length)yield break;for(int i=barNoteStarts[bar];i<barNoteStarts[bar+1];i++)yield return Notes[i];}
@@ -30,9 +32,10 @@ public sealed partial class ChartProject {
         for(int i=lo;i<Notes.Count&&Notes[i].Beat<=to;i++)if(Notes[i].Beat+Math.Max(Notes[i].Duration,.25)>=from)yield return Notes[i];
     }
     public IEnumerable<PedalRange> PedalsOverlapping(double from,double to){
-        int lo=0,hi=Pedals.Count;while(lo<hi){int mid=lo+(hi-lo)/2;if(Pedals[mid].End<=from)lo=mid+1;else hi=mid;}
+        int lo=PedalLowerBound(from);
         for(int i=lo;i<Pedals.Count&&Pedals[i].Start<to;i++)yield return Pedals[i];
     }
+    public int PedalLowerBound(double beat){int lo=0,hi=Pedals.Count;while(lo<hi){int mid=lo+(hi-lo)/2;if(Pedals[mid].End<=beat)lo=mid+1;else hi=mid;}return lo;}
     public double DisplayStep(int bar)=>bar<0?.25:barDisplaySteps[bar];
     public int InstrumentCount(string instrument)=>instrumentCounts.TryGetValue(instrument,out int count)?count:0;
     public ChartNote NoteAtIndex(int index)=>noteByIndex.TryGetValue(index,out var n)?n:null;

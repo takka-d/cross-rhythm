@@ -32,11 +32,11 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(126,162,82,30),"Free",!Project.SnapToGrid,true,14,kind:ControlKind.Choice)&&Project.SnapToGrid){PushUndo();Project.Chart["editorSnapToGrid"]=false;QueueEditorRecovery();Project.Dirty=true;}
         Text(new Rect(236,166,42,24),"Grid",13,muted);int q=(int?)Project.Chart["quantize"]??16;
         if(Button(GridButtonRect,GridLabel(q),gridMenuOpen,true,14,kind:ControlKind.Menu)){EndSongInfoEdit();Editor.Cancel();gridMenuOpen=true;gridMenuIndex=Math.Max(0,Array.IndexOf(Grids,q));gridMenuScroll.y=Math.Max(0,gridMenuIndex*32-128);gridField=q.ToString();GUI.FocusControl(null);}
-        Text(new Rect(510,166,66,24),"Zoom X",13,muted);float previousZoom=zoom;zoom=GUI.HorizontalSlider(new Rect(580,174,160,18),zoom,30f/56f,20);if(Math.Abs(zoom-previousZoom)>.00001f)editScroll.x*=zoom/previousZoom;
+        Text(new Rect(510,166,66,24),"Zoom X",13,muted);float previousZoom=zoom;zoom=ControllerHorizontalSlider(new Rect(580,174,160,18),zoom,30f/56f,20,"editor-zoom");if(Math.Abs(zoom-previousZoom)>.00001f)editScroll.x*=zoom/previousZoom;
         if(Button(new Rect(760,162,190,30),"Metronome",metronome,true,13,kind:ControlKind.Toggle))SetMetronome(!metronome);
         Text(new Rect(972,166,W-996,24),$"Bar {editMeasure+1} / {Project.Measures.Length}   ·   {selection.Count} "+T("選択","selected"),13,muted);
         EditorTimeline();EditorInspector();TrackSongInfoFocus();
-        if(Event.current.rawType==EventType.MouseUp||Event.current.rawType==EventType.KeyUp||editorPanel!=4)mixerEditing="";
+        if(Event.current.rawType==EventType.MouseUp||Event.current.rawType==EventType.KeyUp||controllerPrimaryReleased||editorPanel!=4)mixerEditing="";
         Text(new Rect(24,H-50,W-48,22),T("Shift + 左クリック/ドラッグ: 範囲選択 / Ctrl + 左: 複数選択 / 右: メニュー / 左ダブルクリック: 削除 / 矢印: 移動","Shift + Left click/drag: range · Ctrl + Left: toggle · Right: menu · Double click: delete · Arrows: move"),12,muted);
         GUI.enabled=enabled;EditorFileMenu();EditorMeterControls();EditorContextMenu();if(!draftRunning)EditorKeys();
     }

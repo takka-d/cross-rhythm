@@ -11,6 +11,7 @@
     progress(path,count){const box=progressBox();box.style.display='block';box.message.textContent=(english?'Loading: ':'読込中: ')+count+' · '+path;},
     finish(){if(overlay)overlay.style.display='none';},
     begin(){used=0;},
+    activate(mode){const b=controls.find(b=>b.mode===mode&&!b.disabled&&b.style.display!=='none');if(b){b.focus({preventScroll:true});b.click();}},
     layout(id,x,y,w,h,mode,isEnglish,enabled,primary,fontSize){
       english=isEnglish;
       let b=controls[id];if(!b){b=document.createElement('button');b.type='button';b.className='cr-project-button';

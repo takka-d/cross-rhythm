@@ -82,6 +82,7 @@ public sealed partial class ChartProject {
         if(BPM<20 || BPM>600 || double.IsNaN(BPM)) throw new Exception("BPM must be 20–600");
         Measures=bars.Select(x=>(double)x).ToArray(); Starts=new double[Measures.Length];
         for(int i=0;i<Measures.Length;i++){if(Measures[i]<=0 || Measures[i]>64)throw new Exception("Invalid measure length");if(i>0)Starts[i]=Starts[i-1]+Measures[i-1];}
+        RebuildMeterIndex();
         Tempo=new TempoMap(BPM,Chart["tempoChanges"],Starts,Measures);
         Notes.Clear(); Pedals.Clear();
         int ix=0;
@@ -119,13 +120,14 @@ public sealed partial class ChartProject {
         double local=Math.Round((beat-Starts[m])/Grid,MidpointRounding.AwayFromZero)*Grid;
         return Starts[m]+Math.Max(0,Math.Min((Math.Ceiling(Measures[m]/Grid-1e-9)-1)*Grid,local));
     }
-    public Tuple<int,int> Meter(int m){
+    Tuple<int,int> ComputeMeter(int m){
         var a=Chart["timeSignatures"] as JArray;var s=a!=null&&m<a.Count?a[m] as JObject:null;
         int n=(int?)s?["numerator"]??0,d=(int?)s?["denominator"]??0;
         if(n>0&&d>0&&Math.Abs(n*4.0/d-Measures[m])<1e-8)return Tuple.Create(n,d);
         foreach(int den in new[]{4,8,16,32,64}){double num=Measures[m]*den/4;if(Math.Abs(num-Math.Round(num))<1e-8)return Tuple.Create((int)Math.Round(num),den);}
         return Tuple.Create((int)Math.Round(Measures[m]*64/4),64);
     }
+    public Tuple<int,int> Meter(int m)=>meterIndex!=null&&m>=0&&m<meterIndex.Length&&meterIndex[m]!=null?meterIndex[m]:ComputeMeter(m);
     public IEnumerable<double> Pulses(double from,double to){
         for(int bar=Math.Max(-2,BarAt(from));bar<=Math.Min(Measures.Length-1,BarAt(to));bar++){
             double start=bar<0?bar*CountIn.Length(this):Starts[bar],length=bar<0?CountIn.Length(this):Measures[bar],unit=bar<0?CountIn.Unit(this):4.0/Meter(bar).Item2;

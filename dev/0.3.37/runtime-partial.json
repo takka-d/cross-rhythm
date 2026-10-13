@@ -1,0 +1,40 @@
+{
+  "status": "partial",
+  "completeRuntimePassRecorded": false,
+  "selectedAttempt": {
+    "log": "tasks-0337-20261013-213356-e6bd1179.log",
+    "logSHA256": "27330167b6a6b41997507ec7e0f525a4ed2ce0bcf47633e595f7766bdea59732",
+    "status": "partial",
+    "completionMarkerRecorded": false,
+    "passedAssertions": 253,
+    "firstPassedAssertion": "PASS tasks: audio finished loading",
+    "lastPassedAssertion": "PASS tasks: native startup defers saved-state restoration beyond the creation frame",
+    "stopMarker": "Exception: visible native startup paints before saved-state restoration begins",
+    "lastRecordedLine": "Input System module state changed to: Shutdown."
+  },
+  "attempts": [
+    {
+      "log": "tasks-0337-20261013-213153-823e4881.log",
+      "logSHA256": "5f55fecf1c471196f69ccd3883e66c5e7fb3fd268ad93360c74948283aa14133",
+      "status": "incomplete",
+      "completionMarkerRecorded": false,
+      "passedAssertions": 0,
+      "firstPassedAssertion": null,
+      "lastPassedAssertion": null,
+      "stopMarker": null,
+      "lastRecordedLine": "UnloadTime: 0.736500 ms"
+    },
+    {
+      "log": "tasks-0337-20261013-213356-e6bd1179.log",
+      "logSHA256": "27330167b6a6b41997507ec7e0f525a4ed2ce0bcf47633e595f7766bdea59732",
+      "status": "partial",
+      "completionMarkerRecorded": false,
+      "passedAssertions": 253,
+      "firstPassedAssertion": "PASS tasks: audio finished loading",
+      "lastPassedAssertion": "PASS tasks: native startup defers saved-state restoration beyond the creation frame",
+      "stopMarker": "Exception: visible native startup paints before saved-state restoration begins",
+      "lastRecordedLine": "Input System module state changed to: Shutdown."
+    }
+  ],
+  "retryPolicy": "Stopped after two incomplete/failed attempts; no further runtime retry was made in this packaging step."
+}

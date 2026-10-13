@@ -11,6 +11,9 @@ public partial class CrossRhythmApp {
         if(InputBlocked)throw new Exception("Operation did not finish within 30 seconds");
     }
     IEnumerator LoadingRuntimeCheck(Action<bool,string> check){
+        check(nativeStartupCompleted&&!nativeStartup,"native startup finishes before interactive checks begin");
+        check(nativeStartupRestoreFrame>nativeStartupRequestFrame,"native startup defers saved-state restoration beyond the creation frame");
+        check(!nativeStartupPaintRequired||nativeStartupPaintsBeforeRestore>0,"visible native startup paints before saved-state restoration begins");
         var p=EmptyEditorProject();p.SaveNative(Path.Combine(workspaceCheckRoot,"blocking-save.crproj"),false);
         OpenEditorProject(p);yield return WaitForOperations();p.SetSongInfo("Verified asynchronous save","Artist");
         p.Files["qa-padding.bin"]=new byte[4*1024*1024];p.Dirty=true;

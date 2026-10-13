@@ -25,11 +25,11 @@ public partial class CrossRhythmApp {
         check(p.Title!="Kept editor draft","Practice-to-Edit changes never mutate the Songs project");
         int undoCount=undo.Count;NavigateNow(Page.Songs);FocusSong(Library.IndexOf(p));Begin(true);yield return WaitForOperations();Seek(2);RequestPracticeEdit();yield return WaitForOperations();
         check(ReferenceEquals(Project,draft)&&draft.Title=="Kept editor draft"&&undo.Count==undoCount&&Audio.Beat==2,"Practice Edit reuses an existing dirty document and its history");
-        int frame=Time.frameCount;RequestRestore(false);
+        int frame=Time.frameCount,historyPaints=loadingPaints;RequestRestore(false);
         check(restoringHistory&&InputBlocked&&LoadingIsDialog&&draft.Title=="Kept editor draft","Undo blocks with the retained editor before history processing");
         RequestRestore(false);NavigateNow(Page.Songs);OnEditorShortcut("Paste");
         check(Current==Page.Edit&&draft.Title=="Kept editor draft"&&undo.Count==undoCount,"duplicate Undo, navigation and editing cannot race history restore");
-        yield return WaitForOperations();check(Time.frameCount>=frame+2&&draft.Title==p.Title&&redo.Count==1&&!restoringHistory,"Undo yields for progress then restores one complete history entry");
+        yield return WaitForOperations();check(Time.frameCount>=frame+2&&(!HistoryPaintRequired||loadingPaints>historyPaints)&&draft.Title==p.Title&&redo.Count==1&&!restoringHistory,"visible Undo paints progress before restoring one complete history entry");
         OnEditorShortcut("Redo");check(restoringHistory&&InputBlocked,"browser Redo shortcut uses the progress operation");yield return WaitForOperations();
         check(draft.Title=="Kept editor draft"&&undo.Count==undoCount&&redo.Count==0,"Redo restores the same editor metadata and history");
         var chart=draft.Chart.ToString();Audio.Play(0);EditorBoundary(true);

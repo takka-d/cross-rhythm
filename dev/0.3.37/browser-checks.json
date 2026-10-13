@@ -1,0 +1,63 @@
+{
+  "version": "0.3.37",
+  "status": "passed_with_observation",
+  "target": "http://127.0.0.1:8793/?v=0.3.37&check=after-server-fix",
+  "checks": [
+    {
+      "name": "title version",
+      "result": "passed",
+      "evidence": "Title screen displayed Unity Preview 0.3.37."
+    },
+    {
+      "name": "Songs lane order Japanese",
+      "result": "passed",
+      "evidence": "Songs placed 上段: 手 / 上段: 足 beside Preview."
+    },
+    {
+      "name": "Songs lane order English",
+      "result": "passed",
+      "evidence": "English mode displayed Top: Hands / Top: Feet and no Japanese copy on the inspected Songs screen."
+    },
+    {
+      "name": "Edit layout",
+      "result": "passed",
+      "evidence": "Edit rendered its file and transport controls above the timeline and its editing controls in the lower panel."
+    },
+    {
+      "name": "keyboard navigation",
+      "result": "passed",
+      "evidence": "Arrow Right moved focus to Edit and Enter opened Edit."
+    },
+    {
+      "name": "Undo result",
+      "result": "passed",
+      "evidence": "A newly added note was removed and Redo became available."
+    },
+    {
+      "name": "Undo progress visual",
+      "result": "not_captured",
+      "evidence": "The one-note Undo completed within about 30 ms, so the transient progress frame was not captured in the browser screenshot. The automated repaint-before-restore check passed separately."
+    },
+    {
+      "name": "browser console failures",
+      "result": "passed",
+      "evidence": "No error-level or warning-level console entries and no exception/failure messages were recorded."
+    }
+  ],
+  "console": {
+    "entries": 67,
+    "levels": {
+      "log": 67,
+      "warning": 0,
+      "error": 0
+    },
+    "exceptionOrFailureMessages": 0,
+    "nonFatalAudioLengthMessages": 18,
+    "observation": "Unity emitted startup diagnostics stating that sound length was queried before loading; the inspected session still reached the title and all tested screens without an exception."
+  },
+  "limitations": [
+    "No physical controller was connected during this browser inspection.",
+    "The operating-system and browser file chooser were not exercised.",
+    "The Undo progress frame was too brief to capture with the one-note test."
+  ]
+}

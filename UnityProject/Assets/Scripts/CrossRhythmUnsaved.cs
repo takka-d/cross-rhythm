@@ -51,7 +51,7 @@ public partial class CrossRhythmApp {
         if(Button(new Rect(box.x+204,box.y+204,168,48),"Leave",false,available,16))CompleteLeaving();
         var save=new Rect(box.x+384,box.y+204,252,48);
 #if UNITY_WEBGL && !UNITY_EDITOR
-        Button(save,"",true,available,16);
+        if(Button(save,"",true,available,16))PlatformFiles.CRProjectButtonActivate(5);
         if(Event.current.type==EventType.Repaint)PlatformFiles.CRProjectButton(fileButtonCount++,save.x/W,save.y/H,save.width/W,save.height/H,5,english?1:0,available?1:0,1,16*scale);
 #else
         if(Button(save,"Save & Continue",true,available,16))SaveBeforeLeaving();

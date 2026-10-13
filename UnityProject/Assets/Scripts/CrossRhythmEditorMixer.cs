@@ -20,7 +20,7 @@ public partial class CrossRhythmApp {
             var slider=new Rect(xx,yy+25,width-24,20);
             RectFill(new Rect(slider.x+5+(slider.width-10)/maximum,slider.y-5,1,16),muted);
             GUI.SetNextControlName("mixer-"+instrument);
-            float next=GUI.HorizontalSlider(slider,value,0,maximum);
+            float next=ControllerHorizontalSlider(slider,value,0,maximum,"mixer-"+instrument);
             if(Math.Abs(next-value)>.0001f)SetEditorInstrumentGain(instrument,Mathf.Round(next*100)/100);
         }
     }

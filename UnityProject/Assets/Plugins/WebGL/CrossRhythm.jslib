@@ -19,10 +19,12 @@ mergeInto(LibraryManager.library, {
   CRProjectButtonsBegin: function(){if(window.CrossRhythmPicker)window.CrossRhythmPicker.begin();},
   CRProjectButtonsEnd: function(){if(window.CrossRhythmPicker)window.CrossRhythmPicker.end();},
   CRProjectButton: function(id,x,y,w,h,mode,english,enabled,primary,fontSize){if(window.CrossRhythmPicker)window.CrossRhythmPicker.layout(id,x,y,w,h,mode,!!english,!!enabled,!!primary,fontSize);},
+  CRProjectButtonActivate: function(mode){if(window.CrossRhythmPicker)window.CrossRhythmPicker.activate(mode);},
   CREditorKeys: function(enabled,textFocus) {if(window.CrossRhythmEditorKeys)window.CrossRhythmEditorKeys.set(!!enabled,!!textFocus);},
   CRDisplayLayout: function(x,y,w,h,english,enabled) {
     if(window.CrossRhythmDisplay) window.CrossRhythmDisplay.layout(x,y,w,h,!!english,!!enabled);
   },
+  CRDisplayActivate: function() {if(window.CrossRhythmDisplay)window.CrossRhythmDisplay.activate();},
   CRUnsaved: function(dirty) {
     window.crossRhythmUnsaved=!!dirty;
     if(!window.crossRhythmUnloadGuard){window.crossRhythmUnloadGuard=function(e){if(window.crossRhythmUnsaved){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',window.crossRhythmUnloadGuard);}

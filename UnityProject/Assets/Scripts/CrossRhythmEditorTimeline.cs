@@ -55,7 +55,7 @@ public partial class CrossRhythmApp {
             if(selectedCount>0){RectFill(new Rect(24,y,labelWidth,rh),C(selectedCount==laneCount?"#203c55":"#182c3e"));RectFill(new Rect(24,y,3,rh),C("#94d5ff"));}
             string[] names={"CRASH","RIDE","HI-HAT","SNARE","HIGH TOM","MID TOM","FLOOR TOM","KICK","PEDAL"};
             Text(new Rect(34,y+(rh-24)/2,96,25),names[row],12,selectedCount>0?C("#eef8ff"):C("#b6c5d3"));
-            if(GUI.Button(new Rect(24,y,100,rh),GUIContent.none,GUIStyle.none)){instrument=row;kind=Math.Max(0,Array.IndexOf(Types[row],EditorNoteTypes.Get(Project,row)));Editor.SelectLane(row,Event.current.control||Event.current.command);GUI.FocusControl(null);}
+            var laneRect=new Rect(24,y,100,rh);if(GUI.Button(laneRect,GUIContent.none,GUIStyle.none)||ControllerButtonHit(laneRect,GUI.enabled)){instrument=row;kind=Math.Max(0,Array.IndexOf(Types[row],EditorNoteTypes.Get(Project,row)));Editor.SelectLane(row,Event.current.control||Event.current.command);GUI.FocusControl(null);}
             string inputType=EditorNoteTypes.Label(Instruments[row],EditorNoteTypes.Get(Project,row));
             string monitor=row==8?"HH":Instruments[row];
             if(Button(new Rect(124,y+2,32,rh-4),"M",Project.MonitorMuted(monitor),true,11,"lane-mute-"+row,ControlKind.Toggle))ToggleMonitor(monitor);
@@ -70,6 +70,10 @@ public partial class CrossRhythmApp {
             // v175: Shift+wheel or a horizontal trackpad gesture pans the timeline.
             float delta=Math.Abs(wheel.delta.x)>Math.Abs(wheel.delta.y)*.55f?wheel.delta.x:wheel.shift?wheel.delta.y:0;
             if(delta!=0)editScroll.x=Mathf.Clamp(editScroll.x+delta*48,0,Math.Max(0,totalWidth-viewport.width+16));else if(wheel.delta.y!=0)EditorSeek(EditorInteraction.WheelBeat(Math.Max(0,Audio.Beat),wheel.delta.y,Project.Grid,Project.Length));wheel.Use();
+        }
+        if(Event.current.type==EventType.Repaint&&GUI.enabled&&!MidiPromptOpen&&!showMeterPanel&&!editorFileOpen&&!draftRunning&&!Editor.ContextOpen&&ControllerScrollActive(viewport)){
+            if(Math.Abs(controllerWheel.x)>Math.Abs(controllerWheel.y)*.55f)editScroll.x=Mathf.Clamp(editScroll.x+controllerWheel.x*620*Time.unscaledDeltaTime,0,Math.Max(0,totalWidth-viewport.width+16));
+            else if(Math.Abs(controllerWheel.y)>.001f)EditorSeek(Math.Max(0,Math.Min(Project.Length,Audio.Beat+controllerWheel.y*8*Time.unscaledDeltaTime)));
         }
         editScroll.y=0;editScroll=GUI.BeginScrollView(viewport,editScroll,new Rect(0,0,totalWidth,notesTop+notesHeight),false,false);
         if(Event.current.type==EventType.Repaint){

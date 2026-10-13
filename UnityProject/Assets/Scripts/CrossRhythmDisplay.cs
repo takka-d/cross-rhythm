@@ -13,6 +13,7 @@ public partial class CrossRhythmApp {
         var r=new Rect(W-66,stage?16:14,42,42);
 #if UNITY_WEBGL && !UNITY_EDITOR
         // The DOM button expands the containing article viewport without OS fullscreen. Touch/click uses the same DOM button on mobile WebGL.
+        if(Button(r,"",false,!discardPrompt&&!bindingsOpen&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen&&!showMeterPanel&&!(Current==Page.Edit&&(Editor.ContextOpen||editorFileOpen))))PlatformFiles.CRDisplayActivate();
         if(Event.current.type==EventType.Repaint)PlatformFiles.CRDisplayLayout(r.x/W,r.y/H,r.width/W,r.height/H,english?1:0,discardPrompt||bindingsOpen||MidiPromptOpen||LaneTypeOpen||gridMenuOpen||showMeterPanel||(Current==Page.Edit&&(Editor.ContextOpen||editorFileOpen))?0:1);
 #else
         if(Button(r,"",false,!discardPrompt&&!bindingsOpen&&!MidiPromptOpen&&!LaneTypeOpen&&!gridMenuOpen&&!showMeterPanel&&!(Current==Page.Edit&&(Editor.ContextOpen||editorFileOpen))))ToggleDisplay();
