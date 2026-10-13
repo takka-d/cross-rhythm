@@ -1,0 +1,17 @@
+{
+  "version": "0.3.35",
+  "url": "http://127.0.0.1:8792/?v=0.3.35",
+  "browser": "Codex in-app browser",
+  "checks": [
+    "Title rendered with Unity Preview 0.3.35",
+    "Songs opened and selected Rhythm Check",
+    "Practice opened in a stopped state",
+    "Practice bottom controls fit at 1280x720 without overlap",
+    "Volume menu showed independent Music and Drums sliders with numeric percentages",
+    "Music changed immediately from 70% to 29% and was restored",
+    "MIDI duplicate dialog separated source MIDI sound, game sound, track, channel, MIDI velocity and game strength",
+    "MIDI candidate Preview produced no browser console error",
+    "Selecting one candidate changed Kick from 0/1 to 1/1 and remaining choices from 5 to 4"
+  ],
+  "consoleErrors": []
+}

@@ -11,6 +11,9 @@ public partial class CrossRhythmApp {
         string file=args[at+1];byte[] bytes=File.ReadAllBytes(file);OpenEditorProject(EmptyEditorProject());while(busy||!loaded)yield return null;
         var original=(JObject)Project.Chart.DeepClone();bool dirty=Project.Dirty;int history=undo.Count;midiZeroMode=MidiImport.ZeroMode.NoteOff;
         ImportDroppedMidi(new[]{file});Check(MidiPromptOpen&&pendingMidi.Preview.Overlaps.Length==4,"drop route opens per-instrument overlap prompt");
+        var rim=MidiImport.PreviewNote(37,96,out bool rimClosed);Check(rim!=null&&rim.Instrument=="SN"&&rim.Articulation=="rim_closed"&&rim.Velocity==4&&!rimClosed&&RhythmAudio.KeyFor(rim,rimClosed)=="SIDE","MIDI candidate preview maps source sound and game strength exactly");
+        var openHat=MidiImport.PreviewNote(46,64,out bool hatClosed);Check(openHat!=null&&openHat.Instrument=="HH"&&openHat.Velocity==3&&!hatClosed&&RhythmAudio.KeyFor(openHat,hatClosed)=="OHH","MIDI candidate preview distinguishes open hi-hat audio");
+        Check(MidiImport.SourceSoundLabel(37)=="Side Stick"&&MidiImport.GameSoundLabel(37)=="Closed rimshot"&&MidiImport.InstrumentLabel("SN")=="Snare","MIDI duplicate UI exposes source sound, game sound and full instrument name");
         Check(JToken.DeepEquals(original,Project.Chart)&&dirty==Project.Dirty&&undo.Count==history,"import preview preserves chart dirty flag and undo history");
         var prompt=pendingMidi;ImportDroppedMidi(new[]{file});Check(ReferenceEquals(prompt,pendingMidi),"second drop cannot replace an active choice");
         Navigate(Page.Songs);OnEditorShortcut("SelectAll");Check(Current==Page.Edit&&selection.Count==0,"modal blocks navigation and editor shortcuts");

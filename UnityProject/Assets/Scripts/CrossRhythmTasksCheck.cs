@@ -36,6 +36,11 @@ public partial class CrossRhythmApp {
             yield return Ready();Check(Audio.Project==Project,"Edit receives its own audio after old preview load is cancelled");
             Begin(true);Audio.Pause();pendingPracticeSpeed=.37;UpdatePracticeSpeed();
             Check(Math.Abs(practiceSpeed-.37)<1e-8&&Math.Abs(Audio.Rate-.37)<1e-8&&!Audio.Running,"released speed slider accepts hundredths without starting paused playback");
+            bool hadMusicVolume=PlayerPrefs.HasKey("musicVolume"),hadDrumsVolume=PlayerPrefs.HasKey("drumsVolume");float oldMusicPref=PlayerPrefs.GetFloat("musicVolume",0),oldDrumsPref=PlayerPrefs.GetFloat("drumsVolume",0),oldBackingGain=Audio.BackingGain,oldDrumGain=Audio.DrumGain;
+            SetPracticeVolume(true,.31f);SetPracticeVolume(false,.67f);
+            Check(Math.Abs(Audio.BackingGain-.31f)<.0001&&Math.Abs(Audio.DrumGain-.67f)<.0001,"Practice volume controls change music and drums independently while open");
+            Check(Math.Abs(PlayerPrefs.GetFloat("musicVolume")-.31f)<.0001&&Math.Abs(PlayerPrefs.GetFloat("drumsVolume")-.67f)<.0001,"Practice volume controls share and persist Config audio values");
+            if(hadMusicVolume)PlayerPrefs.SetFloat("musicVolume",oldMusicPref);else PlayerPrefs.DeleteKey("musicVolume");if(hadDrumsVolume)PlayerPrefs.SetFloat("drumsVolume",oldDrumsPref);else PlayerPrefs.DeleteKey("drumsVolume");PlayerPrefs.Save();Audio.BackingGain=oldBackingGain;Audio.DrumGain=oldDrumGain;
             ChangePractice(1,pro);NavigateNow(Page.Songs);
             var p=EmptyEditorProject();string path=Path.Combine(root,"save-check.crproj");p.SaveNative(path,false);OpenEditorProject(p);yield return Ready();
             p.SetSongInfo("Unsaved title","Test artist");QueueEditorRecovery();Navigate(Page.Songs);
@@ -100,7 +105,7 @@ public partial class CrossRhythmApp {
             yield return IndexAndLaneRuntimeCheck(Check);
             yield return PracticeVisualRuntimeCheck(Check);
             yield return WorkflowRuntimeCheck(Check);
-            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.34"},{"checks",new JArray(checks)}}.ToString());
+            File.WriteAllText(Path.Combine(root,"passed.json"),new JObject{{"version","0.3.35"},{"checks",new JArray(checks)}}.ToString());
             Debug.Log("CROSS_RHYTHM_TASKS_CHECK_PASS");
         }finally{if(hadPreview)PlayerPrefs.SetInt("songPreview",originalPreview);else PlayerPrefs.DeleteKey("songPreview");PlayerPrefs.Save();allowApplicationQuit=true;}
         Application.Quit();

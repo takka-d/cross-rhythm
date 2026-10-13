@@ -36,15 +36,16 @@ public partial class CrossRhythmApp {
         english=false;check(EditorNoteTypes.Label("RD","crash")=="Ride crash"&&EditorNoteTypes.Label("SN","rim_closed")=="Closed rimshot"&&EditorNoteTypes.Label("HH","tambourine")=="Tambourine","specific articulations remain distinguishable");
         var flags=BindingFlags.Instance|BindingFlags.NonPublic;var audioType=typeof(RhythmAudio);var voiceList=(List<AudioSource>)audioType.GetField("voices",flags).GetValue(Audio);float previousGain=Audio.DrumGain;Audio.DrumGain=.8f;
         var evidence=new JArray();
-        foreach(string inst in new[]{"HH","RD"}){
+        foreach(string inst in new[]{"HH","RD","CUP"}){
             var levels=new List<double>();
             for(int v=0;v<=5;v++){
-                int next=(int)audioType.GetField("voice",flags).GetValue(Audio);Audio.Drum(new ChartNote{Instrument=inst,Articulation=inst=="HH"?"auto":"ride",Velocity=v},true);
+                string instrument=inst=="CUP"?"RD":inst,articulation=inst=="HH"?"auto":inst=="CUP"?"cup":"ride";
+                int next=(int)audioType.GetField("voice",flags).GetValue(Audio);Audio.Drum(new ChartNote{Instrument=instrument,Articulation=articulation,Velocity=v},true);
                 var voice=voiceList[next%voiceList.Count];var data=new float[voice.clip.samples*voice.clip.channels];voice.clip.GetData(data,0);int count=Math.Min(data.Length,voice.clip.frequency*voice.clip.channels/10);
                 double rms=Math.Sqrt(data.Take(count).Sum(x=>(double)x*x)/count)*voice.volume;levels.Add(rms);
                 check(voice.volume<=1&&voice.volume>=0,"calibrated sample voice remains in supported gain range: "+inst+" V"+v);
             }
-            check(levels[0]==0&&levels[3]>.01&&levels[1]<levels[2]&&levels[2]<levels[3]&&levels[3]<levels[4]&&levels[4]<levels[5],"audible PCM output preserves all strengths and medium hits: "+inst);
+            check(levels[0]==0&&levels[3]>.027&&levels[1]<levels[2]&&levels[2]<levels[3]&&levels[3]<levels[4]&&levels[4]<levels[5],"balanced PCM output preserves all strengths and audible medium hits: "+inst);
             evidence.Add(new JObject{{"instrument",inst},{"rms100msByStrength",new JArray(levels)}});
         }
         Audio.DrumGain=previousGain;Audio.Stop();File.WriteAllText(Path.Combine(workspaceCheckRoot,"meter-sound-evidence.json"),new JObject{{"checks","note/tempo timing, save/reopen, undo/redo, labels, actual decoded voice RMS"},{"samples",evidence}}.ToString());

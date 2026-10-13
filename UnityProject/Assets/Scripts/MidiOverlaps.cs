@@ -33,11 +33,17 @@ public static partial class MidiImport {
         }
         return result.OrderBy(n=>n.Tick).ThenBy(n=>n.Pitch).ToArray();
     }
-    public static string PitchLabel(int pitch){
-        string source=pitch switch {35=>"Acoustic Bass Drum",36=>"Bass Drum 1",37=>"Side Stick",38=>"Acoustic Snare",39=>"Hand Clap",40=>"Electric Snare",42=>"Closed Hi-Hat",46=>"Open Hi-Hat",49=>"Crash Cymbal 1",57=>"Crash Cymbal 2",55=>"Splash Cymbal",52=>"Chinese Cymbal",51=>"Ride Cymbal 1",59=>"Ride Cymbal 2",53=>"Ride Bell",54=>"Tambourine",50=>"High Tom",48=>"Hi-Mid Tom",47=>"Low-Mid Tom",45=>"Low Tom",43=>"High Floor Tom",41=>"Low Floor Tom",_=>"MIDI "+pitch};
+    public static string SourceSoundLabel(int pitch)=>pitch switch {35=>"Acoustic Bass Drum",36=>"Bass Drum 1",37=>"Side Stick",38=>"Acoustic Snare",39=>"Hand Clap",40=>"Electric Snare",42=>"Closed Hi-Hat",46=>"Open Hi-Hat",49=>"Crash Cymbal 1",57=>"Crash Cymbal 2",55=>"Splash Cymbal",52=>"Chinese Cymbal",51=>"Ride Cymbal 1",59=>"Ride Cymbal 2",53=>"Ride Bell",54=>"Tambourine",50=>"High Tom",48=>"Hi-Mid Tom",47=>"Low-Mid Tom",45=>"Low Tom",43=>"High Floor Tom",41=>"Low Floor Tom",_=>"MIDI "+pitch};
+    public static string GameSoundLabel(int pitch){
         var n=new Note{Pitch=pitch};Map(n);
-        string type=n.Hat=="closed"?"Closed hi-hat":n.Hat=="open"?"Open hi-hat":EditorNoteTypes.Label(n.Instrument,n.Type);
-        return source+" ["+pitch+"] → "+type;
+        return n.Hat=="closed"?"Closed hi-hat":n.Hat=="open"?"Open hi-hat":EditorNoteTypes.Label(n.Instrument,n.Type);
+    }
+    public static string PitchLabel(int pitch)=>SourceSoundLabel(pitch)+" ["+pitch+"] → "+GameSoundLabel(pitch);
+    public static string InstrumentLabel(string instrument)=>EditorNoteTypes.Label(instrument,instrument=="HH"?"auto":instrument=="SN"?"center":instrument=="RD"?"ride":instrument=="CR"?"crash":"normal");
+    public static ChartNote PreviewNote(int pitch,int velocity,out bool closed){
+        var n=new Note{Pitch=pitch,Velocity=Math.Max(0,Math.Min(127,velocity))};Map(n);closed=n.Hat=="closed";
+        if(string.IsNullOrEmpty(n.Instrument)||n.Instrument=="HHSTATE")return null;
+        return new ChartNote{Instrument=n.Instrument,Articulation=n.Type,Velocity=Strength(n.Velocity)};
     }
 }
 }
