@@ -5,6 +5,8 @@ using UnityEngine;
 namespace CrossRhythm {
 // Geometry shared by rendering and picking. Matches v175 score geometry and the inherited HTML editor.
 public static class ChartVisuals {
+    public const float StageTripletGuideWidth=.5f;
+    public const float StageTripletGuideOpacity=.018f;
     public static Color Hex(string hex){ColorUtility.TryParseHtmlString(hex,out var color);return color;}
     public static Color PlayColor(string inst)=>Hex(inst=="CR"?"#bf9b48":inst=="RD"?"#bf9b48":inst=="HH"?"#9ba9b8":inst=="SN"?"#5678c8":inst=="HT"?"#e9bb62":inst=="MT"?"#c8874a":inst=="FT"?"#be626b":inst=="BD"?"#2f8f9d":"#8162bd");
     public static Color EditColor(ChartProject p,ChartNote n){

@@ -33,9 +33,12 @@ public static class EditorArrangementTests {
         p.Chart["editorSnapToGrid"]=true;
         shifted=EditorInteraction.AudioOffsetForDrag(p,.75,1,1.37);
         Check(Math.Abs(shifted-.625)<1e-9,"Grid wave movement snaps beat delta");
-        Check(PlayerSettingCheck(),"Windows uses Unity single instance setting");
+        Check(PlayerSettingCheck(),"Windows launcher owns single instance handling");
         Debug.Log("CROSS_RHYTHM_ARRANGEMENT_TESTS_PASS");
     }
-    static bool PlayerSettingCheck()=>UnityEditor.PlayerSettings.forceSingleInstance;
+    static bool PlayerSettingCheck(){
+        string launcher=System.IO.Path.GetFullPath("Tools/Launcher/CrossRhythmLauncher.cs");
+        return !UnityEditor.PlayerSettings.forceSingleInstance&&System.IO.File.Exists(launcher)&&System.IO.File.ReadAllText(launcher).Contains("new Mutex(true,MutexName,out first)");
+    }
 }
 }

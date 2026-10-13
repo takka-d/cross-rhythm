@@ -22,6 +22,7 @@ public partial class CrossRhythmApp {
         string chart=p.Chart.ToString();var timing=p.Notes.Select(n=>(n.Id,n.Beat,n.Step,n.Duration)).ToArray();
         var triplets=ChartVisuals.GridPoints(p,1);check(triplets.Any(x=>Math.Abs(x-1.0/3)<1e-8)&&triplets.Any(x=>Math.Abs(x-2.0/3)<1e-8),"triplet guides cover the occupied group");
         check(!triplets.Any(x=>Math.Abs(x-4.0/3)<1e-8)&&triplets.Contains(.25),"triplet guides stay local and preserve sixteenth lines");
+        check(ChartVisuals.StageTripletGuideWidth<.75f&&ChartVisuals.StageTripletGuideOpacity<.032f*.72f,"triplet guides are thinner and lighter than ordinary sixteenth guides");
         foreach(int bar in new[]{2,3})check(ChartVisuals.GridPoints(p,bar).All(x=>Math.Abs(x*4-Math.Round(x*4))<1e-8),"quintuplet or septuplet keeps ordinary sixteenth guide lines: bar "+bar);
         check(triplets.Where(x=>x<3&&ChartVisuals.IsBeatLine(p,1,x)).SequenceEqual(new[]{0,.5,1,1.5,2,2.5}),"6/8 retains all six eighth-note beat lines with triplet guides");
         check(ChartVisuals.PlayColor("HT")!=ChartVisuals.PlayColor("MT")&&ChartVisuals.PlayColor("MT")!=ChartVisuals.PlayColor("FT"),"three tom pitches use distinct colours");

@@ -50,7 +50,21 @@ public static class StabilityTests {
         Check(meterStable,"meter cache remains stable across repeated reads");
         Check(meterAllocated<4096,"steady meter lookup does not create per-frame garbage");
 
-        var report=new JObject{{"notes",p.Notes.Count},{"simulatedFrames",frames},{"legacyNoteVisits",p.Notes.Count*(long)frames},{"legacyMilliseconds",legacyMs},{"cursorMilliseconds",cursorMs},{"cursorIndexAfterLongRun",cursor.Index},{"offsetIterations",10000},{"offsetAllocatedBytes",allocated},{"meterIterations",100000},{"meterAllocatedBytes",meterAllocated}};
+        var pcm=new float[48000*8];for(int i=0;i<pcm.Length;i++)pcm[i]=(float)Math.Sin(i*.017)*.8f;
+        var waveform=new AudioWaveform(pcm,1,48000);var waveformCache=new WaveformViewportCache();
+        const float waveformPPB=56,waveformLeft=311.5f,waveformRight=1591.5f;const double waveformOffset=.137;
+        Check(waveformCache.Ensure(waveform,p,waveformOffset,waveformPPB,waveformLeft,waveformRight)&&waveformCache.Count==640,"editor waveform cache builds the visible two-pixel columns");
+        bool waveformExact=true;for(int i=0;i<waveformCache.Count;i++){float x=waveformCache.XAt(i);waveform.Range(waveformOffset+p.SecondsAtBeat(x/waveformPPB),waveformOffset+p.SecondsAtBeat((x+2)/waveformPPB),out float lo,out float hi);waveformExact&=Math.Abs(lo-waveformCache.LowAt(i))<1e-7&&Math.Abs(hi-waveformCache.HighAt(i))<1e-7;}
+        Check(waveformExact,"cached editor waveform columns exactly match direct range queries");
+        const int waveformFrames=2000;float sink=0;watch.Restart();for(int frame=0;frame<waveformFrames;frame++)for(float x=waveformLeft;x<waveformRight;x+=2){waveform.Range(waveformOffset+p.SecondsAtBeat(x/waveformPPB),waveformOffset+p.SecondsAtBeat((x+2)/waveformPPB),out float lo,out float hi);sink+=lo+hi;}watch.Stop();double waveformDirectMs=watch.Elapsed.TotalMilliseconds;
+        int waveformBuilds=waveformCache.RebuildCount;before=GC.GetAllocatedBytesForCurrentThread();watch.Restart();for(int frame=0;frame<waveformFrames;frame++){waveformCache.Ensure(waveform,p,waveformOffset,waveformPPB,waveformLeft,waveformRight);sink+=waveformCache.HighAt(frame%waveformCache.Count);}watch.Stop();double waveformCachedMs=watch.Elapsed.TotalMilliseconds;long waveformAllocated=GC.GetAllocatedBytesForCurrentThread()-before;
+        Check(waveformCache.RebuildCount==waveformBuilds,"unchanged editor viewport performs no waveform rebuilds");
+        Check(waveformAllocated<4096,"unchanged editor waveform repaint creates no per-frame garbage");
+        Check(waveformCachedMs<waveformDirectMs,"cached editor waveform repaint avoids repeated min/max scans");
+        Check(waveformCache.Ensure(waveform,p,waveformOffset,waveformPPB,waveformLeft+2,waveformRight+2)&&waveformCache.RebuildCount==waveformBuilds+1,"waveform cache refreshes when the editor viewport moves");
+        GC.KeepAlive(sink);
+
+        var report=new JObject{{"notes",p.Notes.Count},{"simulatedFrames",frames},{"legacyNoteVisits",p.Notes.Count*(long)frames},{"legacyMilliseconds",legacyMs},{"cursorMilliseconds",cursorMs},{"cursorIndexAfterLongRun",cursor.Index},{"offsetIterations",10000},{"offsetAllocatedBytes",allocated},{"meterIterations",100000},{"meterAllocatedBytes",meterAllocated},{"waveformColumns",waveformCache.Count},{"waveformFrames",waveformFrames},{"waveformDirectMilliseconds",waveformDirectMs},{"waveformCachedMilliseconds",waveformCachedMs},{"waveformCachedAllocatedBytes",waveformAllocated},{"waveformScope","Editor waveform min/max column computation only; excludes GUI draw calls and other freeze causes"}};
         string path=Arg("-stabilityReport",Path.Combine(Application.temporaryCachePath,"cross-rhythm-stability.json"));Directory.CreateDirectory(Path.GetDirectoryName(path));File.WriteAllText(path,report.ToString());
         UnityEngine.Debug.Log("CROSS_RHYTHM_STABILITY_TESTS_PASS "+path);
     }

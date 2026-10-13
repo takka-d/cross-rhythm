@@ -12,6 +12,7 @@ public partial class CrossRhythmApp {
     readonly Dictionary<int,float> badgeEnds=new Dictionary<int,float>();
     readonly SortedSet<double> editorGrid=new SortedSet<double>();
     readonly Dictionary<int,Rect> editorBadges=new Dictionary<int,Rect>();
+    readonly WaveformViewportCache waveformViewport=new WaveformViewportCache();
     static readonly string[] LaneNames={"CRASH (CR)","RIDE (RD)","HI-HAT (HH)","SNARE (SN)","HIGH TOM (HT)","MID TOM (MT)","FLOOR TOM (FT)","KICK (BD)","HH PEDAL STATE"};
     void OpenMeterPanel(){
         EndSongInfoEdit();Audio.Pause();Editor.Cancel();Editor.ContextOpen=false;editorFileOpen=false;gridMenuOpen=false;
@@ -80,7 +81,7 @@ public partial class CrossRhythmApp {
         RectFill(new Rect(0,0,totalWidth,notesTop+notesHeight),C("#070b10"));
         float left=editScroll.x,right=Math.Min(totalWidth,left+viewport.width);
         RectFill(new Rect(left,rulerHeight+waveHeight/2,right-left,1),line);
-        if(Event.current.type==EventType.Repaint&&Audio.Waveform!=null){for(float xx=left;xx<right;xx+=2){double from=EditorAudioOffset+Project.SecondsAtBeat(xx/ppb),to=EditorAudioOffset+Project.SecondsAtBeat((xx+2)/ppb);Audio.Waveform.Range(from,to,out float lo,out float hi);float amp=(waveHeight-6)/2;float y=rulerHeight+waveHeight/2-Mathf.Clamp(hi,-1,1)*amp;float h=Math.Max(1,(Mathf.Clamp(hi,-1,1)-Mathf.Clamp(lo,-1,1))*amp);RectFill(new Rect(xx,y,1.5f,h),C("#a7bdca"));}}
+        if(Event.current.type==EventType.Repaint&&Audio.Waveform!=null){waveformViewport.Ensure(Audio.Waveform,Project,EditorAudioOffset,ppb,left,right);float amp=(waveHeight-6)/2;Color waveColor=C("#a7bdca");for(int i=0;i<waveformViewport.Count;i++){float lo=waveformViewport.LowAt(i),hi=waveformViewport.HighAt(i);float y=rulerHeight+waveHeight/2-Mathf.Clamp(hi,-1,1)*amp;float h=Math.Max(1,(Mathf.Clamp(hi,-1,1)-Mathf.Clamp(lo,-1,1))*amp);RectFill(new Rect(waveformViewport.XAt(i),y,1.5f,h),waveColor);}}
         else if(Audio.Waveform==null)Text(new Rect(left+12,rulerHeight+22,600,24),busy?T("音源を読込中…","Loading audio…"):T("Audioで音源を選択","Choose a track with Audio"),13,muted);
         for(int row=0;row<9;row++){RectFill(new Rect(left,notesTop+row*rh,right-left,rh),C(row%2==0?"#0d141c":"#0a1017"));RectFill(new Rect(left,notesTop+row*rh,right-left,1),C("#202c39"));}
         int first=Math.Max(0,Project.BarAt(left/ppb)),last=Project.BarAt(right/ppb);

@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "completeRuntimePassRecorded": true,
+  "selectedAttempt": {
+    "log": "tasks-0338-20261014-014735-65011e9a.log",
+    "logSHA256": "2b8ac18b1c380984f691d0a201e3f283b515e04000e5f89cb6245c29ac1f612a",
+    "status": "passed",
+    "completionMarkerRecorded": true,
+    "passedAssertions": 644,
+    "firstPassedAssertion": "PASS tasks: audio finished loading",
+    "lastPassedAssertion": "PASS tasks: Practice lane order is shared with Config",
+    "stopMarker": null,
+    "lastRecordedLine": "Input System module state changed to: Shutdown."
+  },
+  "attempts": [
+    {
+      "log": "tasks-0338-20261014-014030-b1ff57a2.log",
+      "logSHA256": "f37f7fdf340cf4ca58608ea04590a1dbf60f605e65f3ac47d2ff199cb8ebbca4",
+      "status": "passed",
+      "completionMarkerRecorded": true,
+      "passedAssertions": 644,
+      "firstPassedAssertion": "PASS tasks: audio finished loading",
+      "lastPassedAssertion": "PASS tasks: Practice lane order is shared with Config",
+      "stopMarker": null,
+      "lastRecordedLine": "Input System module state changed to: Shutdown."
+    },
+    {
+      "log": "tasks-0338-20261014-014735-65011e9a.log",
+      "logSHA256": "2b8ac18b1c380984f691d0a201e3f283b515e04000e5f89cb6245c29ac1f612a",
+      "status": "passed",
+      "completionMarkerRecorded": true,
+      "passedAssertions": 644,
+      "firstPassedAssertion": "PASS tasks: audio finished loading",
+      "lastPassedAssertion": "PASS tasks: Practice lane order is shared with Config",
+      "stopMarker": null,
+      "lastRecordedLine": "Input System module state changed to: Shutdown."
+    }
+  ],
+  "retryPolicy": "Stopped after two incomplete/failed attempts; no further runtime retry was made in this packaging step."
+}

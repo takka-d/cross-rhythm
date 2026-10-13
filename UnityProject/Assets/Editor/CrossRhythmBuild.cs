@@ -15,7 +15,7 @@ namespace CrossRhythm {
 public static class CrossRhythmBuild {
     static string Arg(string name,string fallback=""){var a=Environment.GetCommandLineArgs();int i=Array.IndexOf(a,name);return i>=0&&i+1<a.Length?a[i+1]:fallback;}
     public static void Prepare(){
-        PlayerSettings.companyName="TakKa";PlayerSettings.productName="Cross Rhythm";PlayerSettings.bundleVersion="0.3.37";PlayerSettings.defaultScreenWidth=1440;PlayerSettings.defaultScreenHeight=900;PlayerSettings.fullScreenMode=FullScreenMode.Windowed;PlayerSettings.resizableWindow=true;PlayerSettings.forceSingleInstance=true;PlayerSettings.runInBackground=false;PlayerSettings.colorSpace=ColorSpace.Gamma;
+        PlayerSettings.companyName="TakKa";PlayerSettings.productName="Cross Rhythm";PlayerSettings.bundleVersion="0.3.38";PlayerSettings.defaultScreenWidth=1440;PlayerSettings.defaultScreenHeight=900;PlayerSettings.fullScreenMode=FullScreenMode.Windowed;PlayerSettings.resizableWindow=true;PlayerSettings.forceSingleInstance=false;PlayerSettings.runInBackground=false;PlayerSettings.colorSpace=ColorSpace.Gamma;
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone,ScriptingImplementation.Mono2x);PlayerSettings.SetApiCompatibilityLevel(NamedBuildTarget.Standalone,ApiCompatibilityLevel.NET_Standard);
         var settings=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset")[0]);var input=settings.FindProperty("activeInputHandler");if(input!=null){input.intValue=2;settings.ApplyModifiedPropertiesWithoutUndo();}
         Directory.CreateDirectory("Assets/Scenes");var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);var camera=new GameObject("Camera").AddComponent<Camera>();camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.027f,.045f,.063f);new GameObject("AudioListener").AddComponent<AudioListener>();EditorSceneManager.SaveScene(scene,"Assets/Scenes/CrossRhythm.unity");EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene("Assets/Scenes/CrossRhythm.unity",true)};
@@ -37,7 +37,42 @@ public static class CrossRhythmBuild {
         foreach(string path in Directory.GetFiles("Assets/Resources/Drums","*.wav")){var importer=AssetImporter.GetAtPath(path) as AudioImporter;var sample=importer.defaultSampleSettings;sample.loadType=AudioClipLoadType.DecompressOnLoad;sample.compressionFormat=AudioCompressionFormat.Vorbis;sample.quality=.85f;sample.preloadAudioData=true;importer.defaultSampleSettings=sample;importer.SaveAndReimport();}
         AssetDatabase.SaveAssets();Debug.Log("CROSS_RHYTHM_PREPARED");
     }
-    public static void Windows(){Prepare();Tests();string output=Arg("-buildOutput",Path.GetFullPath("../CrossRhythm-Windows/CrossRhythm.exe"));Directory.CreateDirectory(Path.GetDirectoryName(output));var report=BuildPipeline.BuildPlayer(EditorBuildSettings.scenes,output,BuildTarget.StandaloneWindows64,BuildOptions.None);if(report.summary.result!=BuildResult.Succeeded)throw new Exception("Windows build failed: "+report.summary.result);CopyAdtofTools(Path.GetDirectoryName(output));Debug.Log("CROSS_RHYTHM_WINDOWS_BUILD_PASS "+output);}
+    public static void Windows(){
+        Prepare();Tests();
+        string output=Arg("-buildOutput",Path.GetFullPath("../CrossRhythm-Windows/CrossRhythm.exe"));
+        string buildRoot=Path.GetDirectoryName(output),runtimeRoot=Path.Combine(buildRoot,"Runtime"),player=Path.Combine(runtimeRoot,"CrossRhythmPlayer.exe");
+        Directory.CreateDirectory(buildRoot);
+        if(Directory.Exists(runtimeRoot))Directory.Delete(runtimeRoot,true);
+        Directory.CreateDirectory(runtimeRoot);
+        if(File.Exists(output))File.Delete(output);
+        var report=BuildPipeline.BuildPlayer(EditorBuildSettings.scenes,player,BuildTarget.StandaloneWindows64,BuildOptions.None);
+        if(report.summary.result!=BuildResult.Succeeded)throw new Exception("Windows build failed: "+report.summary.result);
+        CopyAdtofTools(runtimeRoot);
+        BuildWindowsLauncher(output);
+        string data=Path.Combine(runtimeRoot,"CrossRhythmPlayer_Data"),unityPlayer=Path.Combine(runtimeRoot,"UnityPlayer.dll");
+        if(!File.Exists(output)||!File.Exists(player)||!Directory.Exists(data)||!File.Exists(unityPlayer))throw new Exception("Windows launcher package is incomplete");
+        Debug.Log("CROSS_RHYTHM_WINDOWS_BUILD_PASS launcher="+output+" player="+player);
+    }
+    static void BuildWindowsLauncher(string output){
+        string script=Path.GetFullPath("Tools/Launcher/Build-Launcher.ps1");
+        if(!File.Exists(script))throw new Exception("Windows launcher build script missing: "+script);
+        var info=new System.Diagnostics.ProcessStartInfo{
+            FileName="powershell.exe",
+            Arguments="-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "+CommandArgument(script)+" -OutputPath "+CommandArgument(output),
+            WorkingDirectory=Path.GetDirectoryName(script),
+            UseShellExecute=false,
+            CreateNoWindow=true,
+            RedirectStandardOutput=true,
+            RedirectStandardError=true
+        };
+        using(var process=System.Diagnostics.Process.Start(info)){
+            string stdout=process.StandardOutput.ReadToEnd(),stderr=process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            if(process.ExitCode!=0)throw new Exception("Windows launcher build failed ("+process.ExitCode+")\n"+stdout+"\n"+stderr);
+            Debug.Log(stdout.Trim());
+        }
+    }
+    static string CommandArgument(string value){return "\""+value.Replace("\"","\\\"")+"\"";}
     static void CopyAdtofTools(string buildRoot){string source=Path.GetFullPath("Tools/ADTOF");if(!Directory.Exists(source))return;string target=Path.Combine(buildRoot,"ADTOF");Directory.CreateDirectory(target);foreach(string file in Directory.GetFiles(source)){File.Copy(file,Path.Combine(target,Path.GetFileName(file)),true);}}
     public static void Web(){Prepare();Tests();PlayerSettings.WebGL.compressionFormat=WebGLCompressionFormat.Disabled;PlayerSettings.WebGL.template="PROJECT:CrossRhythm";PlayerSettings.WebGL.initialMemorySize=256;PlayerSettings.WebGL.maximumMemorySize=2048;PlayerSettings.SetScriptingBackend(NamedBuildTarget.WebGL,ScriptingImplementation.IL2CPP);string output=Arg("-buildOutput",Path.GetFullPath("../CrossRhythm-Web"));Directory.CreateDirectory(output);var report=BuildPipeline.BuildPlayer(EditorBuildSettings.scenes,output,BuildTarget.WebGL,BuildOptions.None);if(report.summary.result!=BuildResult.Succeeded)throw new Exception("Web build failed: "+report.summary.result);Debug.Log("CROSS_RHYTHM_WEB_BUILD_PASS "+output);}
     static void Check(bool ok,string message){if(!ok)throw new Exception("TEST FAILED: "+message);Debug.Log("PASS "+message);}

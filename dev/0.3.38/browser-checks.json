@@ -1,0 +1,40 @@
+{
+  "version": "0.3.38",
+  "status": "passed",
+  "target": "http://127.0.0.1:8795/?qa=dom-final-2",
+  "loadingHidden": true,
+  "checks": [
+    {
+      "name": "version and load",
+      "result": "passed",
+      "evidence": "A fresh browser origin completed loading and exposed productVersion 0.3.38."
+    },
+    {
+      "name": "browser failures",
+      "result": "passed",
+      "evidence": "The page-side capture recorded zero errors, zero warnings, and zero unhandled rejections."
+    },
+    {
+      "name": "Edit and Practice visuals",
+      "result": "passed",
+      "evidence": "Final native runtime captures showed the matching Edit boundary buttons, revised Practice controls, and lighter triplet guides."
+    },
+    {
+      "name": "Play and Practice transitions",
+      "result": "passed",
+      "evidence": "The final Windows runtime suite exercised the revised transitions among Play, Practice, and Songs."
+    }
+  ],
+  "console": {
+    "errors": 0,
+    "warnings": 0,
+    "unhandledRejections": 0,
+    "nonFatalAudioLengthMessages": 0
+  },
+  "interactionScope": "Browser click automation was not repeated after two failed attempts. Native runtime checks covered the revised screen transitions.",
+  "limitations": [
+    "No physical controller was connected during this browser inspection.",
+    "Operating-system and browser file chooser gestures were not exercised.",
+    "Direct browser click automation was omitted after the two-attempt limit."
+  ]
+}

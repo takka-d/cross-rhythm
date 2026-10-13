@@ -50,7 +50,7 @@ public partial class CrossRhythmApp {
             double subdivision=q/ChartVisuals.BeatUnit(Project,m)*2;
             bool beat=ChartVisuals.IsBeatLine(Project,m,q),eighth=Math.Abs(subdivision-Math.Round(subdivision))<1e-8,edge=Math.Abs(q)<1e-8||Math.Abs(q-length)<1e-8;
             bool triplet=Math.Abs(q*4-Math.Round(q*4))>1e-7;
-            float w=beat?(edge?1.2f:1.05f):triplet?.75f:eighth?.9f:.75f,a=alpha*(beat?(edge?.13f:.10f)*.94f:triplet?.045f:eighth?.055f*.82f:.032f*.72f);
+            float w=beat?(edge?1.2f:1.05f):triplet?ChartVisuals.StageTripletGuideWidth:eighth?.9f:.75f,a=alpha*(beat?(edge?.13f:.10f)*.94f:triplet?ChartVisuals.StageTripletGuideOpacity:eighth?.055f*.82f:.032f*.72f);
             float x=220+(float)(q/length)*970;ReferenceLine(x-w/2,top,w,168,z,new Color(1,1,1,a));
         }
         if(current){double unit=ChartVisuals.BeatUnit(Project,m),beat=Math.Floor(Math.Max(0,Math.Min(length-1e-8,b-start))/unit)*unit;ReferenceBeat(220+(float)(beat/length)*970,top,Math.Min(970,(float)(970*unit/length)),z,alpha);}

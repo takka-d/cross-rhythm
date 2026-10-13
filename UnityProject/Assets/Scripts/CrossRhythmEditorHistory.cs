@@ -32,15 +32,11 @@ public partial class CrossRhythmApp {
         Audio.Stop();EditorSeek(end?Project.Length:0);
         if(!end)editScroll.x=0;
     }
+    static string EditorTransportIcon(bool end)=>end?"▶▶":"◀◀";
     bool EditorTransportButton(Rect r,bool end){
         bool hit=Button(r,"",false,true,15,end?"edit-end":"edit-start");
         GUI.Label(r,new GUIContent("",end?T("末尾へ","Go to end"):T("先頭へ","Go to start")),GUIStyle.none);
-        Color color=GUI.enabled?Color.white:muted;float direction=end?1:-1;
-        RectFill(new Rect(r.center.x+direction*9-1,r.center.y-8,2,16),color);
-        for(int row=-8;row<8;row++){
-            float span=11*(1-Math.Abs(row+.5f)/8);
-            RectFill(new Rect(end?r.center.x-6:r.center.x+6-span,r.center.y+row,span,1),color);
-        }
+        Centered(r,EditorTransportIcon(end),16,GUI.enabled?Color.white:muted);
         return hit;
     }
 }
