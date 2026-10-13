@@ -58,7 +58,7 @@ public partial class CrossRhythmApp {
     }
     void SavePlaySelection(){if(selected<0||selected>=Library.Count)return;playSelection=Library[selected].FilePath;if(string.IsNullOrEmpty(workspaceCheckRoot)){PlayerPrefs.SetString("playSelection",playSelection);PlayerPrefs.Save();}}
     void SelectRestoredPlay(){int index=Library.FindIndex(p=>p.FilePath==playSelection);SelectProject(index>=0?index:0);}
-    void OnApplicationQuit(){PersistEditorSession();}
+    void OnApplicationQuit(){ClosePracticeVolume();PersistEditorSession();}
     public void OnEditorRecoveryError(string message){status=T("編集の復元用保存に失敗: ","Editor recovery save failed: ")+message;}
 }
 }

@@ -34,19 +34,22 @@ public partial class CrossRhythmApp {
         string[] expected={"Crash","Ride","Hi-hat","Snare","High tom","Mid tom","Floor tom","Kick","Pedal"};
         foreach(bool language in new[]{false,true}){english=language;for(int row=0;row<Instruments.Length;row++)check(EditorNoteTypes.Label(Instruments[row],Types[row][0])==expected[row],"default Type uses instrument name: "+(language?"English ":"Japanese ")+Instruments[row]);}
         english=false;check(EditorNoteTypes.Label("RD","crash")=="Ride crash"&&EditorNoteTypes.Label("SN","rim_closed")=="Closed rimshot"&&EditorNoteTypes.Label("HH","tambourine")=="Tambourine","specific articulations remain distinguishable");
-        var flags=BindingFlags.Instance|BindingFlags.NonPublic;var audioType=typeof(RhythmAudio);var voiceList=(List<AudioSource>)audioType.GetField("voices",flags).GetValue(Audio);float previousGain=Audio.DrumGain;Audio.DrumGain=.8f;
+        var flags=BindingFlags.Instance|BindingFlags.NonPublic;var audioType=typeof(RhythmAudio);var voiceList=(List<AudioSource>)audioType.GetField("voices",flags).GetValue(Audio);var rawClips=(Dictionary<string,AudioClip>)audioType.GetField("clips",flags).GetValue(Audio);float previousGain=Audio.DrumGain;Audio.DrumGain=.8f;
         var evidence=new JArray();
         foreach(string inst in new[]{"HH","RD","CUP"}){
-            var levels=new List<double>();
+            var levels=new List<double>();var rawData=new float[rawClips[inst].samples*rawClips[inst].channels];rawClips[inst].GetData(rawData,0);float rawPeak=rawData.Max(x=>Math.Abs(x));var kitPeaks=new JObject();
+            foreach(string kit in new[]{"studio","bright","punch","dry"}){float requested=1.27f*ChartProject.MaxInstrumentGain*KitPreset.Get(kit,inst).x*RhythmAudio.SampleGainFor(inst),preparedPeak=rawPeak*RhythmAudio.SafePreparationScale(Math.Max(1,requested),rawPeak);kitPeaks[kit]=preparedPeak;check(preparedPeak<=1.00001f,"prepared PCM peak remains in range for "+kit+" "+inst);}
+            double actualPreparedPeak=0;
             for(int v=0;v<=5;v++){
                 string instrument=inst=="CUP"?"RD":inst,articulation=inst=="HH"?"auto":inst=="CUP"?"cup":"ride";
                 int next=(int)audioType.GetField("voice",flags).GetValue(Audio);Audio.Drum(new ChartNote{Instrument=instrument,Articulation=articulation,Velocity=v},true);
                 var voice=voiceList[next%voiceList.Count];var data=new float[voice.clip.samples*voice.clip.channels];voice.clip.GetData(data,0);int count=Math.Min(data.Length,voice.clip.frequency*voice.clip.channels/10);
-                double rms=Math.Sqrt(data.Take(count).Sum(x=>(double)x*x)/count)*voice.volume;levels.Add(rms);
+                double rms=Math.Sqrt(data.Take(count).Sum(x=>(double)x*x)/count)*voice.volume;levels.Add(rms);actualPreparedPeak=Math.Max(actualPreparedPeak,data.Max(x=>Math.Abs(x)));
                 check(voice.volume<=1&&voice.volume>=0,"calibrated sample voice remains in supported gain range: "+inst+" V"+v);
             }
+            check(actualPreparedPeak<=1.00001,"actual prepared clip peak remains in range: "+inst);
             check(levels[0]==0&&levels[3]>.027&&levels[1]<levels[2]&&levels[2]<levels[3]&&levels[3]<levels[4]&&levels[4]<levels[5],"balanced PCM output preserves all strengths and audible medium hits: "+inst);
-            evidence.Add(new JObject{{"instrument",inst},{"rms100msByStrength",new JArray(levels)}});
+            evidence.Add(new JObject{{"instrument",inst},{"rawPeak",rawPeak},{"preparedPeak",actualPreparedPeak},{"safePreparedPeakByKit",kitPeaks},{"rms100msByStrength",new JArray(levels)}});
         }
         Audio.DrumGain=previousGain;Audio.Stop();File.WriteAllText(Path.Combine(workspaceCheckRoot,"meter-sound-evidence.json"),new JObject{{"checks","note/tempo timing, save/reopen, undo/redo, labels, actual decoded voice RMS"},{"samples",evidence}}.ToString());
         var args=Environment.GetCommandLineArgs();int at=Array.IndexOf(args,"--snow-midi");

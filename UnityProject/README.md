@@ -1,4 +1,4 @@
-# Cross Rhythm 0.3.19 development
+# Cross Rhythm 0.3.36 development
 
 Unity 6000.3.25f1. Windows and WebGL use the same Assets/Scripts source.
 Run `./Build.ps1 -Target Both` from PowerShell with the licensed Unity Editor
@@ -7,7 +7,7 @@ Tests run before BuildPipeline.BuildPlayer. No license activation workaround,
 DLL swap or player version-byte replacement is part of this build.
 
 The production root remains 0.3.12. Verified development builds are published
-under `/dev/0.3.19/`. The WordPress article remains a draft.
+under `/dev/0.3.36/`. The WordPress article remains a draft.
 
 Changes: common folder row in Songs/Config; Songs > Edit opens an independent
 editable copy; File in Edit header; Back in Play/Practice; Practice speed
@@ -264,3 +264,13 @@ Cross Rhythm 0.3.35 development
 - Every MIDI candidate has a Preview button. Import still requires exactly one candidate at each overlapping time and does not alter the chart until confirmation.
 
 Development release only. Production and the WordPress draft were not changed. Native file-dialog gestures, physical controller input and browser ZIP completion remain unverified.
+
+
+Cross Rhythm 0.3.36 development
+
+- Practice has a compact Volume menu for independent Music and Drums adjustment. Changes are heard immediately, while persistent storage is deferred until the drag or menu interaction ends so playback is not interrupted by repeated saves.
+- Rebalanced the decoded hi-hat, ride and ride cup output while keeping prepared PCM peaks within the supported range. Strength order and the separately reduced ride crash remain intact.
+- The MIDI duplicate-hit review separates source MIDI sound from target game sound and shows track, channel, MIDI velocity and game strength.
+- Every MIDI candidate has a Preview button. Audition remains audible even when the editor's Drums or lane monitor is muted, without changing the chart, selection or undo history.
+
+Development release only. Production and the WordPress draft were not changed. Native file-dialog gestures, physical controller input and subjective listening on the user's audio device remain unverified.

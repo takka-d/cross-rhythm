@@ -44,6 +44,9 @@ public sealed partial class RhythmAudio : MonoBehaviour {
     // Balance is based on decoded 100 ms RMS at strength 3. Ride crash keeps
     // its separately reduced value; only the quiet hi-hat / ride voices rise.
     static readonly float[] SampleGains={.78f,1.141123f,1.172821f,1.109425f,1.077727f,1.70f,.80f,.58f,.70f,.72f,.74f,7.25f,4.60f,.168936f,1.505649f,.56f,.56f,.48f};
+    const float PreparedPeakLimit=.999f;
+    internal static float SampleGainFor(string key){int index=Array.IndexOf(SampleKeys,key);return index<0?1:SampleGains[index];}
+    internal static float SafePreparationScale(float requested,float peak)=>peak>0?Math.Min(requested,PreparedPeakLimit/peak):requested;
     void Awake(){Backing=gameObject.AddComponent<AudioSource>();Backing.playOnAwake=false;Backing.priority=0;for(int i=0;i<128;i++){var s=gameObject.AddComponent<AudioSource>();s.playOnAwake=false;voices.Add(s);}foreach(string k in SampleKeys)clips[k]=Resources.Load<AudioClip>("Drums/"+k);
 #if !UNITY_WEBGL || UNITY_EDITOR
         for(int i=0;i<32;i++){var go=new GameObject("OpenHat"+i);go.transform.SetParent(transform);var envelope=go.AddComponent<HiHatEnvelope>();envelope.Source=go.AddComponent<AudioSource>();envelope.Source.playOnAwake=false;envelope.Clear();hatVoices.Add(envelope);}
@@ -202,8 +205,10 @@ public sealed partial class RhythmAudio : MonoBehaviour {
         foreach(var h in hatVoices)if(h.Start>AudioSettings.dspTime){h.Source.Stop();h.Clear();}
 #endif
     }
-    public void Drum(ChartNote n,bool closed,double when=-1){
-        string key=KeyFor(n,closed);if(MonitorSilenced(n.Instrument)){if(key=="HH"||key=="HH_PEDAL")Choke(when);return;}float pitch=1;
+    public void Drum(ChartNote n,bool closed,double when=-1)=>PlayDrum(n,closed,when,false);
+    public void Audition(ChartNote n,bool closed)=>PlayDrum(n,closed,-1,true);
+    void PlayDrum(ChartNote n,bool closed,double when,bool audition){
+        string key=KeyFor(n,closed);if(!audition&&MonitorSilenced(n.Instrument)){if(key=="HH"||key=="HH_PEDAL")Choke(when);return;}float pitch=1;
         if(n.Instrument=="HT")pitch=n.Articulation=="rimshot"?1.34f:n.Articulation=="high"?1.18f:1;
         if(n.Instrument=="MT")pitch=n.Articulation=="rimshot"?1.16f:n.Articulation=="high"?1:.84f;
         if(n.Instrument=="FT"&&n.Articulation=="high")pitch=1.18f;
@@ -211,7 +216,7 @@ public sealed partial class RhythmAudio : MonoBehaviour {
         float kitGain=1,kitRate=1;string kit=(string)Project?.Chart["drumKit"]??"studio";
         // Preset maps are copied from the HTML reference without altering project values.
         var preset=KitPreset.Get(kit,key);kitGain=preset.x;kitRate=preset.y;
-        PlayKey(key,ChartProject.Gains[n.Velocity]*mix*kitGain,pitch*kitRate,when,n.Articulation=="buzz"?(ChartSeconds(n.Beat+n.Duration)-ChartSeconds(n.Beat))/Rate:0,n.Instrument);
+        PlayKey(key,ChartProject.Gains[n.Velocity]*mix*kitGain,pitch*kitRate,when,n.Articulation=="buzz"?(ChartSeconds(n.Beat+n.Duration)-ChartSeconds(n.Beat))/Rate:0,audition?"audition":n.Instrument);
     }
     public void Pedal(double when=-1){if(MonitorSilenced("HH")){Choke(when);return;}PlayKey("HH_PEDAL",Project?.InstrumentGain("HH")??1,1,when,0,"HH");}
     public void Click(bool accent,double when){PlayKey("SIDE",accent?.5f:.25f,accent?1.7f:1.4f,when,0,"click");}
@@ -223,27 +228,30 @@ public sealed partial class RhythmAudio : MonoBehaviour {
         string kit=(string)Project.Chart["drumKit"]??"studio";
         for(int k=0;k<SampleKeys.Length;k++){
             string key=SampleKeys[k];var clip=clips[key];if(clip==null)continue;
-            float level=Math.Max(1,1.27f*maxMix*KitPreset.Get(kit,key).x*SampleGains[k]);
-            if(level<=1)continue;
+            float requested=Math.Max(1,1.27f*maxMix*KitPreset.Get(kit,key).x*SampleGains[k]);
+            if(requested<=1)continue;
             var samples=new float[clip.samples*clip.channels];
             if(!clip.GetData(samples,0))throw new Exception("Cannot prepare drum sample: "+key);
-            for(int i=0;i<samples.Length;i++)samples[i]*=level;
+            float peak=0;for(int i=0;i<samples.Length;i++)peak=Math.Max(peak,Math.Abs(samples[i]));
+            float scale=SafePreparationScale(requested,peak);for(int i=0;i<samples.Length;i++)samples[i]*=scale;
             var prepared=AudioClip.Create(key+"-gain",clip.samples,clip.channels,clip.frequency,false);prepared.SetData(samples,0);
-            gainScales[key]=level;gainClips[key]=prepared;
+            gainScales[key]=scale;gainClips[key]=prepared;
         }
     }
     void PlayKey(string key,float gain,float pitch,double when,double duration,string channel){
         if(!clips.TryGetValue(key,out var clip)||clip==null)return;
-        float level=DrumGain*gain*SampleGains[Array.IndexOf(SampleKeys,key)];
+        float level=DrumGain*gain*SampleGainFor(key);
         if(gainClips.TryGetValue(key,out var prepared)){clip=prepared;level/=gainScales[key];}
-        if(key=="HH"||key=="HH_PEDAL")Choke(when);
-        if(key=="OHH"){PlayHat(clip,level,pitch,when);return;}
+        level=Mathf.Clamp01(level);
+        bool audition=channel=="audition";
+        if(!audition&&(key=="HH"||key=="HH_PEDAL"))Choke(when);
+        if(!audition&&key=="OHH"){PlayHat(clip,level,pitch,when);return;}
         var s=voices[voice++%voices.Count];openHats.Remove(s);s.Stop();s.clip=clip;s.pitch=pitch;s.volume=level;s.loop=duration>0;
         double start=when<0?Clock:Math.Max(Clock,when);
         voiceStarts[s]=start;voiceChannels[s]=channel;
         if(when<0)s.Play();else s.PlayScheduled(ToUnityDSP(start));
         if(duration>0)s.SetScheduledEndTime(ToUnityDSP(start+duration));
-        if(key=="OHH")openHats.Add(s);
+        if(!audition&&key=="OHH")openHats.Add(s);
     }
 }
 public static class KitPreset {

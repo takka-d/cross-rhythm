@@ -4,9 +4,9 @@ namespace CrossRhythm {
 public partial class CrossRhythmApp {
     double practiceSpeed=1;
     double? pendingPracticeSpeed;
-    bool practiceVolumeOpen;
+    bool practiceVolumeOpen,practiceVolumeDirty;
     void UpdatePracticeSpeed(){
-        if(Current!=Page.Practice){pendingPracticeSpeed=null;practiceVolumeOpen=false;return;}
+        if(Current!=Page.Practice){pendingPracticeSpeed=null;ClosePracticeVolume();return;}
         if(pendingPracticeSpeed.HasValue&&(UnityEngine.InputSystem.Mouse.current==null||!UnityEngine.InputSystem.Mouse.current.leftButton.isPressed)){
             double next=pendingPracticeSpeed.Value;pendingPracticeSpeed=null;ChangePractice(next,pro);
         }
@@ -48,15 +48,16 @@ public partial class CrossRhythmApp {
         float normal=slider.x+thumb/2+(slider.width-thumb)*(1f-.25f)/(2f-.25f);
         RectFill(new Rect(normal,y+8,1,7),mint);RectFill(new Rect(normal,y+28,1,7),mint);
         Rect volumeButton=new Rect(volumeX,y+6,116,32);
-        if(Button(volumeButton,"Volume",practiceVolumeOpen,true,14,"practice-volume",ControlKind.Menu))practiceVolumeOpen=!practiceVolumeOpen;
+        if(Button(volumeButton,"Volume",practiceVolumeOpen,true,14,"practice-volume",ControlKind.Menu)){if(practiceVolumeOpen)ClosePracticeVolume();else practiceVolumeOpen=true;}
         LaneOrderControls(new Rect(laneX,y+6,310,32),14);
         if(practiceVolumeOpen){
             Rect popup=new Rect(volumeButton.xMax-382,y-132,382,126);
-            if(Event.current.type==EventType.MouseDown&&!popup.Contains(Event.current.mousePosition)&&!volumeButton.Contains(Event.current.mousePosition))practiceVolumeOpen=false;
+            if(Event.current.type==EventType.MouseDown&&!popup.Contains(Event.current.mousePosition)&&!volumeButton.Contains(Event.current.mousePosition))ClosePracticeVolume();
             RoundFill(popup,panel);RoundBorder(popup,mint);
             Text(new Rect(popup.x+18,popup.y+10,346,25),T("音量","Volume"),17,Color.white,true);
             PracticeVolumeRow(new Rect(popup.x+18,popup.y+43,346,28),"Music",Audio.BackingGain,true);
             PracticeVolumeRow(new Rect(popup.x+18,popup.y+82,346,28),"Drums",Audio.DrumGain,false);
+            if(Event.current.type==EventType.MouseUp)FlushPracticeVolume();
         }
         if(Audio.Preparing||!string.IsNullOrEmpty(Audio.PlaybackError))FittedText(new Rect(242,y-23,670,22),Audio.Preparing?T("音源を準備中…","Preparing audio…"):T("音源の準備に失敗しました。再生し直してください","Audio preparation failed. Press Play to retry."),12,muted);
     }
@@ -69,7 +70,9 @@ public partial class CrossRhythmApp {
     }
     void SetPracticeVolume(bool music,float value){
         value=Mathf.Clamp01(value);if(music)Audio.BackingGain=value;else Audio.DrumGain=value;
-        PlayerPrefs.SetFloat(music?"musicVolume":"drumsVolume",value);PlayerPrefs.Save();
+        PlayerPrefs.SetFloat(music?"musicVolume":"drumsVolume",value);practiceVolumeDirty=true;
     }
+    void FlushPracticeVolume(){if(!practiceVolumeDirty)return;PlayerPrefs.Save();practiceVolumeDirty=false;}
+    void ClosePracticeVolume(){FlushPracticeVolume();practiceVolumeOpen=false;}
 }
 }

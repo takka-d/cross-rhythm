@@ -1,0 +1,21 @@
+{
+  "version": "0.3.36",
+  "url": "http://127.0.0.1:8792/?v=0.3.36",
+  "viewport": "1280x720",
+  "checks": [
+    "Title screen rendered Unity Preview 0.3.36 with no console errors",
+    "Songs rendered the built-in Rhythm Check project and its Practice action",
+    "Practice controls fit within 1280x720 without overlapping the chart",
+    "Practice playback stayed in the running state and advanced from M2 through M5 while Music was dragged from 70% to 25%",
+    "Practice playback stayed in the running state and advanced through M11 while Drums was dragged from 80% to 47%",
+    "Music and Drums were restored to 70% and 80%, and the Volume menu closed cleanly",
+    "No console warning or error was reported during either live volume drag",
+    "Edit opened the independent Rhythm Check document",
+    "Import MIDI opened the duplicate-hit review for overlaps-0318.mid",
+    "The review separated source MIDI sound, target game sound, Track, Channel, MIDI velocity and game strength",
+    "Preview displayed 'ゲーム内の変換音を試聴: Kick' and produced no console warning or error"
+  ],
+  "limitations": [
+    "The browser UI confirmed uninterrupted transport and rendering during volume drags; subjective speaker-output continuity still requires listening on the user's device."
+  ]
+}

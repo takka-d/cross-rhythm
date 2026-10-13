@@ -39,7 +39,7 @@ public partial class CrossRhythmApp {
     }
     void PreviewMidiCandidate(MidiImport.Candidate candidate){
         var note=MidiImport.PreviewNote(candidate.Pitch,candidate.Velocity,out bool closed);if(note==null)return;
-        Audio.Drum(note,closed);status=T("元MIDIの音を試聴: ","Previewing source MIDI hit: ")+MidiImport.SourceSoundLabel(candidate.Pitch);
+        Audio.Audition(note,closed);status=T("ゲーム内の変換音を試聴: ","Previewing target game sound: ")+MidiImport.GameSoundLabel(candidate.Pitch);
     }
     int MidiRemaining=>pendingMidi==null?0:pendingMidi.Preview.Overlaps.Sum(o=>o.Collisions.Count(c=>pendingMidi.Choices[o.Instrument].SelectedId(c)<0));
     void MidiOverlapPrompt(){
