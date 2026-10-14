@@ -17,7 +17,7 @@ public static partial class MidiImport {
     }
     sealed class Note {public int Id,Track,Channel,Pitch,Velocity;public long Tick;public string Instrument,Type,Hat;public double Beat,Step;public long EndTick=-1;}
     sealed class Meter {public long Tick;public int N,D;}
-    public sealed class Result {public JObject Chart;public int Hits,ZeroKept,ZeroDropped,TempoChanges,OverlapsRemoved;public Overlap[] Overlaps=Array.Empty<Overlap>();}
+    public sealed class Result {public JObject Chart;public int Hits,ZeroKept,ZeroDropped,TempoChanges,OverlapsRemoved,LeadingBarsAligned;public Overlap[] Overlaps=Array.Empty<Overlap>();}
     public static int Strength(int v)=>v<=12?0:v<=37?1:v<=62?2:v<=87?3:v<=113?4:5;
     static void Map(Note n){switch(n.Pitch){
         case 35:case 36:n.Instrument="BD";break;
@@ -37,6 +37,40 @@ public static partial class MidiImport {
         case 47:case 45:n.Instrument="MT";n.Type="normal";break;
         case 43:case 41:n.Instrument="FT";n.Type="normal";break;
     }}
+    static double MidiBpmAtBeat(Tuple<long,double>[] tempos,int ppq,double beat){
+        double bpm=tempos.FirstOrDefault(t=>t.Item1==0)?.Item2??120;
+        foreach(var tempo in tempos){double at=tempo.Item1/(double)ppq;if(at>beat+1e-9)break;bpm=tempo.Item2;}return bpm;
+    }
+    static double MidiSecondsAtBeat(Tuple<long,double>[] tempos,int ppq,double beat){
+        double seconds=0,last=0,bpm=tempos.FirstOrDefault(t=>t.Item1==0)?.Item2??120;
+        foreach(var tempo in tempos.Where(t=>t.Item1>0)){double at=tempo.Item1/(double)ppq;if(at>=beat-1e-9)break;seconds+=(at-last)*60/bpm;last=at;bpm=tempo.Item2;}
+        return seconds+(beat-last)*60/bpm;
+    }
+    // A positive audio offset often removes complete count-in bars from the
+    // backing track. Align MIDI only when that offset is an exact MIDI bar
+    // boundary; millisecond sync adjustments must not move the chart grid.
+    static double WholeBarTrim(double seconds,List<Meter> meters,Tuple<long,double>[] tempos,int ppq,out int bars){
+        bars=0;if(seconds<=0||tempos.Length==0||tempos[0].Item1!=0)return 0;double cursor=0,tickTolerance=.500001/ppq;int ti=0;
+        for(int guard=0;guard<100000;guard++){
+            double tolerance=Math.Max(.0015,30.0001/(ppq*MidiBpmAtBeat(tempos,ppq,cursor))),at=MidiSecondsAtBeat(tempos,ppq,cursor);
+            if(Math.Abs(at-seconds)<=tolerance)return cursor;if(at>seconds+tolerance){bars=0;return 0;}
+            while(ti+1<meters.Count&&meters[ti+1].Tick/(double)ppq<=cursor+tickTolerance)ti++;
+            var meter=meters[ti];double next=ti+1<meters.Count?meters[ti+1].Tick/(double)ppq:double.PositiveInfinity;
+            double length=Math.Min(meter.N*4.0/meter.D,next-cursor);if(length<=tickTolerance||length>64){bars=0;return 0;}
+            cursor+=length;bars++;
+        }
+        bars=0;return 0;
+    }
+    static List<Meter> ShiftMeters(List<Meter> source,double trim,int ppq){
+        if(trim<=0)return source;double tolerance=.500001/ppq;var active=source.Last(m=>m.Tick/(double)ppq<=trim+tolerance);
+        var shifted=new List<Meter>{new Meter{Tick=0,N=active.N,D=active.D}};
+        foreach(var meter in source.Where(m=>m.Tick/(double)ppq>trim+tolerance))shifted.Add(new Meter{Tick=(long)Math.Round((meter.Tick/(double)ppq-trim)*ppq),N=meter.N,D=meter.D});
+        return shifted.GroupBy(m=>m.Tick).Select(g=>g.Last()).OrderBy(m=>m.Tick).ToList();
+    }
+    static Tuple<long,double>[] ShiftTempos(Tuple<long,double>[] source,double trim,int ppq){
+        if(trim<=0)return source;double tolerance=.500001/ppq,bpm=MidiBpmAtBeat(source,ppq,trim);
+        return new[]{Tuple.Create(0L,bpm)}.Concat(source.Where(t=>t.Item1/(double)ppq>trim+tolerance).Select(t=>Tuple.Create((long)Math.Round((t.Item1/(double)ppq-trim)*ppq),t.Item2))).GroupBy(t=>t.Item1).Select(g=>g.Last()).OrderBy(t=>t.Item1).ToArray();
+    }
     public static Result Read(byte[] bytes,ChartProject source,string name,ZeroMode zeroMode,IReadOnlyDictionary<string,OverlapChoice> choices=null){
         if(bytes.Length>32*1024*1024)throw new InvalidDataException("MIDI exceeds 32 MB");
         var r=new Reader(bytes);r.Chunk("MThd");int header=r.Number(4);if(header<6)throw new InvalidDataException("Invalid MIDI header");
@@ -69,15 +103,22 @@ public static partial class MidiImport {
         var result=new Result();var resolved=new List<Note>();
         foreach(var n in notes){bool keep=!(n.Pitch==44&&n.Velocity==0)&&(n.Velocity>0||zeroMode==ZeroMode.Mute||(zeroMode==ZeroMode.Auto&&off80.Contains(n.Track)));if(n.Velocity==0){if(keep)result.ZeroKept++;else result.ZeroDropped++;}if(keep&&n.Instrument!=null)resolved.Add(n);}
         if(resolved.Count==0)throw new InvalidDataException("No drum notes found in MIDI");
+        var rawTempos=tempos.GroupBy(t=>t.Item1).Select(g=>g.Last()).OrderBy(t=>t.Item1).ToArray();
+        if(rawTempos.Any(t=>!TempoMap.ValidBPM(t.Item2)))throw new InvalidDataException("BPM must be 20-600");
+        var rawTime=meters.GroupBy(m=>m.Tick).Select(g=>g.Last()).OrderBy(m=>m.Tick).ToList();if(rawTime.Count==0||rawTime[0].Tick>0)rawTime.Insert(0,new Meter{Tick=0,N=4,D=4});
+        double trimBeat=WholeBarTrim(source.Offset,rawTime,rawTempos,ppq,out int trimmedBars);long trimTick=(long)Math.Round(trimBeat*ppq);result.LeadingBarsAligned=trimmedBars;
         int channel=resolved.Any(n=>n.Channel==9)?9:resolved.GroupBy(n=>n.Channel).OrderByDescending(g=>g.Count()).First().Key;
         var hits=resolved.Where(n=>n.Channel==channel).OrderBy(n=>n.Tick).ThenBy(n=>n.Pitch).ToArray();
+        if(trimBeat>0){
+            double trimTolerance=.500001/ppq;foreach(var n in hits){n.Tick-=trimTick;n.Beat-=trimBeat;if(n.EndTick>=0)n.EndTick-=trimTick;if(n.Beat<0&&n.Beat>=-trimTolerance){n.Beat=0;n.Tick=0;}else if(n.Beat<0&&n.Pitch==44&&n.EndTick>0){n.Beat=0;n.Tick=0;}}
+            hits=hits.Where(n=>n.Beat>=0).ToArray();if(hits.Length==0)throw new InvalidDataException("Audio offset removes all MIDI drum notes");
+        }
         result.Overlaps=FindOverlaps(hits);hits=ResolveOverlaps(hits,choices,out result.OverlapsRemoved);
-        var orderedTempos=tempos.GroupBy(t=>t.Item1).Select(g=>g.Last()).OrderBy(t=>t.Item1).ToArray();double bpm=orderedTempos.FirstOrDefault(t=>t.Item1==0)?.Item2??120;
-        if(orderedTempos.Any(t=>!TempoMap.ValidBPM(t.Item2)))throw new InvalidDataException("BPM must be 20-600");
+        var orderedTempos=ShiftTempos(rawTempos,trimBeat,ppq);double bpm=orderedTempos.FirstOrDefault(t=>t.Item1==0)?.Item2??120;
         result.TempoChanges=orderedTempos.Count(t=>t.Item1>0);
         if(bpm<20||bpm>600)throw new InvalidDataException("BPM must be 20–600");
-        var time=meters.GroupBy(m=>m.Tick).Select(g=>g.Last()).OrderBy(m=>m.Tick).ToList();if(time.Count==0||time[0].Tick>0)time.Insert(0,new Meter{Tick=0,N=4,D=4});
-        double lastEvent=Math.Max(hits.Last().Beat,Math.Max(tempos.Count==0?0:tempos.Max(t=>t.Item1)/(double)ppq,meters.Count==0?0:meters.Max(m=>m.Tick)/(double)ppq));
+        var time=ShiftMeters(rawTime,trimBeat,ppq);
+        double lastEvent=Math.Max(hits.Last().Beat,Math.Max(orderedTempos.Length==0?0:orderedTempos.Max(t=>t.Item1)/(double)ppq,time.Count==0?0:time.Max(m=>m.Tick)/(double)ppq));
         lastEvent=Math.Max(lastEvent,hits.Where(n=>n.Pitch==44&&n.EndTick>n.Tick).Select(n=>n.EndTick/(double)ppq).DefaultIfEmpty(0).Max());
         double total=Math.Max(4,Math.Ceiling((lastEvent+1e-8)/source.Grid)*source.Grid+source.Grid*2),cursor=0;int ti=0;
         var bars=new JArray();var signatures=new JArray();

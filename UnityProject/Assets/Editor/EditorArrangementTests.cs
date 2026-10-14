@@ -38,7 +38,20 @@ public static class EditorArrangementTests {
     }
     static bool PlayerSettingCheck(){
         string launcher=System.IO.Path.GetFullPath("Tools/Launcher/CrossRhythmLauncher.cs");
-        return !UnityEditor.PlayerSettings.forceSingleInstance&&System.IO.File.Exists(launcher)&&System.IO.File.ReadAllText(launcher).Contains("new Mutex(true,MutexName,out first)");
+        string startup=System.IO.Path.GetFullPath("Assets/Scripts/CrossRhythmStartup.cs");
+        if(UnityEditor.PlayerSettings.forceSingleInstance||!System.IO.File.Exists(launcher)||!System.IO.File.Exists(startup))return false;
+        string source=System.IO.File.ReadAllText(launcher),startupSource=System.IO.File.ReadAllText(startup);
+        const string startupWait="while(!nativeStartupCancelled&&busy)yield return null;";
+        int restoreAt=startupSource.IndexOf("RestoreEditorNative();",StringComparison.Ordinal);
+        int requestedAt=startupSource.IndexOf("ImportNative(args[at+1]);",StringComparison.Ordinal);
+        int waitAt=startupSource.IndexOf(startupWait,StringComparison.Ordinal);
+        return source.Contains("new Mutex(true,MutexName,out first)")
+            &&source.Contains("FormBorderStyle=FormBorderStyle.None")
+            &&source.Contains("--startup-ready-event")
+            &&startupSource.Contains("EventWaitHandle.OpenExisting(nativeStartupReadyEvent)")
+            &&startupSource.Contains("if(nativeStartupExternalOverlay)")
+            &&restoreAt>=0&&requestedAt>restoreAt&&waitAt>requestedAt
+            &&startupSource.IndexOf(startupWait,waitAt+startupWait.Length,StringComparison.Ordinal)<0;
     }
 }
 }

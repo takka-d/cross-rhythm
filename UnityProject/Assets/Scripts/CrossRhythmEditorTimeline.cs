@@ -25,9 +25,12 @@ public partial class CrossRhythmApp {
             RoundFill(new Rect(0,0,740,408),panel,10);RoundBorder(new Rect(0,0,740,408),line,1,10);
             Text(new Rect(24,16,580,34),"Bar / Meter",24,mint,true);
             if(Button(new Rect(632,16,84,32),"Close",false,true,14))showMeterPanel=false;
-            Text(new Rect(24,70,390,30),$"Bar {editMeasure+1} / {Project.Measures.Length}",20);
-            if(Button(new Rect(514,68,96,32),T("前の小節","Previous"),false,editMeasure>0,14))SelectMeasure(editMeasure-1,true);
-            if(Button(new Rect(620,68,96,32),T("次の小節","Next"),false,editMeasure<Project.Measures.Length-1,14))SelectMeasure(editMeasure+1,true);
+            Text(new Rect(24,72,42,28),"Bar",18);
+            meterBarField=EditField("meter-bar",new Rect(68,68,70,32),meterBarField);
+            Text(new Rect(148,72,122,28),"/ "+Project.Measures.Length,18,muted);
+            if(Button(new Rect(280,68,82,32),T("移動","Go"),false,true,14))GoToTypedMeterMeasure();
+            if(Button(new Rect(514,68,96,32),T("前の小節","Previous"),false,editMeasure>0,14))GoToMeterMeasure(editMeasure-1);
+            if(Button(new Rect(620,68,96,32),T("次の小節","Next"),false,editMeasure<Project.Measures.Length-1,14))GoToMeterMeasure(editMeasure+1);
             Text(new Rect(24,119,220,28),T("選択した小節の拍子","Selected bar's meter"),16,muted);
             meterNumerator=EditField("meter-n",new Rect(266,113,82,38),meterNumerator);
             Text(new Rect(359,119,24,28),"/",20,muted);

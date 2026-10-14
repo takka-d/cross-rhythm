@@ -3,22 +3,28 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace CrossRhythm {
 public partial class CrossRhythmApp {
     bool nativeStartup,nativeStartupCancelled,nativeStartupCompleted,nativeStartupPaintRequired;
+    bool nativeStartupExternalOverlay;
     int nativeStartupPaints,nativeStartupRequestFrame=-1,nativeStartupRestoreFrame=-1,nativeStartupPaintsBeforeRestore;
-    string nativeStartupDetail="";
+    string nativeStartupDetail="",nativeStartupReadyEvent="",nativeStartupStatusPath="";
 
     IEnumerator NativeStartupRoutine(string[] args){
         bool previousRunInBackground=Application.runInBackground;
         Application.runInBackground=true;
+        nativeStartupReadyEvent=StartupArgument(args,"--startup-ready-event");
+        nativeStartupStatusPath=StartupArgument(args,"--startup-status-file");
+        nativeStartupExternalOverlay=!string.IsNullOrEmpty(nativeStartupReadyEvent);
         nativeStartup=true;nativeStartupCancelled=false;nativeStartupCompleted=false;nativeStartupPaints=0;
         nativeStartupPaintRequired=string.IsNullOrEmpty(workspaceCheckRoot)&&!Application.isBatchMode;
         nativeStartupRequestFrame=Time.frameCount;nativeStartupRestoreFrame=-1;nativeStartupPaintsBeforeRestore=0;
-        nativeStartupDetail=T("画面を準備しています","Preparing the window");
+        ReportNativeStartup(T("画面を準備しています","Preparing the window"));
 
         // Awake must finish before any saved project is read. This gives the native
         // window a real repaint opportunity instead of appearing frozen at launch.
@@ -33,27 +39,56 @@ public partial class CrossRhythmApp {
 
         nativeStartupRestoreFrame=Time.frameCount;
         nativeStartupPaintsBeforeRestore=nativeStartupPaints;
-        nativeStartupDetail=T("プロジェクトフォルダーを復元しています","Restoring the project folder");
+        ReportNativeStartup(T("プロジェクトフォルダーを復元しています","Restoring the project folder"));
         yield return RestoreLibraryAtStartup();
         if(nativeStartupCancelled)yield break;
 
-        nativeStartupDetail=T("編集中のファイルを復元しています","Restoring the editor file");
+        ReportNativeStartup(T("編集中のファイルを復元しています","Restoring the editor file"));
         yield return null;
         if(nativeStartupCancelled)yield break;
         RestoreEditorNative();
 
         int at=Array.IndexOf(args,"--project-file");
         if(at>=0&&at+1<args.Length){
-            nativeStartupDetail=T("指定されたプロジェクトを開いています","Opening the requested project");
+            ReportNativeStartup(T("指定されたプロジェクトを開いています","Opening the requested project"));
             yield return null;
             if(nativeStartupCancelled)yield break;
             ImportNative(args[at+1]);
         }
 
-        nativeStartupDetail=T("準備が完了しました","Ready");
+        // Restoring or explicitly opening an editor project can start
+        // asynchronous audio decoding. Keep the external startup surface in
+        // front until every startup load has completed, so it cannot hand off
+        // to a second Unity loading dialog. Close remains responsive through
+        // the launcher while the player is busy.
+        while(!nativeStartupCancelled&&busy)yield return null;
+        if(nativeStartupCancelled)yield break;
+
+        ReportNativeStartup(T("準備が完了しました","Ready"));
         nativeStartupCompleted=true;nativeStartup=false;
+        // Paint the ready destination behind the external startup screen first.
+        // The launcher only disappears after this frame, so no second loading
+        // page or blank Unity window flashes between startup and the title.
+        yield return null;
+        SignalNativeStartupReady();
         Application.runInBackground=previousRunInBackground;
         StartNativeChecks(args);
+    }
+
+    static string StartupArgument(string[] args,string name){
+        int at=Array.IndexOf(args,name);
+        return at>=0&&at+1<args.Length?args[at+1]:"";
+    }
+
+    void ReportNativeStartup(string value){
+        nativeStartupDetail=value;
+        if(string.IsNullOrEmpty(nativeStartupStatusPath))return;
+        try{File.WriteAllText(nativeStartupStatusPath,value,Encoding.UTF8);}catch(Exception){}
+    }
+
+    void SignalNativeStartupReady(){
+        if(string.IsNullOrEmpty(nativeStartupReadyEvent))return;
+        try{using(var ready=EventWaitHandle.OpenExisting(nativeStartupReadyEvent))ready.Set();}catch(Exception){}
     }
 
     IEnumerator RestoreLibraryAtStartup(){
@@ -70,7 +105,7 @@ public partial class CrossRhythmApp {
                 try{hasNext=paths.MoveNext();}
                 catch(Exception e){importErrors.Add(e.Message);break;}
                 if(!hasNext)break;
-                nativeStartupDetail=T("読込中: ","Loading: ")+Path.GetFileName(paths.Current);
+                ReportNativeStartup(T("読込中: ","Loading: ")+Path.GetFileName(paths.Current));
                 ImportNative(paths.Current);
                 // Keep the startup window responsive and make Close effective between files.
                 yield return null;
@@ -96,6 +131,11 @@ public partial class CrossRhythmApp {
     void NativeStartupPage(){
         if(Event.current.type==EventType.Repaint)nativeStartupPaints++;
         menuItems.Clear();menuActivate="";
+        if(nativeStartupExternalOverlay){
+            var blocked=Event.current;
+            if(blocked.isKey||blocked.isMouse||blocked.type==EventType.ScrollWheel||blocked.type==EventType.ContextClick)blocked.Use();
+            return;
+        }
         var box=new Rect((W-680)/2,(H-304)/2,680,304);
         Text(new Rect(box.x,box.y-62,680,42),"CROSS RHYTHM",28,mint,true);
         RectFill(box,panel);Border(box,line);

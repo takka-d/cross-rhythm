@@ -41,7 +41,7 @@ public partial class CrossRhythmApp {
                 Text(new Rect(left,top+89,220,34),"Language",19);
                 if(Button(new Rect(left+230,top+85,184,42),"日本語",!english,true,16,kind:ControlKind.Choice))SetLanguage(false);
                 if(Button(new Rect(left+426,top+85,184,42),"English",english,true,16,kind:ControlKind.Choice))SetLanguage(true);
-                Text(new Rect(left,top+159,220,34),T("レーンの上下","Lane Order"),19);
+                Text(new Rect(left,top+159,220,34),T("ノーツの上下配置","Note Layout"),19);
                 LaneOrderControls(new Rect(left+230,top+155,380,42));
                 Text(new Rect(left,top+221,width,26),T("Songs・Practiceと共通の設定です。変更は自動保存されます。","Shared with Songs and Practice. Changes save automatically."),15,muted);
                 break;

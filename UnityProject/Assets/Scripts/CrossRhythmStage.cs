@@ -30,10 +30,11 @@ public partial class CrossRhythmApp {
         GUI.DrawTexture(new Rect(x-40*sizeScale,y-40*sizeScale*sy,80*sizeScale,80*sizeScale*sy),texture);GUI.color=old;
     }
     bool feetAbove;
+    string LaneOrderOption(bool feetOnTop)=>feetOnTop?T("足で踏むノーツが上","Foot Notes on Top"):T("手で叩くノーツが上","Hand Notes on Top");
     void LaneOrderControls(Rect r,int size=16){
         float width=(r.width-10)/2;
-        if(Button(new Rect(r.x,r.y,width,r.height),T("上段: 手","Top: Hands"),!feetAbove,true,size,kind:ControlKind.Choice))SetFeetAbove(false);
-        if(Button(new Rect(r.x+width+10,r.y,width,r.height),T("上段: 足","Top: Feet"),feetAbove,true,size,kind:ControlKind.Choice))SetFeetAbove(true);
+        if(Button(new Rect(r.x,r.y,width,r.height),LaneOrderOption(false),!feetAbove,true,size,kind:ControlKind.Choice))SetFeetAbove(false);
+        if(Button(new Rect(r.x+width+10,r.y,width,r.height),LaneOrderOption(true),feetAbove,true,size,kind:ControlKind.Choice))SetFeetAbove(true);
     }
     void SetFeetAbove(bool value){feetAbove=value;stageEffects.Clear();PlayerPrefs.SetInt("feetAbove",value?1:0);PlayerPrefs.Save();}
     float LaneY(string lane,float top,float rh){float row=lane=="H1"?.5f:lane=="H2"?1.5f:lane=="HANY"?1:lane=="F1"?2.5f:lane=="F2"?3.5f:3;return top+(feetAbove?(row<2?row+2:row-2):row)*rh;}

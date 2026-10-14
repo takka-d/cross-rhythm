@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-10-14T12:11:24.1790474+09:00",
+  "result": "PASS",
+  "url": "http://127.0.0.1:8765/?v=0.3.39",
+  "versionVisible": "0.3.39",
+  "checks": {
+    "titleRendered": true,
+    "songsRendered": true,
+    "songsNoteLayoutOnPreviewRow": true,
+    "japaneseHandFootLabelsVisible": true,
+    "editRendered": true,
+    "boundaryButtonsVisible": true,
+    "boundaryLabels": [
+      "|◀",
+      "▶|"
+    ],
+    "barMeterDialogRendered": true,
+    "typedBarFieldVisible": true,
+    "consoleLogCount": 68,
+    "consoleErrorCount": 0
+  },
+  "scope": "Local final Web build in Codex in-app browser. No native folder dialog, physical controller, or audible effect verification.",
+  "status": "passed",
+  "loadingHidden": true,
+  "console": {
+    "total": 68,
+    "errors": 0,
+    "warnings": 0,
+    "unhandledRejections": 0,
+    "nonFatalAudioLengthMessages": 0
+  },
+  "interactionScope": [
+    "Title rendered with version 0.3.39",
+    "Songs rendered with note layout on Preview row",
+    "Edit rendered with |◀ and ▶| boundary controls",
+    "Bar / Meter dialog rendered with typed bar field"
+  ]
+}

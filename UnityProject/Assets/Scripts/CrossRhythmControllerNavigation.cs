@@ -15,6 +15,7 @@ public static class ControllerNavigationMath {
         if(value.sqrMagnitude<.25f)return KeyCode.None;
         return Math.Abs(value.x)>Math.Abs(value.y)?(value.x>0?KeyCode.RightArrow:KeyCode.LeftArrow):(value.y>0?KeyCode.UpArrow:KeyCode.DownArrow);
     }
+    public static bool ActivatesPointer(Vector2 pointer,Vector2 scroll,bool secondaryPressed)=>pointer!=Vector2.zero||scroll!=Vector2.zero||secondaryPressed;
 }
 
 public partial class CrossRhythmApp {
@@ -88,14 +89,20 @@ public partial class CrossRhythmApp {
         Gamepad pad=Gamepad.all.FirstOrDefault(ControllerHasActivity)??ControllerPad();if(pad==null){controllerPadId=0;controllerStageUiMode=false;controllerPointerVisible=false;controllerDrag="";return;}
         Vector2 pointer=ControllerNavigationMath.Deadzone(pad.leftStick.ReadValue(),ControllerNavigationMath.PointerDeadzone);
         Vector2 scroll=ControllerNavigationMath.Deadzone(pad.rightStick.ReadValue(),ControllerNavigationMath.ScrollDeadzone);
+        bool secondary=pad.rightStickButton.wasPressedThisFrame;
         bool padActivity=ControllerHasActivity(pad);if(padActivity)controllerPadId=pad.deviceId;
         if(ControllerStage&&pad.startButton.wasPressedThisFrame&&!stageExitPrompt){
             controllerStageUiMode=!controllerStageUiMode;controllerPointerVisible=controllerStageUiMode;ReleaseInputs();
             if(controllerStageUiMode&&controllerPointerScreen==Vector2.zero)controllerPointerScreen=new Vector2(Screen.width*.5f,Screen.height*.5f);
         }
         if(ControllerStage&&pad.selectButton.wasPressedThisFrame&&!stageExitPrompt){controllerStageUiMode=true;controllerPointerVisible=true;RequestStageExit();}
+        // Right-stick scrolling and its press must work before the player has
+        // moved the pointer. Previously both inputs were discarded while the
+        // virtual pointer was hidden, which made wheel and right-click appear
+        // completely unresponsive after keyboard or mouse navigation.
+        if(ControllerNavigationMath.ActivatesPointer(pointer,scroll,secondary))ActivateControllerPointer(pad);
         if(pointer!=Vector2.zero){
-            ActivateControllerPointer(pad);float speed=720f*(.45f+.55f*pointer.magnitude)*Time.unscaledDeltaTime;
+            float speed=720f*(.45f+.55f*pointer.magnitude)*Time.unscaledDeltaTime;
             controllerPointerDelta=new Vector2(pointer.x,-pointer.y)*speed;controllerPointerScreen+=controllerPointerDelta;
             controllerPointerScreen.x=Mathf.Clamp(controllerPointerScreen.x,6,Math.Max(6,Screen.width-6));controllerPointerScreen.y=Mathf.Clamp(controllerPointerScreen.y,6,Math.Max(6,Screen.height-6));
         }
@@ -105,7 +112,7 @@ public partial class CrossRhythmApp {
             bindingRow=-1;captureCancelFrame=Time.frameCount;bindingNotice=T("割り当てをキャンセルしました","Binding cancelled");
         }
         if(uiAllowed&&bindingRow<0){
-            var confirm=ControllerConfirm(pad);controllerPrimaryPressed=confirm.wasPressedThisFrame;controllerPrimaryHeld=confirm.isPressed;controllerPrimaryReleased=confirm.wasReleasedThisFrame;controllerSecondaryPressed=pad.rightStickButton.wasPressedThisFrame;
+            var confirm=ControllerConfirm(pad);controllerPrimaryPressed=confirm.wasPressedThisFrame;controllerPrimaryHeld=confirm.isPressed;controllerPrimaryReleased=confirm.wasReleasedThisFrame;controllerSecondaryPressed=secondary;
             if(ControllerBack(pad).wasPressedThisFrame)ControllerBackAction();
             if(Current!=Page.Edit||stageExitPrompt)UpdateControllerRepeat(ControllerNavigationMath.Direction(pad.dpad.ReadValue()));else UpdateControllerRepeat(KeyCode.None);
             if(!controllerPointerVisible&&controllerPrimaryPressed){QueueControllerKey(KeyCode.Return);controllerPrimaryPressed=false;}

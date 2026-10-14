@@ -28,7 +28,7 @@ public partial class CrossRhythmApp {
     }
     void CommitMidi(MidiImport.Result imported){
         Audio.Pause();PushUndo();Project.Chart=imported.Chart;Project.Manifest["title"]=Project.Title;Edited();Editor.Reset();editScroll=Vector2.zero;editMeasure=0;ResetEditorFields();Audio.AnchorBeat=0;
-        status=T("MIDI読込: ","MIDI imported: ")+imported.Hits+" notes · V0 +"+imported.ZeroKept+" / −"+imported.ZeroDropped+(imported.TempoChanges>0?T(" / テンポ変更: "," / Tempo changes: ")+imported.TempoChanges:"")+(imported.OverlapsRemoved>0?T(" / 重複整理: "," / Overlaps removed: ")+imported.OverlapsRemoved:"");
+        status=T("MIDI読込: ","MIDI imported: ")+imported.Hits+" notes · V0 +"+imported.ZeroKept+" / −"+imported.ZeroDropped+(imported.TempoChanges>0?T(" / テンポ変更: "," / Tempo changes: ")+imported.TempoChanges:"")+(imported.LeadingBarsAligned>0?T(" / 音源位置に合わせた先頭小節: "," / Leading bars aligned to audio: ")+imported.LeadingBarsAligned:"")+(imported.OverlapsRemoved>0?T(" / 重複整理: "," / Overlaps removed: ")+imported.OverlapsRemoved:"");
     }
     void CancelMidi(){pendingMidi=null;ResetMenuFocus();status=T("MIDI読込をキャンセルしました。譜面は変更していません","MIDI import cancelled; chart unchanged");}
     void ApplyPendingMidi(){

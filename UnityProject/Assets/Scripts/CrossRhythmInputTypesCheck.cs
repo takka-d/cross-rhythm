@@ -39,6 +39,12 @@ public partial class CrossRhythmApp {
             InputSystem.QueueStateEvent(device,new GamepadState{leftStick=new Vector2(.8f,0)});yield return null;
             check(controllerPointerVisible&&controllerPointerScreen.x>pointerBefore,"left stick moves the shared UI pointer outside performance");
             InputSystem.QueueStateEvent(device,new GamepadState());yield return null;
+            controllerPointerVisible=false;InputSystem.QueueStateEvent(device,new GamepadState{rightStick=new Vector2(0,-.8f)});yield return null;
+            check(controllerPointerVisible&&controllerWheel.y>0,"right stick activates the shared pointer and produces downward wheel input");
+            InputSystem.QueueStateEvent(device,new GamepadState());yield return null;
+            controllerPointerVisible=false;InputSystem.QueueStateEvent(device,new GamepadState(GamepadButton.RightStick));yield return null;
+            check(controllerPointerVisible&&controllerSecondaryPressed,"right-stick press activates the shared pointer and reaches the right-click route");
+            InputSystem.QueueStateEvent(device,new GamepadState());yield return null;
             Current=Page.Play;ResetControllerNavigationForPage();InputSystem.QueueStateEvent(device,new GamepadState{leftStick=new Vector2(.8f,0)});yield return null;
             check(controllerStageUiMode&&controllerPointerVisible&&ControllerOwnsPerformance(device),"left stick enters isolated UI mode during performance");
             var confirm=nintendo?GamepadButton.East:GamepadButton.South;InputSystem.QueueStateEvent(device,new GamepadState(confirm));yield return null;

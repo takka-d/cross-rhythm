@@ -20,6 +20,13 @@ public partial class CrossRhythmApp {
         DisplayGlyph(r,Screen.fullScreen);
 #endif
 #endif
+
+#if !UNITY_WEBGL && !UNITY_ANDROID && !UNITY_IOS || UNITY_EDITOR
+        // Keep the native application exit in the same pointer/keyboard/controller
+        // button path as the rest of the UI. Application.wantsToQuit still owns
+        // the unsaved-edit confirmation.
+        if(Current==Page.Title){float titleX=Mathf.Max(80,(W-1080)/2);if(Button(new Rect(titleX+704,553,180,64),"Exit"))Application.Quit();}
+#endif
     }
     void DisplayGlyph(Rect r,bool active){
         float left=r.center.x-12,top=r.center.y-12;

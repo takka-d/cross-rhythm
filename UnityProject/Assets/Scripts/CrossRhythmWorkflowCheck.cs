@@ -38,11 +38,17 @@ public partial class CrossRhythmApp {
         var chart=draft.Chart.ToString();Audio.Play(0);EditorBoundary(true);
         check(!Audio.Running&&Audio.Beat==draft.Length&&editMeasure==draft.Measures.Length-1,"end transport stops and moves to the final bar end");
         EditorBoundary(false);check(!Audio.Running&&Audio.Beat==0&&editMeasure==0&&editScroll.x==0&&draft.Chart.ToString()==chart,"start transport returns to bar one without changing chart or history");
-        check(EditorTransportIcon(false)=="◀◀"&&EditorTransportIcon(true)=="▶▶","editor boundary buttons use matching line-free transport icons");
+        check(EditorTransportIcon(false)=="|◀"&&EditorTransportIcon(true)=="▶|","editor boundary buttons preserve the requested boundary icon shape");
         draft.Dirty=false;NavigateNow(Page.Songs);FocusSong(Library.IndexOf(p));Begin(true);yield return WaitForOperations();RequestStageExit();
         check(!stageExitPrompt&&transitioning&&Current==Page.Practice,"Practice Songs leaves directly without opening the Play stop dialog");yield return WaitForOperations();
         check(Current==Page.Songs&&!stageExitPrompt&&!Audio.Running,"Practice Songs returns directly to Songs");
-        bool oldFeet=feetAbove;try{SetFeetAbove(!oldFeet);Begin(true);yield return WaitForOperations();check(feetAbove!=oldFeet,"Songs lane order is inherited in Practice");SetFeetAbove(oldFeet);NavigateNow(Page.Config);check(feetAbove==oldFeet,"Practice lane order is shared with Config");}finally{SetFeetAbove(oldFeet);}
+        bool oldFeet=feetAbove,oldEnglish=english;try{
+            float songsX=(W-1160)/2;var laneOrderRect=SongsLaneOrderRect(songsX);var previewRect=SongsPreviewRect(songsX);
+            check(Math.Abs(laneOrderRect.y-previewRect.y)<.001&&laneOrderRect.xMax<previewRect.x,"Songs note layout is on the Preview row instead of the song-detail panel");
+            english=false;check(LaneOrderOption(false)=="手で叩くノーツが上"&&LaneOrderOption(true)=="足で踏むノーツが上","Japanese lane choices explain which playable notes move above");
+            english=true;check(LaneOrderOption(false)=="Hand Notes on Top"&&LaneOrderOption(true)=="Foot Notes on Top","English lane choices explain which playable notes move above");
+            english=oldEnglish;SetFeetAbove(!oldFeet);Begin(true);yield return WaitForOperations();check(feetAbove!=oldFeet,"Songs lane order is inherited in Practice");SetFeetAbove(oldFeet);NavigateNow(Page.Config);check(feetAbove==oldFeet,"Practice lane order is shared with Config");
+        }finally{english=oldEnglish;SetFeetAbove(oldFeet);}
         NavigateNow(Page.Songs);yield return WaitForOperations();
     }
 }

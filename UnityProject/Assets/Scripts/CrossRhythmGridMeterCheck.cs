@@ -35,6 +35,9 @@ public partial class CrossRhythmApp {
         check(p.Measures.Length==4&&p.Meter(1).Item1==6&&p.Meter(1).Item2==8&&p.Measures[1]==3,"insert after 6/8 inherits 6/8 and its exact length");
         check(Math.Abs(p.Notes.Single(n=>n.Id=="long-sn").Beat-(timing[2].Beat+3))<1e-9&&(int)p.TempoChanges.First()["measure"]==2,"insert shifts later notes and tempo together");
         Restore(false);check(p.Chart.ToString()==gridChart,"bar insertion Undo restores exact chart");Restore(true);
+        meterBarField="2";GoToTypedMeterMeasure();check(editMeasure==1&&Math.Abs(Audio.Beat-p.Starts[1])<1e-8,"typed bar number selects and seeks the exact bar for meter editing");
+        string beforeTypedMeter=p.Chart.ToString();var firstMeter=p.Meter(0);meterKeepTiming=false;meterNumerator="5";meterDenominator="8";ApplyMeter();
+        check(p.Meter(1).Equals(Tuple.Create(5,8))&&p.Meter(0).Equals(firstMeter),"typed bar meter action changes only the requested bar");Restore(false);check(p.Chart.ToString()==beforeTypedMeter,"typed bar meter change has one exact Undo step");
         SelectMeasure(2);InsertEditorMeasure();check(p.Meter(3).Item1==7&&p.Meter(3).Item2==8&&p.Measures[3]==3.5,"insert after 7/8 inherits 7/8 in mixed meter chart");
         SelectMeasure(1);meterNumerator="5";meterDenominator="8";ApplyMeter();check(p.Measures[1]==2.5&&p.Meter(1).Item1==5,"meter action changes inserted bar to 5/8");
         SelectMeasure(0);meterNumerator="7";meterDenominator="8";ApplyMeter();check(p.Measures[0]==3.5&&p.Meter(0).Item1==7,"meter action changes original bar to 7/8");

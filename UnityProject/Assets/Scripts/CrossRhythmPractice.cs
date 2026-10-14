@@ -40,7 +40,7 @@ public partial class CrossRhythmApp {
         Text(new Rect(242,y+11,132,26),$"Speed ×{(pendingPracticeSpeed??practiceSpeed):0.00}",15,mint);
         if(Button(new Rect(390,y+6,68,32),"×1",false,true,14)){pendingPracticeSpeed=null;ChangePractice(1,pro);}
         GUI.SetNextControlName("practice-speed");
-        float laneX=W-342,volumeX=laneX-128;
+        float laneX=W-372,volumeX=laneX-128;
         Rect slider=new Rect(480,y+17,Math.Max(56,volumeX-498),20);
         float speed=ControllerHorizontalSlider(slider,(float)(pendingPracticeSpeed??practiceSpeed),.25f,2f,"practice-speed");
         if(Math.Abs(speed-(pendingPracticeSpeed??practiceSpeed))>.0001)pendingPracticeSpeed=Math.Round(speed,2);
@@ -49,7 +49,7 @@ public partial class CrossRhythmApp {
         RectFill(new Rect(normal,y+8,1,7),mint);RectFill(new Rect(normal,y+28,1,7),mint);
         Rect volumeButton=new Rect(volumeX,y+6,116,32);
         if(Button(volumeButton,"Volume",practiceVolumeOpen,true,14,"practice-volume",ControlKind.Menu)){if(practiceVolumeOpen)ClosePracticeVolume();else practiceVolumeOpen=true;}
-        LaneOrderControls(new Rect(laneX,y+6,310,32),14);
+        LaneOrderControls(new Rect(laneX,y+6,340,32),13);
         if(practiceVolumeOpen){
             Rect popup=new Rect(volumeButton.xMax-382,y-132,382,126);
             if(Event.current.type==EventType.MouseDown&&!popup.Contains(Event.current.mousePosition)&&!volumeButton.Contains(Event.current.mousePosition))ClosePracticeVolume();

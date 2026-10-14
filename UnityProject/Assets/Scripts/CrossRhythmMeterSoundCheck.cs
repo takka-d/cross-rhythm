@@ -57,6 +57,9 @@ public partial class CrossRhythmApp {
             var imported=MidiImport.Read(File.ReadAllBytes(args[at+1]),EmptyEditorProject(),"Private MIDI fixture",MidiImport.ZeroMode.Auto);var actual=new ChartProject{Chart=imported.Chart,Manifest=new JObject()};actual.Rebuild();
             check(actual.Starts[51]==153&&actual.Meter(51).Item1==3&&actual.Meter(51).Item2==8&&actual.Starts[52]==154.5,"private MIDI raw tick 73440 / PPQ 480 maps to bar 52 at beat 153 and back to 6/8 at 154.5");
             check(actual.Notes.Count(n=>n.Instrument=="HH"&&n.Velocity==3)==240&&actual.Notes.Count(n=>n.Instrument=="RD"&&n.Velocity==3)==107,"private MIDI hi-hat and ride medium strengths are imported without loss");
+            var alignedSource=EmptyEditorProject();alignedSource.Chart["audioOffsetSec"]=1.894734;alignedSource.Rebuild();
+            var alignedImport=MidiImport.Read(File.ReadAllBytes(args[at+1]),alignedSource,"Snowdome aligned MIDI",MidiImport.ZeroMode.Auto);var aligned=new ChartProject{Chart=alignedImport.Chart,Manifest=new JObject()};aligned.Rebuild();
+            check(alignedImport.LeadingBarsAligned==1&&aligned.Starts[50]==150&&aligned.Meter(50).Equals(Tuple.Create(3,8))&&aligned.Starts[51]==151.5&&Math.Abs(aligned.Notes.First(n=>!n.Pedal).Beat-12)<1e-8,"Snowdome one-bar audio lead aligns notes and the 3/8 meter at bar 51 together");
         }
         p.Dirty=false;NavigateNow(Page.Songs);yield return null;
     }

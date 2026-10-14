@@ -14,7 +14,7 @@ public partial class CrossRhythmApp {
     Vector2 editScroll;
     float zoom=1;
     int editMeasure;
-    string meterNumerator="4",meterDenominator="4";
+    string meterBarField="1",meterNumerator="4",meterDenominator="4";
     MidiImport.ZeroMode midiZeroMode;
     void PickMidi(){
         if(!CanImportMidi)return;
@@ -31,7 +31,9 @@ public partial class CrossRhythmApp {
     void PushUndo(){mixerEditing="";EndSongInfoEdit();undo.Push(new Snapshot{Chart=(JObject)Project.Chart.DeepClone(),Manifest=(JObject)Project.Manifest.DeepClone(),Files=new Dictionary<string,byte[]>(Project.Files)});redo.Clear();}
     void Restore(bool reverse){mixerEditing="";EndSongInfoEdit();CancelWaveMove();var src=reverse?redo:undo;var dst=reverse?undo:redo;if(src.Count==0)return;dst.Push(new Snapshot{Chart=(JObject)Project.Chart.DeepClone(),Manifest=(JObject)Project.Manifest.DeepClone(),Files=new Dictionary<string,byte[]>(Project.Files)});var s=src.Pop();Audio.Pause();bool audioChanged=!ReferenceEquals(Project.Files.TryGetValue(Project.AudioPath,out var oldAudio)?oldAudio:null,s.Files.TryGetValue((string)s.Manifest["audio"]?["path"]??"",out var newAudio)?newAudio:null);Project.Chart=s.Chart;Project.Manifest=s.Manifest;Project.Files=s.Files;Project.Dirty=true;QueueEditorRecovery();Project.Rebuild();Editor.Reset();Audio.Pause();Audio.BPM=Project.BPM;Audio.Offset=Project.Offset;Audio.AnchorBeat=Math.Min(Audio.Beat,Project.Length);ResetScheduled();if(audioChanged){busy=true;loaded=false;Audio.Load(Project);}ResetEditorFields();}
     void Edited(){Project.Dirty=true;QueueEditorRecovery();Project.Rebuild();stageGrids.Clear();Audio.BPM=Project.BPM;Audio.Offset=Project.Offset;Audio.CancelFutureDrums();ResetScheduled();if(Audio.Running)foreach(var n in Project.Notes)if(n.Beat<Audio.Beat)scheduled.Add(n.Index);editMeasure=Math.Min(editMeasure,Project.Measures.Length-1);}
-    void SelectMeasure(int m,bool scroll=false){int next=Math.Max(0,Math.Min(Project.Measures.Length-1,m));if(Audio.Running&&!scroll&&next==editMeasure)return;editMeasure=Math.Max(0,Math.Min(Project.Measures.Length-1,m));var sig=Project.Meter(editMeasure);meterNumerator=sig.Item1.ToString();meterDenominator=sig.Item2.ToString();if(scroll)editScroll.x=(float)Project.Starts[editMeasure]*EditorPPB*zoom;}
+    void SelectMeasure(int m,bool scroll=false){int next=Math.Max(0,Math.Min(Project.Measures.Length-1,m));if(Audio.Running&&!scroll&&next==editMeasure)return;editMeasure=Math.Max(0,Math.Min(Project.Measures.Length-1,m));meterBarField=(editMeasure+1).ToString();var sig=Project.Meter(editMeasure);meterNumerator=sig.Item1.ToString();meterDenominator=sig.Item2.ToString();if(scroll)editScroll.x=(float)Project.Starts[editMeasure]*EditorPPB*zoom;}
+    void GoToMeterMeasure(int m){m=Math.Max(0,Math.Min(Project.Measures.Length-1,m));Audio.Seek(Project.Starts[m]);ResetScheduled();lastClick=Math.Floor(Project.Starts[m])-1;pasteBeat=Project.Starts[m];SelectMeasure(m,true);status="";}
+    void GoToTypedMeterMeasure(){if(int.TryParse(meterBarField,out int bar)&&bar>=1&&bar<=Project.Measures.Length){GoToMeterMeasure(bar-1);return;}status=T("小節番号は1から ","Bar number must be 1 to ")+Project.Measures.Length;meterBarField=(editMeasure+1).ToString();}
     bool meterKeepTiming=true;
     void ApplyMeter(){
         if(!int.TryParse(meterNumerator,out int n)||!int.TryParse(meterDenominator,out int d)||!(meterKeepTiming?Project.ValidMeter(editMeasure,n,d):Project.CanSetMeter(editMeasure,n,d))){status=T("拍子を確認してください。短くする範囲のノーツ・テンポ変更を先に移動・削除してください。","Check the meter. Move or erase notes and tempo changes beyond the new bar end first.");return;}
