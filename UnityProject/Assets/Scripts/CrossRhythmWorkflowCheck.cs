@@ -32,13 +32,14 @@ public partial class CrossRhythmApp {
         check(restoringHistory&&InputBlocked&&LoadingIsDialog&&draft.Title=="Kept editor draft","Undo blocks with the retained editor before history processing");
         RequestRestore(false);NavigateNow(Page.Songs);OnEditorShortcut("Paste");
         check(Current==Page.Edit&&draft.Title=="Kept editor draft"&&undo.Count==undoCount,"duplicate Undo, navigation and editing cannot race history restore");
-        yield return WaitForOperations();check(Time.frameCount>=frame+2&&(!HistoryPaintRequired||loadingPaints>historyPaints)&&draft.Title==p.Title&&redo.Count==1&&!restoringHistory,"visible Undo paints progress before restoring one complete history entry");
+        yield return WaitForOperations();check(Time.frameCount>=frame+2&&(!HistoryPaintRequired||loadingPaints>historyPaints)&&historyBackgroundSuppressed&&draft.Title==p.Title&&redo.Count==1&&!restoringHistory,"visible Undo paints a lightweight progress dialog before restoring one complete history entry");
         OnEditorShortcut("Redo");check(restoringHistory&&InputBlocked,"browser Redo shortcut uses the progress operation");yield return WaitForOperations();
         check(draft.Title=="Kept editor draft"&&undo.Count==undoCount&&redo.Count==0,"Redo restores the same editor metadata and history");
         var chart=draft.Chart.ToString();Audio.Play(0);EditorBoundary(true);
         check(!Audio.Running&&Audio.Beat==draft.Length&&editMeasure==draft.Measures.Length-1,"end transport stops and moves to the final bar end");
         EditorBoundary(false);check(!Audio.Running&&Audio.Beat==0&&editMeasure==0&&editScroll.x==0&&draft.Chart.ToString()==chart,"start transport returns to bar one without changing chart or history");
         check(EditorTransportIcon(false)=="|◀"&&EditorTransportIcon(true)=="▶|","editor boundary buttons preserve the requested boundary icon shape");
+        check(StageExitLabels.SequenceEqual(new[]{"Resume","Practice","Songs"}),"Play stop choices name the destinations without a Quit-to-Quit label");
         draft.Dirty=false;NavigateNow(Page.Songs);FocusSong(Library.IndexOf(p));Begin(true);yield return WaitForOperations();RequestStageExit();
         check(!stageExitPrompt&&transitioning&&Current==Page.Practice,"Practice Songs leaves directly without opening the Play stop dialog");yield return WaitForOperations();
         check(Current==Page.Songs&&!stageExitPrompt&&!Audio.Running,"Practice Songs returns directly to Songs");

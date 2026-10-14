@@ -11,10 +11,11 @@ public partial class CrossRhythmApp {
     void Border(Rect r,Color c,float width=1){RectFill(new Rect(r.x,r.y,r.width,width),c);RectFill(new Rect(r.x,r.yMax-width,r.width,width),c);RectFill(new Rect(r.x,r.y,width,r.height),c);RectFill(new Rect(r.xMax-width,r.y,width,r.height),c);}
     void Text(Rect r,string s,int size=18,Color? color=null,bool bold=false){if(Event.current.type!=EventType.Repaint)return;var st=TextStyle(size,bold);st.normal.textColor=color??Color.white;GUI.Label(r,s,st);}
     enum ControlKind { Action, Menu, Dialog, Toggle, Tab, Choice }
+    static Rect ScreenRect(Rect r){Vector2 a=GUIUtility.GUIToScreenPoint(r.min),b=GUIUtility.GUIToScreenPoint(r.max);return Rect.MinMaxRect(Mathf.Min(a.x,b.x),Mathf.Min(a.y,b.y),Mathf.Max(a.x,b.x),Mathf.Max(a.y,b.y));}
     bool Button(Rect r,string text,bool primary=false,bool enabled=true,int fontSize=18,string focusKey=null,ControlKind kind=ControlKind.Action){
         bool active=GUI.enabled&&enabled,hover=active&&(r.Contains(Event.current.mousePosition)||ControllerContains(r));
         string id=focusKey??(Current+":"+text+":"+r.x+":"+r.y);RegisterMenu(id,r,active);bool focused=keyboardMenu&&menuFocus==id;
-        if(Event.current.type==EventType.Repaint){if(hover&&hoverButton!=id){hoverButton=id;uiFeedback.Hover(id,controllerPointerVisible?ControllerGuiPointer():Event.current.mousePosition);}else if(!hover&&hoverButton==id){hoverButton="";uiFeedback.Leave(id);}}
+        if(Event.current.type==EventType.Repaint&&hover){Vector2 point=controllerPointerVisible?ControllerGuiPointer():Event.current.mousePosition;uiFeedback.Hover(id,ScreenRect(r),GUIUtility.GUIToScreenPoint(point));}
         bool pressed=hover&&((UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.leftButton.isPressed)||(controllerPointerVisible&&controllerPrimaryHeld));
         Color fill=primary?mint:panel;if(!active)fill=Color.Lerp(bg,fill,.45f);else if(pressed)fill=Color.Lerp(fill,Color.white,.25f);else if(hover)fill=Color.Lerp(fill,mint,primary?.14f:.24f);
         if(flashButton==id&&Time.unscaledTimeAsDouble<buttonFlashUntil)fill=Color.Lerp(fill,Color.white,.22f);
@@ -40,9 +41,10 @@ public partial class CrossRhythmApp {
     }
 
     void OnGUI(){
+        bool repaint=Event.current.type==EventType.Repaint;if(repaint)uiFeedback.BeginHoverFrame();
         Styles();scale=Mathf.Min(Screen.width/1280f,Screen.height/800f);W=Screen.width/scale;H=Screen.height/scale;GUI.matrix=Matrix4x4.Scale(new Vector3(scale,scale,1));RectFill(new Rect(0,0,W,H),bg);
-        if(InputBlocked){LoadingBackground();LoadingPage();DrawControllerPointer();return;}
-        if(Project==null)return;DismissEditorFileMenu();DismissLaneTypeMenu();DismissGridMenu();BindingKeys();StageExitKeys();MenuKeys();if(Event.current.type==EventType.Repaint)menuItems.Clear();
+        if(InputBlocked){LoadingBackground();LoadingPage();DrawControllerPointer();if(repaint)uiFeedback.EndHoverFrame();return;}
+        if(Project==null){if(repaint)uiFeedback.EndHoverFrame();return;}DismissEditorFileMenu();DismissLaneTypeMenu();DismissGridMenu();BindingKeys();StageExitKeys();MenuKeys();if(repaint)menuItems.Clear();
 #if UNITY_WEBGL && !UNITY_EDITOR
         if(Event.current.type==EventType.Repaint){fileButtonCount=0;PlatformFiles.CRProjectButtonsBegin();}
 #endif
@@ -64,6 +66,7 @@ public partial class CrossRhythmApp {
 #endif
         if(!stage&&Current!=Page.Result)Text(new Rect(26,H-28,W-52,24),busy?T("読込中…","Loading…"):status,13,muted);
         DrawControllerPointer();
+        if(repaint)uiFeedback.EndHoverFrame();
     }
     void Header(){
         Text(new Rect(26,18,250,42),"CROSS RHYTHM",21,mint,true);

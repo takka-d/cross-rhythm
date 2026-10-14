@@ -42,9 +42,11 @@ public static class MidiOverlapTests {
         var same=new MidiImport.Collision{Tick=9,Candidates=new[]{new MidiImport.Candidate{Id=500,Track=2,Pitch=38,Velocity=15},new MidiImport.Candidate{Id=501,Track=2,Pitch=38,Velocity=120}}};
         bulk=new MidiImport.OverlapChoice();bulk.SelectSource(new MidiImport.Overlap{Collisions=new[]{same}},2,38);
         Check(bulk.SelectedId(same)<0,"identical source pitches remain individually selectable instead of using velocity");
-        bulk.Selected[9]=501;Check(bulk.SelectedId(same)==501,"exact event identity chooses a duplicate within one track");
+        Check(!bulk.SelectCandidate(same,999)&&bulk.SelectedId(same)<0,"candidate selection rejects an event outside the displayed collision");
+        Check(bulk.SelectCandidate(same,501)&&bulk.SelectedId(same)==501,"exact displayed event chooses a duplicate within one track");
         choices["SN"].Selected[sn.Collisions[0].Tick]=-99;bool invalid=false;try{MidiImport.Read(bytes,source,"Overlap.mid",MidiImport.ZeroMode.NoteOff,choices);}catch(InvalidDataException){invalid=true;}Check(invalid,"invalid candidate is rejected without silent fallback");
         Check(MidiImport.PitchLabel(38)!=MidiImport.PitchLabel(40)&&MidiImport.PitchLabel(37).Contains("Closed rimshot"),"labels identify MIDI source sounds and mapped Type");
+        Check(MidiImport.TargetInstrumentLabel(37)=="Snare"&&MidiImport.TargetTypeLabel(37)=="Closed rimshot"&&MidiImport.TargetInstrumentLabel(46)=="Hi-hat"&&MidiImport.TargetTypeLabel(46)=="Open","candidate labels separate target instrument and Type");
         Check(JToken.DeepEquals(source.Chart,before),"preview and resolution never mutate source");
         Check(MidiDropFiles.IsMidi("日本語.MID")&&MidiDropFiles.IsMidi("a.midi")&&!MidiDropFiles.IsMidi("song.mid.exe")&&!MidiDropFiles.IsMidi("song.crproj"),"drop file names use exact MIDI extension");
         var broken=bytes.Take(bytes.Length-7).ToArray();bool rejected=false;try{MidiImport.Read(broken,source,"broken.mid",MidiImport.ZeroMode.NoteOff,choices);}catch(InvalidDataException){rejected=true;}Check(rejected&&JToken.DeepEquals(source.Chart,before),"invalid MIDI leaves original unchanged");

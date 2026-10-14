@@ -35,28 +35,32 @@ public partial class CrossRhythmApp {
         foreach(bool language in new[]{false,true}){english=language;for(int row=0;row<Instruments.Length;row++)check(EditorNoteTypes.Label(Instruments[row],Types[row][0])==expected[row],"default Type uses instrument name: "+(language?"English ":"Japanese ")+Instruments[row]);}
         english=false;check(EditorNoteTypes.Label("RD","crash")=="Ride crash"&&EditorNoteTypes.Label("SN","rim_closed")=="Closed rimshot"&&EditorNoteTypes.Label("HH","tambourine")=="Tambourine","specific articulations remain distinguishable");
         var flags=BindingFlags.Instance|BindingFlags.NonPublic;var audioType=typeof(RhythmAudio);var voiceList=(List<AudioSource>)audioType.GetField("voices",flags).GetValue(Audio);var rawClips=(Dictionary<string,AudioClip>)audioType.GetField("clips",flags).GetValue(Audio);float previousGain=Audio.DrumGain;Audio.DrumGain=.8f;
-        var evidence=new JArray();
-        foreach(string inst in new[]{"HH","RD","CUP"}){
+        var evidence=new JArray();var mediumRms=new Dictionary<string,double>();
+        foreach(string inst in new[]{"BD","SN","HH","OHH","RD","CUP"}){
             var levels=new List<double>();var rawData=new float[rawClips[inst].samples*rawClips[inst].channels];rawClips[inst].GetData(rawData,0);float rawPeak=rawData.Max(x=>Math.Abs(x));var kitPeaks=new JObject();
             foreach(string kit in new[]{"studio","bright","punch","dry"}){float requested=1.27f*ChartProject.MaxInstrumentGain*KitPreset.Get(kit,inst).x*RhythmAudio.SampleGainFor(inst),preparedPeak=rawPeak*RhythmAudio.SafePreparationScale(Math.Max(1,requested),rawPeak);kitPeaks[kit]=preparedPeak;check(preparedPeak<=1.00001f,"prepared PCM peak remains in range for "+kit+" "+inst);}
             double actualPreparedPeak=0;
             for(int v=0;v<=5;v++){
-                string instrument=inst=="CUP"?"RD":inst,articulation=inst=="HH"?"auto":inst=="CUP"?"cup":"ride";
-                int next=(int)audioType.GetField("voice",flags).GetValue(Audio);Audio.Drum(new ChartNote{Instrument=instrument,Articulation=articulation,Velocity=v},true);
+                string instrument=inst=="CUP"?"RD":inst=="OHH"?"HH":inst,articulation=inst=="HH"||inst=="OHH"?"auto":inst=="CUP"?"cup":inst=="RD"?"ride":"normal";
+                int next=(int)audioType.GetField("voice",flags).GetValue(Audio);Audio.Audition(new ChartNote{Instrument=instrument,Articulation=articulation,Velocity=v},inst!="OHH");
                 var voice=voiceList[next%voiceList.Count];var data=new float[voice.clip.samples*voice.clip.channels];voice.clip.GetData(data,0);int count=Math.Min(data.Length,voice.clip.frequency*voice.clip.channels/10);
                 double rms=Math.Sqrt(data.Take(count).Sum(x=>(double)x*x)/count)*voice.volume;levels.Add(rms);actualPreparedPeak=Math.Max(actualPreparedPeak,data.Max(x=>Math.Abs(x)));
                 check(voice.volume<=1&&voice.volume>=0,"calibrated sample voice remains in supported gain range: "+inst+" V"+v);
             }
             check(actualPreparedPeak<=1.00001,"actual prepared clip peak remains in range: "+inst);
-            check(levels[0]==0&&levels[3]>.027&&levels[1]<levels[2]&&levels[2]<levels[3]&&levels[3]<levels[4]&&levels[4]<levels[5],"balanced PCM output preserves all strengths and audible medium hits: "+inst);
+            check(levels[0]==0&&levels[1]<levels[2]&&levels[2]<levels[3]&&levels[3]<levels[4]&&levels[4]<levels[5],"balanced PCM output preserves all strengths: "+inst);
+            mediumRms[inst]=levels[3];
             evidence.Add(new JObject{{"instrument",inst},{"rawPeak",rawPeak},{"preparedPeak",actualPreparedPeak},{"safePreparedPeakByKit",kitPeaks},{"rms100msByStrength",new JArray(levels)}});
         }
+        foreach(string inst in new[]{"HH","OHH","RD","CUP"})check(mediumRms[inst]>=mediumRms["BD"]*.95&&mediumRms[inst]<=mediumRms["SN"]*1.05,"medium "+inst+" is audible between kick and snare reference levels");
+        check(Math.Abs(RhythmAudio.SampleGainFor("RIDE_CRASH")-.168936f)<.000001f,"ride balance does not raise Ride Crash");
         Audio.DrumGain=previousGain;Audio.Stop();File.WriteAllText(Path.Combine(workspaceCheckRoot,"meter-sound-evidence.json"),new JObject{{"checks","note/tempo timing, save/reopen, undo/redo, labels, actual decoded voice RMS"},{"samples",evidence}}.ToString());
         var args=Environment.GetCommandLineArgs();int at=Array.IndexOf(args,"--snow-midi");
         if(at>=0&&at+1<args.Length){
             var imported=MidiImport.Read(File.ReadAllBytes(args[at+1]),EmptyEditorProject(),"Private MIDI fixture",MidiImport.ZeroMode.Auto);var actual=new ChartProject{Chart=imported.Chart,Manifest=new JObject()};actual.Rebuild();
             check(actual.Starts[51]==153&&actual.Meter(51).Item1==3&&actual.Meter(51).Item2==8&&actual.Starts[52]==154.5,"private MIDI raw tick 73440 / PPQ 480 maps to bar 52 at beat 153 and back to 6/8 at 154.5");
             check(actual.Notes.Count(n=>n.Instrument=="HH"&&n.Velocity==3)==240&&actual.Notes.Count(n=>n.Instrument=="RD"&&n.Velocity==3)==107,"private MIDI hi-hat and ride medium strengths are imported without loss");
+            check(MidiImport.Strength(63)==3&&MidiImport.Strength(87)==3&&ChartProject.Gains[actual.Notes.First(n=>n.Instrument=="HH"&&n.Velocity==3).Velocity]==.75f&&ChartProject.Gains[actual.Notes.First(n=>n.Instrument=="RD"&&n.Velocity==3).Velocity]==.75f,"Snowdome MIDI strength 3 reaches the same velocity-to-gain path as edited notes");
             var alignedSource=EmptyEditorProject();alignedSource.Chart["audioOffsetSec"]=1.894734;alignedSource.Rebuild();
             var alignedImport=MidiImport.Read(File.ReadAllBytes(args[at+1]),alignedSource,"Snowdome aligned MIDI",MidiImport.ZeroMode.Auto);var aligned=new ChartProject{Chart=alignedImport.Chart,Manifest=new JObject()};aligned.Rebuild();
             check(alignedImport.LeadingBarsAligned==1&&aligned.Starts[50]==150&&aligned.Meter(50).Equals(Tuple.Create(3,8))&&aligned.Starts[51]==151.5&&Math.Abs(aligned.Notes.First(n=>!n.Pedal).Beat-12)<1e-8,"Snowdome one-bar audio lead aligns notes and the 3/8 meter at bar 51 together");

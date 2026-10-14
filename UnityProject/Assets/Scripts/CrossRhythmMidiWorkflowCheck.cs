@@ -15,6 +15,7 @@ public partial class CrossRhythmApp {
         var rim=MidiImport.PreviewNote(37,96,out bool rimClosed);Check(rim!=null&&rim.Instrument=="SN"&&rim.Articulation=="rim_closed"&&rim.Velocity==4&&!rimClosed&&RhythmAudio.KeyFor(rim,rimClosed)=="SIDE","MIDI candidate preview maps source sound and game strength exactly");
         var openHat=MidiImport.PreviewNote(46,64,out bool hatClosed);Check(openHat!=null&&openHat.Instrument=="HH"&&openHat.Velocity==3&&!hatClosed&&RhythmAudio.KeyFor(openHat,hatClosed)=="OHH","MIDI candidate preview distinguishes open hi-hat audio");
         Check(MidiImport.SourceSoundLabel(37)=="Side Stick"&&MidiImport.GameSoundLabel(37)=="Closed rimshot"&&MidiImport.GameSoundLabel(46)=="Open hi-hat"&&MidiImport.InstrumentLabel("SN")=="Snare","MIDI duplicate UI exposes source sound, target game sound and full instrument name");
+        Check(MidiImport.TargetInstrumentLabel(37)=="Snare"&&MidiImport.TargetTypeLabel(37)=="Closed rimshot"&&MidiImport.TargetInstrumentLabel(46)=="Hi-hat"&&MidiImport.TargetTypeLabel(46)=="Open","MIDI duplicate UI shows target instrument and Type as separate fields");
         Check(JToken.DeepEquals(original,Project.Chart)&&dirty==Project.Dirty&&undo.Count==history,"import preview preserves chart dirty flag and undo history");
         var audioType=typeof(RhythmAudio);var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;var voices=(List<AudioSource>)audioType.GetField("voices",flags).GetValue(Audio);var channels=(Dictionary<AudioSource,string>)audioType.GetField("voiceChannels",flags).GetValue(Audio);var gainScales=(Dictionary<string,float>)audioType.GetField("gainScales",flags).GetValue(Audio);var hatVoices=(List<HiHatEnvelope>)audioType.GetField("hatVoices",flags).GetValue(Audio);
         Func<string> choiceState=()=>string.Join("|",pendingMidi.Choices.OrderBy(x=>x.Key).SelectMany(x=>x.Value.Selected.OrderBy(y=>y.Key).Select(y=>x.Key+":"+y.Key+":"+y.Value)));string choicesBefore=choiceState();
@@ -42,7 +43,7 @@ public partial class CrossRhythmApp {
         ImportMidi(bytes,Path.GetFileName(file));Check(MidiPromptOpen,"Import MIDI uses the same overlap review");
         Check(MidiRemaining==5,"overlap dialog initially requires five concrete choices");
         ApplyPendingMidi();Check(MidiPromptOpen&&JToken.DeepEquals(original,Project.Chart),"incomplete choices cannot replace the chart");
-        foreach(var overlap in pendingMidi.Preview.Overlaps)foreach(var c in overlap.Collisions)pendingMidi.Choices[overlap.Instrument].Selected[c.Tick]=c.Candidates[0].Id;
+        foreach(var overlap in pendingMidi.Preview.Overlaps)foreach(var c in overlap.Collisions)Check(pendingMidi.Choices[overlap.Instrument].SelectCandidate(c,c.Candidates[0].Id),"displayed MIDI candidate can be selected directly");
         var sn=pendingMidi.Preview.Overlaps.Single(o=>o.Instrument=="SN");pendingMidi.Choices["SN"].SelectSource(sn,sn.Collisions[0].Candidates.First(c=>c.Pitch==37).Track,37);
         Check(MidiRemaining==0,"each exact candidate resolves one position");ApplyPendingMidi();
         Check(!MidiPromptOpen&&Project.PlayableNoteCount==10&&Project.Dirty,"confirmed policies apply exactly once");

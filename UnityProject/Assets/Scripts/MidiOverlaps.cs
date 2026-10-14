@@ -14,6 +14,10 @@ public static partial class MidiImport {
         // (or repeated within one track) are still individually selectable.
         public readonly Dictionary<long,int> Selected=new Dictionary<long,int>();
         public int SelectedId(Collision collision)=>Selected.TryGetValue(collision.Tick,out int id)&&collision.Candidates.Any(c=>c.Id==id)?id:-1;
+        public bool SelectCandidate(Collision collision,int candidateId){
+            if(collision==null||collision.Candidates==null||!collision.Candidates.Any(c=>c.Id==candidateId))return false;
+            Selected[collision.Tick]=candidateId;return true;
+        }
         public void SelectSource(Overlap overlap,int track,int pitch){
             foreach(var collision in overlap.Collisions){var matches=collision.Candidates.Where(c=>c.Track==track&&c.Pitch==pitch).ToArray();if(matches.Length==1)Selected[collision.Tick]=matches[0].Id;}
         }
@@ -40,6 +44,13 @@ public static partial class MidiImport {
     }
     public static string PitchLabel(int pitch)=>SourceSoundLabel(pitch)+" ["+pitch+"] → "+GameSoundLabel(pitch);
     public static string InstrumentLabel(string instrument)=>EditorNoteTypes.Label(instrument,instrument=="HH"?"auto":instrument=="SN"?"center":instrument=="RD"?"ride":instrument=="CR"?"crash":"normal");
+    public static string TargetInstrumentLabel(int pitch){var n=new Note{Pitch=pitch};Map(n);return string.IsNullOrEmpty(n.Instrument)?"Unknown":InstrumentLabel(n.Instrument);}
+    public static string TargetTypeLabel(int pitch){
+        var n=new Note{Pitch=pitch};Map(n);
+        if(n.Hat=="closed")return "Closed";if(n.Hat=="open")return "Open";if(n.Hat=="pedal")return "Pedal";
+        if(string.IsNullOrEmpty(n.Type)||n.Type=="normal")return "Normal";if(n.Type=="center")return "Center";if(n.Type=="ride")return "Ride";
+        return EditorNoteTypes.Label(n.Instrument,n.Type);
+    }
     public static ChartNote PreviewNote(int pitch,int velocity,out bool closed){
         var n=new Note{Pitch=pitch,Velocity=Math.Max(0,Math.Min(127,velocity))};Map(n);closed=n.Hat=="closed";
         if(string.IsNullOrEmpty(n.Instrument)||n.Instrument=="HHSTATE")return null;

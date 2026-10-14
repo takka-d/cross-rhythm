@@ -3,10 +3,11 @@ $launcherRoot=$PSScriptRoot
 $testRoot=Join-Path ([IO.Path]::GetTempPath()) ('cross-rhythm-launcher-'+[Guid]::NewGuid().ToString('N'))
 $runtime=Join-Path $testRoot 'Runtime'
 $launcher=Join-Path $testRoot 'CrossRhythm.exe'
-$cancelMarker=Join-Path $testRoot 'cancel player marker.txt'
+$closeMarker=Join-Path $testRoot 'close player marker.txt'
+$escapeMarker=Join-Path $testRoot 'escape player marker.txt'
 $readyMarker=Join-Path $testRoot 'ready player marker.txt'
-$cancelLauncher=$null;$duplicate=$null;$readyLauncher=$null;$readyDuplicate=$null
-$cancelChildId=0;$readyChildId=0
+$closeLauncher=$null;$duplicate=$null;$escapeLauncher=$null;$readyLauncher=$null;$readyDuplicate=$null
+$closeChildId=0;$escapeChildId=0;$readyChildId=0
 try {
   New-Item -ItemType Directory -Force -Path $runtime | Out-Null
   & (Join-Path $launcherRoot 'Build-Launcher.ps1') -OutputPath $launcher
@@ -25,7 +26,7 @@ class PlayerStub {
     if(args.Contains("--signal-ready")){
       string status=Value(args,"--startup-status-file");
       if(status.Length>0)File.WriteAllText(status,"Restoring editor file",Encoding.UTF8);
-      Thread.Sleep(900);
+      Thread.Sleep(1100);
       using(var ready=EventWaitHandle.OpenExisting(Value(args,"--startup-ready-event")))ready.Set();
     }
     Thread.Sleep(60000);
@@ -41,57 +42,129 @@ class PlayerStub {
   Add-Type @'
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 public static class LauncherTestNative {
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left,Top,Right,Bottom; }
+  public delegate bool EnumWindowProc(IntPtr window,IntPtr parameter);
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd,uint msg,IntPtr wParam,IntPtr lParam);
   [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd,int index);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd,out RECT rect);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd,int x,int y,int width,int height,bool repaint);
+  [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr parent,EnumWindowProc callback,IntPtr parameter);
+  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr window,StringBuilder text,int capacity);
+  [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr window);
+  public static string ReadText(IntPtr window){var text=new StringBuilder(512);GetWindowText(window,text,text.Capacity);return text.ToString();}
+  public static IntPtr FindChildByText(IntPtr parent,string expected){
+    IntPtr found=IntPtr.Zero;
+    EnumChildWindows(parent,delegate(IntPtr window,IntPtr parameter){if(ReadText(window)==expected){found=window;return false;}return true;},IntPtr.Zero);
+    return found;
+  }
 }
 '@
 
-  # The startup surface must be visible immediately, borderless and monitor-sized.
+  function Wait-LauncherWindow([Diagnostics.Process]$process,[int]$seconds=5){
+    $deadline=[DateTime]::UtcNow.AddSeconds($seconds);$window=[IntPtr]::Zero
+    while([DateTime]::UtcNow -lt $deadline -and $window -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 20;$process.Refresh();$window=$process.MainWindowHandle}
+    if($window -eq [IntPtr]::Zero){throw 'Startup surface was not visible within five seconds.'}
+    return $window
+  }
+  function Wait-Marker([string]$path,[string]$failure){
+    $deadline=[DateTime]::UtcNow.AddSeconds(5)
+    while(!(Test-Path -LiteralPath $path) -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Milliseconds 20}
+    if(!(Test-Path -LiteralPath $path)){throw $failure}
+    return [int](Get-Content -LiteralPath $path -Raw)
+  }
+  function Get-Rect([IntPtr]$window){
+    $rect=New-Object LauncherTestNative+RECT
+    if(![LauncherTestNative]::GetWindowRect($window,[ref]$rect)){throw 'Could not read a launcher control rectangle.'}
+    return $rect
+  }
+  function Assert-Child([IntPtr]$parent,[string]$text){
+    $window=[LauncherTestNative]::FindChildByText($parent,$text)
+    if($window -eq [IntPtr]::Zero){throw "Launcher child was not rendered: $text"}
+    return $window
+  }
+  function Test-Overlap($first,$second){
+    return $first.Left -lt $second.Right -and $first.Right -gt $second.Left -and $first.Top -lt $second.Bottom -and $first.Bottom -gt $second.Top
+  }
+
+  # The startup surface is a centered fixed-ratio game panel instead of a
+  # full-monitor overlay. Validate the actual native window at the active DPI.
   $watch=[Diagnostics.Stopwatch]::StartNew()
-  $cancelLauncher=Start-Process -FilePath $launcher -ArgumentList ('"'+$cancelMarker+'"') -PassThru
-  $cancelWindow=[IntPtr]::Zero
-  while($watch.Elapsed.TotalSeconds -lt 5 -and $cancelWindow -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 25;$cancelLauncher.Refresh();$cancelWindow=$cancelLauncher.MainWindowHandle}
-  if($cancelWindow -eq [IntPtr]::Zero){throw 'Startup surface was not visible within five seconds.'}
+  $closeLauncher=Start-Process -FilePath $launcher -ArgumentList ('"'+$closeMarker+'"') -PassThru
+  $closeWindow=Wait-LauncherWindow $closeLauncher
   $visibleMs=$watch.ElapsedMilliseconds
-  $style=[LauncherTestNative]::GetWindowLong($cancelWindow,-16)
-  if(($style -band 0x00c00000) -ne 0){throw 'Startup surface still has a captioned window frame.'}
-  $rect=New-Object LauncherTestNative+RECT
-  [LauncherTestNative]::GetWindowRect($cancelWindow,[ref]$rect) | Out-Null
-  $screen=[Windows.Forms.Screen]::FromHandle($cancelWindow).Bounds
-  if(($rect.Right-$rect.Left) -lt $screen.Width -or ($rect.Bottom-$rect.Top) -lt $screen.Height){throw 'Startup surface does not cover its monitor.'}
+  $style=[LauncherTestNative]::GetWindowLong($closeWindow,-16)
+  if(($style -band 0x00c00000) -ne 0){throw 'Startup surface still has a captioned Windows frame.'}
+  $rect=Get-Rect $closeWindow
+  $screen=[Windows.Forms.Screen]::FromHandle($closeWindow)
+  $width=$rect.Right-$rect.Left;$height=$rect.Bottom-$rect.Top
+  if($width -ge [Math]::Floor($screen.Bounds.Width*0.95) -or $height -ge [Math]::Floor($screen.Bounds.Height*0.95)){throw 'Startup surface is still effectively full-screen.'}
+  if($width -gt [Math]::Ceiling($screen.WorkingArea.Width*0.88) -or $height -gt [Math]::Ceiling($screen.WorkingArea.Height*0.82)){throw 'Startup surface exceeds its bounded working-area size.'}
+  if([Math]::Abs(($width/[double]$height)-(820/461)) -gt 0.025){throw 'Startup surface did not preserve its 16:9 presentation ratio.'}
+  $expectedLeft=$screen.WorkingArea.Left+[Math]::Floor(($screen.WorkingArea.Width-$width)/2)
+  $expectedTop=$screen.WorkingArea.Top+[Math]::Floor(($screen.WorkingArea.Height-$height)/2)
+  if([Math]::Abs($rect.Left-$expectedLeft) -gt 3 -or [Math]::Abs($rect.Top-$expectedTop) -gt 3){throw 'Startup surface is not centered in the monitor working area.'}
+  $dpi=[LauncherTestNative]::GetDpiForWindow($closeWindow);if($dpi -lt 96){$dpi=96}
+  $logicalWidth=$width*96/[double]$dpi;$logicalHeight=$height*96/[double]$dpi
+  if($logicalWidth -lt 790 -or $logicalWidth -gt 850 -or $logicalHeight -lt 435 -or $logicalHeight -gt 485){throw "Startup surface is not DPI-scaled from its intended fixed size: ${logicalWidth}x${logicalHeight}."}
 
-  $deadline=[DateTime]::UtcNow.AddSeconds(5)
-  while(!(Test-Path $cancelMarker) -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Milliseconds 25}
-  if(!(Test-Path $cancelMarker)){throw 'Launcher did not start the child player.'}
-  $cancelChildId=[int](Get-Content -LiteralPath $cancelMarker -Raw)
+  $titleWindow=Assert-Child $closeWindow 'CROSS RHYTHM'
+  $headingWindow=[LauncherTestNative]::FindChildByText($closeWindow,'Cross Rhythm を起動しています')
+  if($headingWindow -eq [IntPtr]::Zero){$headingWindow=Assert-Child $closeWindow 'Starting Cross Rhythm'}
+  $detailWindow=[LauncherTestNative]::FindChildByText($closeWindow,'画面を準備しています')
+  if($detailWindow -eq [IntPtr]::Zero){$detailWindow=Assert-Child $closeWindow 'Preparing the game'}
+  $closeButton=Assert-Child $closeWindow 'CLOSE'
+  $titleRect=Get-Rect $titleWindow;$headingRect=Get-Rect $headingWindow;$detailRect=Get-Rect $detailWindow;$closeRect=Get-Rect $closeButton
+  if($titleRect.Bottom -gt $headingRect.Top -or $headingRect.Bottom -gt $detailRect.Top){throw 'Central launcher text regions overlap.'}
+  if($titleRect.Left -lt $rect.Left -or $titleRect.Right -gt $rect.Right -or $detailRect.Bottom -gt $rect.Bottom){throw 'Central launcher text is clipped outside the startup surface.'}
+  if(($closeRect.Right-$closeRect.Left) -lt [Math]::Floor(96*$dpi/96) -or ($closeRect.Bottom-$closeRect.Top) -lt [Math]::Floor(34*$dpi/96)){throw 'Game-styled Close control is too small at the active DPI.'}
+  if(Test-Overlap $titleRect $closeRect){throw 'Close overlaps the title at the preferred startup size.'}
 
-  $duplicate=Start-Process -FilePath $launcher -ArgumentList ('"'+$cancelMarker+'"') -PassThru
+  # Force a compact 16:9 client to cover the small-monitor fallback layout. The
+  # fixed surface normally chooses this size only when the work area requires it.
+  $compactWidth=[Math]::Round(600*$dpi/96);$compactHeight=[Math]::Round(338*$dpi/96)
+  if(![LauncherTestNative]::MoveWindow($closeWindow,$rect.Left,$rect.Top,$compactWidth,$compactHeight,$true)){throw 'Could not exercise compact launcher layout.'}
+  Start-Sleep -Milliseconds 120
+  $compactRect=Get-Rect $closeWindow;$titleRect=Get-Rect $titleWindow;$headingRect=Get-Rect $headingWindow;$detailRect=Get-Rect $detailWindow;$closeRect=Get-Rect $closeButton
+  if($titleRect.Bottom -gt $headingRect.Top -or $headingRect.Bottom -gt $detailRect.Top -or (Test-Overlap $titleRect $closeRect)){throw 'Compact launcher controls overlap.'}
+  if($titleRect.Left -lt $compactRect.Left -or $titleRect.Right -gt $compactRect.Right -or $detailRect.Bottom -gt $compactRect.Bottom){throw 'Compact launcher text is clipped outside the startup surface.'}
+
+  $closeChildId=Wait-Marker $closeMarker 'Launcher did not start the child player.'
+  $duplicate=Start-Process -FilePath $launcher -ArgumentList ('"'+$closeMarker+'"') -PassThru
   if(!$duplicate.WaitForExit(3000)){throw 'Second launcher did not hand control to the startup surface.'}
-  Start-Sleep -Milliseconds 200
-  $players=@(Get-Process -Name CrossRhythmPlayer -ErrorAction SilentlyContinue | Where-Object {$_.Id -eq $cancelChildId})
+  Start-Sleep -Milliseconds 150
+  $players=@(Get-Process -Name CrossRhythmPlayer -ErrorAction SilentlyContinue | Where-Object {$_.Id -eq $closeChildId})
   if($players.Count -ne 1){throw 'Second launcher created or lost the child player.'}
 
-  [LauncherTestNative]::PostMessage($cancelWindow,0x0100,[IntPtr]0x1b,[IntPtr]::Zero) | Out-Null
-  [LauncherTestNative]::PostMessage($cancelWindow,0x0101,[IntPtr]0x1b,[IntPtr]::Zero) | Out-Null
-  if(!$cancelLauncher.WaitForExit(5000)){throw 'Escape did not close the launcher.'}
-  Start-Sleep -Milliseconds 200
-  if(Get-Process -Id $cancelChildId -ErrorAction SilentlyContinue){throw 'Escape did not terminate the child player.'}
-  $cancelChildId=0
+  # Exercise the real native button, not only the shared handler source text.
+  [LauncherTestNative]::PostMessage($closeButton,0x00F5,[IntPtr]::Zero,[IntPtr]::Zero) | Out-Null
+  if(!$closeLauncher.WaitForExit(5000)){throw 'Clicking Close did not close the launcher.'}
+  Start-Sleep -Milliseconds 150
+  if(Get-Process -Id $closeChildId -ErrorAction SilentlyContinue){throw 'Clicking Close did not terminate the child player.'}
+  $closeChildId=0
 
-  # The same surface stays up through Unity startup, then hands off directly to
-  # the ready player. No second launcher or second child is created meanwhile.
+  # Escape remains a separate route into the same cancellation behaviour.
+  $escapeLauncher=Start-Process -FilePath $launcher -ArgumentList ('"'+$escapeMarker+'"') -PassThru
+  $escapeWindow=Wait-LauncherWindow $escapeLauncher
+  $escapeChildId=Wait-Marker $escapeMarker 'Escape test child did not start.'
+  [LauncherTestNative]::PostMessage($escapeWindow,0x0100,[IntPtr]0x1b,[IntPtr]::Zero) | Out-Null
+  [LauncherTestNative]::PostMessage($escapeWindow,0x0101,[IntPtr]0x1b,[IntPtr]::Zero) | Out-Null
+  if(!$escapeLauncher.WaitForExit(5000)){throw 'Escape did not close the launcher.'}
+  Start-Sleep -Milliseconds 150
+  if(Get-Process -Id $escapeChildId -ErrorAction SilentlyContinue){throw 'Escape did not terminate the child player.'}
+  $escapeChildId=0
+
+  # The same surface displays the restore state, then hands off directly to the
+  # ready player. No second startup screen or second child is created meanwhile.
   $readyLauncher=Start-Process -FilePath $launcher -ArgumentList @('"'+$readyMarker+'"','--signal-ready') -PassThru
-  $readyWindow=[IntPtr]::Zero
-  $deadline=[DateTime]::UtcNow.AddSeconds(5)
-  while([DateTime]::UtcNow -lt $deadline -and $readyWindow -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 20;$readyLauncher.Refresh();$readyWindow=$readyLauncher.MainWindowHandle}
-  if($readyWindow -eq [IntPtr]::Zero){throw 'Ready-handoff startup surface was never visible.'}
-  while(!(Test-Path $readyMarker) -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Milliseconds 25}
-  if(!(Test-Path $readyMarker)){throw 'Ready-handoff child did not start.'}
-  $readyChildId=[int](Get-Content -LiteralPath $readyMarker -Raw)
+  $readyWindow=Wait-LauncherWindow $readyLauncher
+  $readyChildId=Wait-Marker $readyMarker 'Ready-handoff child did not start.'
+  $deadline=[DateTime]::UtcNow.AddSeconds(3);$statusWindow=[IntPtr]::Zero
+  while([DateTime]::UtcNow -lt $deadline -and $statusWindow -eq [IntPtr]::Zero){Start-Sleep -Milliseconds 20;$statusWindow=[LauncherTestNative]::FindChildByText($readyWindow,'Restoring editor file')}
+  if($statusWindow -eq [IntPtr]::Zero){throw 'Restore status was not shown on the existing startup surface.'}
+  if($readyWindow -ne $readyLauncher.MainWindowHandle){throw 'Restore status replaced the startup surface instead of using the same window.'}
   $deadline=[DateTime]::UtcNow.AddSeconds(5)
   while([LauncherTestNative]::IsWindowVisible($readyWindow) -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Milliseconds 25}
   if([LauncherTestNative]::IsWindowVisible($readyWindow)){throw 'Startup surface remained visible after the player signalled readiness.'}
@@ -105,12 +178,14 @@ public static class LauncherTestNative {
   if(!$readyLauncher.WaitForExit(5000)){throw 'Hidden launcher did not exit with the player.'}
 
   $source=Get-Content -LiteralPath (Join-Path $launcherRoot 'CrossRhythmLauncher.cs') -Raw
-  if($source -notmatch 'FormBorderStyle=FormBorderStyle\.None' -or $source -notmatch 'AutoEllipsis=true'){throw 'Borderless and clipped-text safeguards are missing.'}
-  if($source -notmatch 'close\.Click\+=\(s,e\)=>RequestCancel\(\)' -or $source -notmatch 'e\.KeyCode==Keys\.Escape.*RequestCancel\(\)'){throw 'Close and Escape must share the tested cancellation path.'}
-  Write-Output "CROSS_RHYTHM_LAUNCHER_TEST_PASS visible_ms=$visibleMs borderless_full_monitor=true duplicate_instances=1 escape_cancelled_child=true ready_handoff=true status_bridge=true close_uses_same_cancel_path=true"
+  $manifest=Get-Content -LiteralPath (Join-Path $launcherRoot 'CrossRhythmLauncher.manifest') -Raw
+  if($source -notmatch 'AutoScaleMode=AutoScaleMode\.Dpi' -or $source -notmatch 'WM_DPICHANGED'){throw 'Per-monitor DPI layout safeguards are missing.'}
+  if($source -notmatch 'GameCloseButton' -or $source -notmatch 'close\.Click\+=\(s,e\)=>RequestCancel\(\)' -or $source -notmatch 'e\.KeyCode==Keys\.Escape.*RequestCancel\(\)'){throw 'Close and Escape must share the tested cancellation path.'}
+  if($manifest -notmatch 'PerMonitorV2,PerMonitor' -or $manifest -notmatch 'true/pm'){throw 'The launcher manifest is not per-monitor DPI aware.'}
+  Write-Output "CROSS_RHYTHM_LAUNCHER_TEST_PASS visible_ms=$visibleMs centered_fixed_ratio=true fullscreen=false dpi=$dpi nonoverlapping_text=true game_close=true close_cancelled_child=true escape_cancelled_child=true duplicate_instances=1 ready_handoff=true status_bridge=true one_startup_surface=true"
 } finally {
-  foreach($process in @($readyDuplicate,$readyLauncher,$duplicate,$cancelLauncher)){if($process -and !$process.HasExited){Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue}}
-  foreach($id in @($readyChildId,$cancelChildId)){if($id){Stop-Process -Id $id -Force -ErrorAction SilentlyContinue}}
+  foreach($process in @($readyDuplicate,$readyLauncher,$escapeLauncher,$duplicate,$closeLauncher)){if($process -and !$process.HasExited){Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue}}
+  foreach($childProcessId in @($readyChildId,$escapeChildId,$closeChildId)){if($childProcessId){Stop-Process -Id $childProcessId -Force -ErrorAction SilentlyContinue}}
   Start-Sleep -Milliseconds 100
   if(Test-Path -LiteralPath $testRoot){
     $resolved=[IO.Path]::GetFullPath($testRoot)

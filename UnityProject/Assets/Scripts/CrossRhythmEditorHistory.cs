@@ -6,10 +6,12 @@ public partial class CrossRhythmApp {
     bool restoringHistory;
     string historyLabel="";
     int historyRequestFrame,historyRequestPaints;
+    bool historyBackgroundSuppressed;
     bool HistoryPaintRequired=>string.IsNullOrEmpty(workspaceCheckRoot)&&!Application.isBatchMode;
     void RequestRestore(bool reverse){
         if(Current!=Page.Edit||InputBlocked||(reverse?redo:undo).Count==0)return;
         restoringHistory=true;historyLabel=reverse?"Redo":"Undo";
+        historyBackgroundSuppressed=false;
         historyRequestFrame=Time.frameCount;historyRequestPaints=loadingPaints;
         PrepareExclusiveOperation();
         StartCoroutine(RestoreHistoryRoutine(reverse,Project));

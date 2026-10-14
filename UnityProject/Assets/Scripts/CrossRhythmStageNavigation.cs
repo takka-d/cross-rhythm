@@ -4,6 +4,7 @@ namespace CrossRhythm {
 public partial class CrossRhythmApp {
     bool stageExitPrompt,stageWasRunning;
     int stageExitChoice;
+    static readonly string[] StageExitLabels={"Resume","Practice","Songs"};
     void RequestStageExit(){
         if(InputBlocked||stageExitPrompt||(Current!=Page.Play&&Current!=Page.Practice))return;
         stageWasRunning=Audio.Running;Audio.Pause();SetPedal(false,Audio.Beat,false);ReleaseInputs();
@@ -49,11 +50,10 @@ public partial class CrossRhythmApp {
         Text(new Rect(r.x+26,r.y+24,608,38),T("演奏を中断しますか？","Stop this performance?"),27,Color.white,true);
         Text(new Rect(r.x+26,r.y+81,608,30),T("再開するか、同じ位置からPracticeへ移れます。","Resume, or practice from this position."),16,muted);
         const float width=194;
-        string[] labels={"Resume","Practice","Songs"};
-        for(int i=0;i<labels.Length;i++){
+        for(int i=0;i<StageExitLabels.Length;i++){
             var buttonRect=new Rect(r.x+26+i*(width+13),r.y+170,width,48);
             if(i==stageExitChoice)RoundBorder(new Rect(buttonRect.x-3,buttonRect.y-3,buttonRect.width+6,buttonRect.height+6),Color.white,1,7);
-            if(Button(buttonRect,labels[i],i==0,true,18,"stage-exit:"+i)){
+            if(Button(buttonRect,StageExitLabels[i],i==0,true,18,"stage-exit:"+i)){
                 if(i==0)ResumeStage();else if(i==1)PracticeFromStage();else QuitStage();
             }
         }

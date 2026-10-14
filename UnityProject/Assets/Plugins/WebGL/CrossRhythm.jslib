@@ -1,4 +1,10 @@
 mergeInto(LibraryManager.library, {
+  CRSystemPointer: function(show){
+    const root=document.documentElement,hidden=!show;
+    if(!window.crossRhythmPointerStyle){const style=document.createElement('style');style.textContent='.cr-system-pointer-hidden,.cr-system-pointer-hidden *{cursor:none!important}';document.head.appendChild(style);window.crossRhythmPointerStyle=style;}
+    root.classList.toggle('cr-system-pointer-hidden',hidden);
+    if(!window.crossRhythmPointerMove){window.crossRhythmPointerMove=function(){if(document.documentElement.classList.contains('cr-system-pointer-hidden'))SendMessage('CrossRhythm','OnSystemPointerMoved','');};document.addEventListener('pointermove',window.crossRhythmPointerMove,{passive:true});}
+  },
   CRExportMidi: function(pointer,length,namePtr,targetPtr){
     const bytes=HEAPU8.slice(pointer,pointer+length),name=UTF8ToString(namePtr),target=UTF8ToString(targetPtr);
     const done=value=>SendMessage(target,'OnMidiExported',JSON.stringify(value));

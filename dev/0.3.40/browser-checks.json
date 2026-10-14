@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-10-15T01:21:10.6818663+09:00",
+  "result": "PASS",
+  "url": "http://127.0.0.1:8340/?v=0.3.40",
+  "versionVisible": "0.3.40",
+  "checks": {
+    "titleRendered": true,
+    "songsRendered": true,
+    "practiceRendered": true,
+    "practiceSongsReturnsDirectly": true,
+    "practiceStartOpensFreshScoredPlay": true,
+    "playStopDialogRendered": true,
+    "playStopLabels": [
+      "Resume",
+      "Practice",
+      "Songs"
+    ],
+    "editRendered": true,
+    "undoRoundTripRestoredDeletedNote": true,
+    "undoProgressOrderRuntimeCheck": true,
+    "largeChartUndoOverlayCaptured": false,
+    "midiOverlapCardsOpenedInBrowser": false,
+    "consoleLogCount": 68,
+    "consoleErrorCount": 0,
+    "consoleWarningCount": 0
+  },
+  "scope": "Local final Web build in Codex in-app browser. Native project picker automatically cancelled in the hidden browser, so the large-chart visual timing and MIDI overlap cards were not opened. Physical controller and audible balance were not verified.",
+  "status": "passed",
+  "loadingHidden": true,
+  "console": {
+    "total": 68,
+    "errors": 0,
+    "warnings": 0,
+    "unhandledRejections": 0,
+    "nonFatalAudioLengthMessages": "not_counted"
+  },
+  "interactionScope": [
+    "Title rendered with version 0.3.40",
+    "Songs rendered",
+    "Practice opened and Songs returned without a dialog",
+    "Practice Start opened a fresh scored Play",
+    "Play Stop dialog showed Resume, Practice and Songs",
+    "Edit rendered and Undo restored a deleted note"
+  ]
+}

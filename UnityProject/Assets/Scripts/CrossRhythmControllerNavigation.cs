@@ -16,13 +16,16 @@ public static class ControllerNavigationMath {
         return Math.Abs(value.x)>Math.Abs(value.y)?(value.x>0?KeyCode.RightArrow:KeyCode.LeftArrow):(value.y>0?KeyCode.UpArrow:KeyCode.DownArrow);
     }
     public static bool ActivatesPointer(Vector2 pointer,Vector2 scroll,bool secondaryPressed)=>pointer!=Vector2.zero||scroll!=Vector2.zero||secondaryPressed;
+    public static bool MouseReclaimsPointer(bool virtualPointerVisible,Vector2 mouseDelta)=>virtualPointerVisible&&mouseDelta.sqrMagnitude>.04f;
+    public static bool SystemPointerVisible(bool virtualPointerVisible)=>!virtualPointerVisible;
 }
 
 public partial class CrossRhythmApp {
     Vector2 controllerPointerScreen;
     Vector2 controllerPointerDelta;
     Vector2 controllerWheel;
-    bool controllerPointerVisible,controllerStageUiMode;
+    bool controllerPointerVisibleState,controllerStageUiMode;
+    bool controllerPointerVisible {get=>controllerPointerVisibleState;set{if(controllerPointerVisibleState==value){Cursor.visible=ControllerNavigationMath.SystemPointerVisible(value);return;}controllerPointerVisibleState=value;SetSystemPointerVisible(ControllerNavigationMath.SystemPointerVisible(value));}}
     bool controllerPrimaryPressed,controllerPrimaryHeld,controllerPrimaryReleased,controllerSecondaryPressed;
     bool controllerPrimaryConsumed,controllerSecondaryConsumed;
     bool controllerEditorPrimaryCapture;
@@ -32,6 +35,14 @@ public partial class CrossRhythmApp {
     KeyCode controllerRepeatKey=KeyCode.None;
     double controllerRepeatAt;
     const double ControllerRepeatDelay=.36,ControllerRepeatRate=.11;
+
+    void SetSystemPointerVisible(bool visible){
+        Cursor.visible=visible;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        PlatformFiles.CRSystemPointer(visible?1:0);
+#endif
+    }
+    public void OnSystemPointerMoved(string _){if(controllerPointerVisible)controllerPointerVisible=false;}
 
     Gamepad ControllerPad(){
         var known=Gamepad.all.FirstOrDefault(p=>p.deviceId==controllerPadId);
@@ -85,7 +96,7 @@ public partial class CrossRhythmApp {
         if(controllerPage!=Current)ResetControllerNavigationForPage();
         controllerPrimaryPressed=controllerPrimaryReleased=controllerSecondaryPressed=false;
         controllerPrimaryConsumed=controllerSecondaryConsumed=false;controllerPointerDelta=Vector2.zero;controllerWheel=Vector2.zero;
-        if(Mouse.current!=null&&Mouse.current.delta.ReadValue().sqrMagnitude>.04f&&!ControllerStage)controllerPointerVisible=false;
+        if(Mouse.current!=null&&ControllerNavigationMath.MouseReclaimsPointer(controllerPointerVisible,Mouse.current.delta.ReadValue()))controllerPointerVisible=false;
         Gamepad pad=Gamepad.all.FirstOrDefault(ControllerHasActivity)??ControllerPad();if(pad==null){controllerPadId=0;controllerStageUiMode=false;controllerPointerVisible=false;controllerDrag="";return;}
         Vector2 pointer=ControllerNavigationMath.Deadzone(pad.leftStick.ReadValue(),ControllerNavigationMath.PointerDeadzone);
         Vector2 scroll=ControllerNavigationMath.Deadzone(pad.rightStick.ReadValue(),ControllerNavigationMath.ScrollDeadzone);
@@ -118,6 +129,7 @@ public partial class CrossRhythmApp {
             if(!controllerPointerVisible&&controllerPrimaryPressed){QueueControllerKey(KeyCode.Return);controllerPrimaryPressed=false;}
         }else UpdateControllerRepeat(KeyCode.None);
         if(controllerPrimaryReleased)controllerDrag="";
+        Cursor.visible=ControllerNavigationMath.SystemPointerVisible(controllerPointerVisible);
     }
     bool ControllerButtonHit(Rect rect,bool active){
         if(!active||controllerPrimaryConsumed||!controllerPrimaryPressed||!ControllerContains(rect))return false;
@@ -152,5 +164,6 @@ public partial class CrossRhythmApp {
         RoundFill(new Rect(p.x-3,p.y-3,7,7),Color.white,4);RoundBorder(new Rect(p.x-9,p.y-9,19,19),mint,2,10);
         RectFill(new Rect(p.x+10,p.y,9,1.5f),mint);RectFill(new Rect(p.x,p.y+10,1.5f,9),mint);
     }
+    void OnDisable(){controllerPointerVisible=false;}
 }
 }

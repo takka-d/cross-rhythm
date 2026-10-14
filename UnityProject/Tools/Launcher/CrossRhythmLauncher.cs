@@ -14,9 +14,9 @@ using System.Windows.Forms;
 [assembly:AssemblyDescription("Cross Rhythm startup launcher")]
 [assembly:AssemblyCompany("TakKa")]
 [assembly:AssemblyProduct("Cross Rhythm")]
-[assembly:AssemblyVersion("0.3.39.0")]
-[assembly:AssemblyFileVersion("0.3.39.0")]
-[assembly:AssemblyInformationalVersion("0.3.39")]
+[assembly:AssemblyVersion("0.3.40.0")]
+[assembly:AssemblyFileVersion("0.3.40.0")]
+[assembly:AssemblyInformationalVersion("0.3.40")]
 
 namespace CrossRhythmLauncher {
 internal static class Program {
@@ -74,6 +74,10 @@ internal static class Program {
 }
 
 internal sealed class LauncherForm:Form {
+    const int LogicalWindowWidth=820;
+    const int LogicalWindowHeight=461;
+    const double MaximumWorkingAreaWidth=0.86;
+    const double MaximumWorkingAreaHeight=0.80;
     readonly EventWaitHandle activate,ready;
     readonly string[] arguments;
     readonly string statusPath;
@@ -89,7 +93,9 @@ internal sealed class LauncherForm:Form {
         activate=activateEvent;ready=readyEvent;arguments=RemoveReservedArguments(playerArguments);
         statusPath=Path.Combine(Path.GetTempPath(),"cross-rhythm-startup-"+Process.GetCurrentProcess().Id+".txt");
         Text="Cross Rhythm";StartPosition=FormStartPosition.Manual;FormBorderStyle=FormBorderStyle.None;
-        WindowState=FormWindowState.Normal;Bounds=Screen.FromPoint(Cursor.Position).Bounds;
+        AutoScaleDimensions=new SizeF(96f,96f);AutoScaleMode=AutoScaleMode.Dpi;
+        WindowState=FormWindowState.Normal;ClientSize=new Size(LogicalWindowWidth,LogicalWindowHeight);
+        CenterOnScreen(Screen.FromPoint(Cursor.Position),false);
         MaximizeBox=false;MinimizeBox=false;KeyPreview=true;TopMost=true;ShowInTaskbar=true;
         BackColor=Color.FromArgb(7,13,19);ForeColor=Color.FromArgb(239,247,249);
         SetStyle(ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.UserPaint,true);
@@ -98,10 +104,10 @@ internal sealed class LauncherForm:Form {
         heading=new Label{Text=Japanese()?"Cross Rhythm を起動しています":"Starting Cross Rhythm",AutoSize=false,TextAlign=ContentAlignment.MiddleCenter,AutoEllipsis=true,Font=new Font("Segoe UI Semibold",20,FontStyle.Bold),ForeColor=Color.White,BackColor=Color.Transparent};
         detail=new Label{Text=Japanese()?"画面を準備しています":"Preparing the game",AutoSize=false,TextAlign=ContentAlignment.MiddleCenter,AutoEllipsis=true,Font=new Font("Segoe UI",12.5f),ForeColor=Color.FromArgb(199,216,223),BackColor=Color.Transparent};
         progress=new ProgressBar{Style=ProgressBarStyle.Marquee,MarqueeAnimationSpeed=22};
-        close=new Button{Text="Close",FlatStyle=FlatStyle.Flat,BackColor=Color.FromArgb(20,34,43),ForeColor=Color.White,Font=new Font("Segoe UI",11),TabIndex=0,AccessibleName="Close startup"};
-        close.FlatAppearance.BorderColor=Color.FromArgb(80,112,126);close.FlatAppearance.BorderSize=1;close.Click+=(s,e)=>RequestCancel();
+        close=new GameCloseButton{Text="CLOSE",Font=new Font("Segoe UI Semibold",10,FontStyle.Bold),TabIndex=0,AccessibleName="Close startup"};
+        close.Click+=(s,e)=>RequestCancel();
         Controls.Add(title);Controls.Add(heading);Controls.Add(detail);Controls.Add(progress);Controls.Add(close);
-        Resize+=(s,e)=>LayoutControls();Shown+=(s,e)=>{LayoutControls();StartPlayer();};
+        Resize+=(s,e)=>LayoutControls();Shown+=(s,e)=>{CenterOnScreen(Screen.FromHandle(Handle),true);LayoutControls();StartPlayer();};
         KeyDown+=(s,e)=>{if(e.KeyCode==Keys.Escape){RequestCancel();e.Handled=true;e.SuppressKeyPress=true;}};
         FormClosing+=OnClosing;
         timer=new System.Windows.Forms.Timer{Interval=50};timer.Tick+=(s,e)=>Tick();timer.Start();
@@ -120,13 +126,37 @@ internal sealed class LauncherForm:Form {
     }
 
     void LayoutControls(){
-        int width=Math.Min(780,Math.Max(360,ClientSize.Width-80));
+        int margin=Math.Max(24,ClientSize.Width/24);
+        int width=Math.Min(700,Math.Max(420,ClientSize.Width-margin*2));
+        int left=(ClientSize.Width-width)/2;
         int centerY=ClientSize.Height/2;
-        title.Bounds=new Rectangle((ClientSize.Width-width)/2,centerY-150,width,72);
-        heading.Bounds=new Rectangle((ClientSize.Width-width)/2,centerY-64,width,46);
-        detail.Bounds=new Rectangle((ClientSize.Width-width)/2,centerY-12,width,34);
-        progress.Bounds=new Rectangle((ClientSize.Width-width)/2,centerY+42,width,8);
-        close.Bounds=new Rectangle(Math.Max(24,ClientSize.Width-152),24,120,42);
+        int closeWidth=Math.Max(104,ClientSize.Width*15/100);
+        int closeHeight=Math.Max(38,ClientSize.Height*9/100);
+        close.Bounds=new Rectangle(ClientSize.Width-margin-closeWidth,margin,closeWidth,closeHeight);
+        int titleHeight=Math.Max(54,ClientSize.Height*14/100);
+        int headingHeight=Math.Max(42,ClientSize.Height*11/100);
+        int detailHeight=Math.Max(48,ClientSize.Height*13/100);
+        int titleTop=Math.Max(close.Bottom+12,centerY-Math.Max(138,ClientSize.Height*30/100));
+        title.Bounds=new Rectangle(left,titleTop,width,titleHeight);
+        heading.Bounds=new Rectangle(left,title.Bottom+8,width,headingHeight);
+        detail.Bounds=new Rectangle(left,heading.Bottom+4,width,detailHeight);
+        progress.Bounds=new Rectangle(left,detail.Bottom+20,width,8);
+    }
+
+    void CenterOnScreen(Screen screen,bool useCurrentDpi){
+        Rectangle area=screen.WorkingArea;
+        float dpi=96f;
+        if(useCurrentDpi&&IsHandleCreated){try{uint value=Native.GetDpiForWindow(Handle);if(value>=96&&value<=768)dpi=value;}catch(EntryPointNotFoundException){}catch(DllNotFoundException){}}
+        double preferredWidth=LogicalWindowWidth*(dpi/96d),preferredHeight=LogicalWindowHeight*(dpi/96d);
+        double fit=Math.Min(1d,Math.Min((area.Width*MaximumWorkingAreaWidth)/preferredWidth,(area.Height*MaximumWorkingAreaHeight)/preferredHeight));
+        int width=Math.Max(520,(int)Math.Round(preferredWidth*fit));
+        int height=Math.Max(293,(int)Math.Round(preferredHeight*fit));
+        // Preserve the intended 16:9 presentation even when the available monitor
+        // area forces the startup surface below its preferred DPI-scaled size.
+        double ratio=(double)LogicalWindowWidth/LogicalWindowHeight;
+        if((double)width/height>ratio)width=(int)Math.Round(height*ratio);else height=(int)Math.Round(width/ratio);
+        width=Math.Min(width,area.Width);height=Math.Min(height,area.Height);
+        Bounds=new Rectangle(area.Left+(area.Width-width)/2,area.Top+(area.Height-height)/2,width,height);
     }
 
     void StartPlayer(){
@@ -177,7 +207,7 @@ internal sealed class LauncherForm:Form {
     }
 
     void BringLauncherForward(){
-        ShowInTaskbar=true;TopMost=true;Show();WindowState=FormWindowState.Normal;Bounds=Screen.FromPoint(Cursor.Position).Bounds;Activate();LayoutControls();
+        ShowInTaskbar=true;TopMost=true;Show();WindowState=FormWindowState.Normal;CenterOnScreen(Screen.FromPoint(Cursor.Position),true);Activate();LayoutControls();
     }
 
     void RequestCancel(){
@@ -204,11 +234,51 @@ internal sealed class LauncherForm:Form {
         if(disposing){timer.Dispose();if(player!=null)player.Dispose();try{if(File.Exists(statusPath))File.Delete(statusPath);}catch(Exception){}}
         base.Dispose(disposing);
     }
+
+    protected override void OnPaint(PaintEventArgs e){
+        base.OnPaint(e);
+        using(var top=new SolidBrush(Color.FromArgb(132,232,196)))e.Graphics.FillRectangle(top,0,0,ClientSize.Width,3);
+        using(var border=new Pen(Color.FromArgb(48,78,90)))e.Graphics.DrawRectangle(border,0,0,Math.Max(0,ClientSize.Width-1),Math.Max(0,ClientSize.Height-1));
+    }
+
+    protected override void WndProc(ref Message message){
+        base.WndProc(ref message);
+        if(message.Msg==Native.WM_DPICHANGED&&!IsDisposed&&IsHandleCreated){
+            BeginInvoke((MethodInvoker)(()=>{CenterOnScreen(Screen.FromHandle(Handle),true);LayoutControls();Invalidate();}));
+        }
+    }
+}
+
+internal sealed class GameCloseButton:Button {
+    bool hovering,pressed;
+    internal GameCloseButton(){
+        FlatStyle=FlatStyle.Flat;FlatAppearance.BorderSize=0;BackColor=Color.Transparent;ForeColor=Color.White;
+        Cursor=Cursors.Hand;UseVisualStyleBackColor=false;SetStyle(ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.UserPaint,true);
+    }
+    protected override void OnMouseEnter(EventArgs e){hovering=true;Invalidate();base.OnMouseEnter(e);}
+    protected override void OnMouseLeave(EventArgs e){hovering=false;pressed=false;Invalidate();base.OnMouseLeave(e);}
+    protected override void OnMouseDown(MouseEventArgs e){if(e.Button==MouseButtons.Left)pressed=true;Invalidate();base.OnMouseDown(e);}
+    protected override void OnMouseUp(MouseEventArgs e){pressed=false;Invalidate();base.OnMouseUp(e);}
+    protected override void OnEnabledChanged(EventArgs e){Invalidate();base.OnEnabledChanged(e);}
+    protected override void OnPaint(PaintEventArgs e){
+        var graphics=e.Graphics;graphics.SmoothingMode=System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        Color fill=!Enabled?Color.FromArgb(13,24,30):pressed?Color.FromArgb(24,66,68):hovering?Color.FromArgb(20,53,60):Color.FromArgb(14,31,39);
+        Color line=!Enabled?Color.FromArgb(52,76,80):hovering?Color.FromArgb(132,232,196):Color.FromArgb(70,118,123);
+        using(var brush=new SolidBrush(fill))graphics.FillRectangle(brush,0,0,Width,Height);
+        using(var pen=new Pen(line,hovering?2f:1f))graphics.DrawRectangle(pen,0,0,Math.Max(0,Width-1),Math.Max(0,Height-1));
+        int iconSize=Math.Max(8,Math.Min(12,Height/3)),iconLeft=Math.Max(12,Width/8),iconTop=(Height-iconSize)/2;
+        using(var pen=new Pen(line,1.6f)){graphics.DrawLine(pen,iconLeft,iconTop,iconLeft+iconSize,iconTop+iconSize);graphics.DrawLine(pen,iconLeft+iconSize,iconTop,iconLeft,iconTop+iconSize);}
+        var textBounds=new Rectangle(iconLeft+iconSize+8,0,Math.Max(1,Width-iconLeft-iconSize-14),Height);
+        TextRenderer.DrawText(graphics,Text,Font,textBounds,Enabled?ForeColor:Color.FromArgb(112,130,135),TextFormatFlags.Left|TextFormatFlags.VerticalCenter|TextFormatFlags.SingleLine|TextFormatFlags.NoPrefix|TextFormatFlags.EndEllipsis);
+        if(Focused&&ShowFocusCues)ControlPaint.DrawFocusRectangle(graphics,new Rectangle(4,4,Math.Max(1,Width-9),Math.Max(1,Height-9)),ForeColor,fill);
+    }
 }
 
 internal static class Native {
     internal const int SW_RESTORE=9;
+    internal const int WM_DPICHANGED=0x02E0;
     [DllImport("user32.dll")]internal static extern bool SetForegroundWindow(IntPtr window);
     [DllImport("user32.dll")]internal static extern bool ShowWindow(IntPtr window,int command);
+    [DllImport("user32.dll")]internal static extern uint GetDpiForWindow(IntPtr window);
 }
 }

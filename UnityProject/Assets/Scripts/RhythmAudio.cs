@@ -41,9 +41,11 @@ public sealed partial class RhythmAudio : MonoBehaviour {
     public double BeatAt(double dsp)=>Running&&!Preparing?ChartBeat(ChartSeconds(AnchorBeat)+(dsp-AnchorDSP)*Rate):AnchorBeat;
     public double DSPAt(double beat)=>AnchorDSP+(ChartSeconds(beat)-ChartSeconds(AnchorBeat))/Rate;
     public static readonly string[] SampleKeys={"BD","SN","SN_RIM","SIDE","SN_BUZZ","HH","OHH","HH_PEDAL","HT","FT","TOM_RIM","RD","CUP","RIDE_CRASH","CR","SPLASH","CHINA","TAMBOURINE"};
-    // Balance is based on decoded 100 ms RMS at strength 3. Ride crash keeps
-    // its separately reduced value; only the quiet hi-hat / ride voices rise.
-    static readonly float[] SampleGains={.78f,1.141123f,1.172821f,1.109425f,1.077727f,1.70f,.80f,.58f,.70f,.72f,.74f,7.25f,4.60f,.168936f,1.505649f,.56f,.56f,.48f};
+    // Balance is based on decoded stereo 100 ms RMS at strength 3. The source
+    // HH and ride recordings are roughly 6 dB below kick/snare after the old
+    // correction, so their family receives another 4 dB while retaining the
+    // shared six-step velocity curve. Ride crash keeps its separate value.
+    static readonly float[] SampleGains={.78f,1.141123f,1.172821f,1.109425f,1.077727f,2.72f,1.28f,.58f,.70f,.72f,.74f,11.60f,7.36f,.168936f,1.505649f,.56f,.56f,.48f};
     const float PreparedPeakLimit=.999f;
     internal static float SampleGainFor(string key){int index=Array.IndexOf(SampleKeys,key);return index<0?1:SampleGains[index];}
     internal static float SafePreparationScale(float requested,float peak)=>peak>0?Math.Min(requested,PreparedPeakLimit/peak):requested;

@@ -31,6 +31,9 @@ public partial class CrossRhythmApp {
 
     void LoadingBackground(){
         // Render the retained page only on repaint. No input event reaches its controls.
+        // Large editor charts can take long enough to redraw that the progress dialog
+        // appears late. Undo/Redo only needs a clear, immediate progress surface.
+        if(restoringHistory){historyBackgroundSuppressed=true;return;}
         if(!LoadingIsDialog||Project==null||Event.current.type!=EventType.Repaint)return;
         menuActivate="";bool enabled=GUI.enabled;GUI.enabled=false;
         try{
