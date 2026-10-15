@@ -3,14 +3,19 @@ $launcherRoot=$PSScriptRoot
 $testRoot=Join-Path ([IO.Path]::GetTempPath()) ('cross-rhythm-launcher-'+[Guid]::NewGuid().ToString('N'))
 $runtime=Join-Path $testRoot 'Runtime'
 $launcher=Join-Path $testRoot 'CrossRhythm.exe'
+$foreignRoot=Join-Path $testRoot 'foreign-copy'
+$foreignRuntime=Join-Path $foreignRoot 'Runtime'
+$foreignLauncher=Join-Path $foreignRoot 'CrossRhythm.exe'
+$foreignMarker=Join-Path $testRoot 'foreign player marker.txt'
 $closeMarker=Join-Path $testRoot 'close player marker.txt'
 $escapeMarker=Join-Path $testRoot 'escape player marker.txt'
 $readyMarker=Join-Path $testRoot 'ready player marker.txt'
-$closeLauncher=$null;$duplicate=$null;$escapeLauncher=$null;$readyLauncher=$null;$readyDuplicate=$null
-$closeChildId=0;$escapeChildId=0;$readyChildId=0
+$foreignLauncherProcess=$null;$closeLauncher=$null;$duplicate=$null;$escapeLauncher=$null;$readyLauncher=$null;$readyDuplicate=$null
+$foreignChildId=0;$closeChildId=0;$escapeChildId=0;$readyChildId=0
 try {
-  New-Item -ItemType Directory -Force -Path $runtime | Out-Null
+  New-Item -ItemType Directory -Force -Path $runtime,$foreignRuntime | Out-Null
   & (Join-Path $launcherRoot 'Build-Launcher.ps1') -OutputPath $launcher
+  & (Join-Path $launcherRoot 'Build-Launcher.ps1') -OutputPath $foreignLauncher
   $stub=Join-Path $testRoot 'PlayerStub.cs'
   @'
 using System;
@@ -37,6 +42,7 @@ class PlayerStub {
   if(!(Test-Path $csc)){$csc=Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'}
   & $csc /nologo /target:winexe "/out:$(Join-Path $runtime 'CrossRhythmPlayer.exe')" /reference:System.Core.dll $stub
   if($LASTEXITCODE -ne 0){throw 'Test player compilation failed.'}
+  Copy-Item -LiteralPath (Join-Path $runtime 'CrossRhythmPlayer.exe') -Destination (Join-Path $foreignRuntime 'CrossRhythmPlayer.exe')
 
   Add-Type -AssemblyName System.Windows.Forms
   Add-Type @'
@@ -89,6 +95,12 @@ public static class LauncherTestNative {
     return $first.Left -lt $second.Right -and $first.Right -gt $second.Left -and $first.Top -lt $second.Bottom -and $first.Bottom -gt $second.Top
   }
 
+  # A player and launcher from another extracted copy must not suppress this
+  # package's startup surface or receive this package's ready signal.
+  $foreignLauncherProcess=Start-Process -FilePath $foreignLauncher -ArgumentList ('"'+$foreignMarker+'"') -PassThru
+  $foreignWindow=Wait-LauncherWindow $foreignLauncherProcess
+  $foreignChildId=Wait-Marker $foreignMarker 'Foreign package did not start its child player.'
+
   # The startup surface is a centered fixed-ratio game panel instead of a
   # full-monitor overlay. Validate the actual native window at the active DPI.
   $watch=[Diagnostics.Stopwatch]::StartNew()
@@ -113,13 +125,13 @@ public static class LauncherTestNative {
   $titleWindow=Assert-Child $closeWindow 'CROSS RHYTHM'
   $headingWindow=[LauncherTestNative]::FindChildByText($closeWindow,'Cross Rhythm を起動しています')
   if($headingWindow -eq [IntPtr]::Zero){$headingWindow=Assert-Child $closeWindow 'Starting Cross Rhythm'}
-  $detailWindow=[LauncherTestNative]::FindChildByText($closeWindow,'画面を準備しています')
-  if($detailWindow -eq [IntPtr]::Zero){$detailWindow=Assert-Child $closeWindow 'Preparing the game'}
-  $closeButton=Assert-Child $closeWindow 'CLOSE'
+  $detailWindow=[LauncherTestNative]::FindChildByText($closeWindow,'ゲーム画面の準備を開始します')
+  if($detailWindow -eq [IntPtr]::Zero){$detailWindow=Assert-Child $closeWindow 'Preparing the game screen'}
+  $closeButton=Assert-Child $closeWindow '×'
   $titleRect=Get-Rect $titleWindow;$headingRect=Get-Rect $headingWindow;$detailRect=Get-Rect $detailWindow;$closeRect=Get-Rect $closeButton
   if($titleRect.Bottom -gt $headingRect.Top -or $headingRect.Bottom -gt $detailRect.Top){throw 'Central launcher text regions overlap.'}
   if($titleRect.Left -lt $rect.Left -or $titleRect.Right -gt $rect.Right -or $detailRect.Bottom -gt $rect.Bottom){throw 'Central launcher text is clipped outside the startup surface.'}
-  if(($closeRect.Right-$closeRect.Left) -lt [Math]::Floor(96*$dpi/96) -or ($closeRect.Bottom-$closeRect.Top) -lt [Math]::Floor(34*$dpi/96)){throw 'Game-styled Close control is too small at the active DPI.'}
+  if(($closeRect.Right-$closeRect.Left) -lt [Math]::Floor(38*$dpi/96) -or ($closeRect.Bottom-$closeRect.Top) -lt [Math]::Floor(38*$dpi/96)){throw 'The × Close control has an inadequate hit area at the active DPI.'}
   if(Test-Overlap $titleRect $closeRect){throw 'Close overlaps the title at the preferred startup size.'}
 
   # Force a compact 16:9 client to cover the small-monitor fallback layout. The
@@ -132,6 +144,12 @@ public static class LauncherTestNative {
   if($titleRect.Left -lt $compactRect.Left -or $titleRect.Right -gt $compactRect.Right -or $detailRect.Bottom -gt $compactRect.Bottom){throw 'Compact launcher text is clipped outside the startup surface.'}
 
   $closeChildId=Wait-Marker $closeMarker 'Launcher did not start the child player.'
+  if($closeChildId -eq $foreignChildId){throw 'The launcher attached to a different package solely because the player names matched.'}
+  if($foreignLauncherProcess.HasExited){throw 'Starting another extracted copy displaced the original launcher.'}
+  Stop-Process -Id $foreignLauncherProcess.Id -Force
+  $foreignLauncherProcess=$null
+  Stop-Process -Id $foreignChildId -Force
+  $foreignChildId=0
   $duplicate=Start-Process -FilePath $launcher -ArgumentList ('"'+$closeMarker+'"') -PassThru
   if(!$duplicate.WaitForExit(3000)){throw 'Second launcher did not hand control to the startup surface.'}
   Start-Sleep -Milliseconds 150
@@ -181,11 +199,14 @@ public static class LauncherTestNative {
   $manifest=Get-Content -LiteralPath (Join-Path $launcherRoot 'CrossRhythmLauncher.manifest') -Raw
   if($source -notmatch 'AutoScaleMode=AutoScaleMode\.Dpi' -or $source -notmatch 'WM_DPICHANGED'){throw 'Per-monitor DPI layout safeguards are missing.'}
   if($source -notmatch 'GameCloseButton' -or $source -notmatch 'close\.Click\+=\(s,e\)=>RequestCancel\(\)' -or $source -notmatch 'e\.KeyCode==Keys\.Escape.*RequestCancel\(\)'){throw 'Close and Escape must share the tested cancellation path.'}
+  if($source -notmatch 'PackageKey\(AppDomain\.CurrentDomain\.BaseDirectory\)' -or $source -match 'TryActivatePlayer'){throw 'Launcher identity is not scoped to the extracted package.'}
+  if($source -notmatch 'visiblePaints>0.*StartPlayer\(\)' -or $source -match 'Shown\+=.*StartPlayer\(\)'){throw 'The player may start before the startup surface has painted.'}
+  if($source -match 'AutoEllipsis=true' -or $source -match 'EndEllipsis' -or $source -match 'Text="CLOSE"' -or $source -match 'Text=Japanese\(\)\?"閉じる"' -or $source -match 'iconSize=.*DrawLine'){throw 'Startup text or × Close still uses abbreviation or redundant caption decoration.'}
   if($manifest -notmatch 'PerMonitorV2,PerMonitor' -or $manifest -notmatch 'true/pm'){throw 'The launcher manifest is not per-monitor DPI aware.'}
-  Write-Output "CROSS_RHYTHM_LAUNCHER_TEST_PASS visible_ms=$visibleMs centered_fixed_ratio=true fullscreen=false dpi=$dpi nonoverlapping_text=true game_close=true close_cancelled_child=true escape_cancelled_child=true duplicate_instances=1 ready_handoff=true status_bridge=true one_startup_surface=true"
+  Write-Output "CROSS_RHYTHM_LAUNCHER_TEST_PASS visible_ms=$visibleMs centered_fixed_ratio=true fullscreen=false dpi=$dpi nonoverlapping_text=true full_text=true clean_close=true close_cancelled_child=true escape_cancelled_child=true duplicate_instances=1 package_isolation=true painted_before_player=true ready_handoff=true status_bridge=true one_startup_surface=true"
 } finally {
-  foreach($process in @($readyDuplicate,$readyLauncher,$escapeLauncher,$duplicate,$closeLauncher)){if($process -and !$process.HasExited){Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue}}
-  foreach($childProcessId in @($readyChildId,$escapeChildId,$closeChildId)){if($childProcessId){Stop-Process -Id $childProcessId -Force -ErrorAction SilentlyContinue}}
+  foreach($process in @($readyDuplicate,$readyLauncher,$escapeLauncher,$duplicate,$closeLauncher,$foreignLauncherProcess)){if($process -and !$process.HasExited){Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue}}
+  foreach($childProcessId in @($readyChildId,$escapeChildId,$closeChildId,$foreignChildId)){if($childProcessId){Stop-Process -Id $childProcessId -Force -ErrorAction SilentlyContinue}}
   Start-Sleep -Milliseconds 100
   if(Test-Path -LiteralPath $testRoot){
     $resolved=[IO.Path]::GetFullPath($testRoot)

@@ -41,8 +41,16 @@ public sealed class EditorInteraction {
     ChartNote Note(int index)=>Project.Notes.FirstOrDefault(n=>n.Index==index);
     public Rect NoteRect(ChartNote n)=>ChartVisuals.EditRect(Project,n,Array.IndexOf(Lanes,n.Instrument),PPB,RowHeight);
     ChartNote Hit(Vector2 point)=>Project.Notes.OrderByDescending(n=>n.Index).FirstOrDefault(n=>NoteRect(n).Contains(point));
-    ChartNote HitResizeEdge(Vector2 point){return Project.Notes.Where(n=>Selection.Contains(n.Index)&&(n.Pedal||n.Instrument=="SN")).FirstOrDefault(n=>{var r=NoteRect(n);return point.y>=r.yMin-4&&point.y<=r.yMax+4&&(Math.Abs(point.x-r.xMin)<=7||Math.Abs(point.x-r.xMax)<=7);});}
-    public void SetDuration(double beats){if(!(!double.IsNaN(beats)&&!double.IsInfinity(beats))||beats<=0)return;DefaultDuration=beats;var notes=Project.Notes.Where(n=>Selection.Contains(n.Index)&&(n.Pedal||n.Instrument=="SN")).ToArray();if(notes.Length==0)return;Snapshot();foreach(var n in notes)n.Source["durationBeats"]=Math.Min(beats,Project.Length-n.Beat);Commit();}
+    ChartNote HitResizeEdge(Vector2 point){return Project.Notes.Where(n=>Selection.Contains(n.Index)&&n.Sustained).FirstOrDefault(n=>{var r=NoteRect(n);return point.y>=r.yMin-4&&point.y<=r.yMax+4&&(Math.Abs(point.x-r.xMin)<=7||Math.Abs(point.x-r.xMax)<=7);});}
+    public bool SetDuration(double beats){
+        if(!(!double.IsNaN(beats)&&!double.IsInfinity(beats))||beats<=0)return false;
+        var notes=Project.Notes.Where(n=>Selection.Contains(n.Index)&&n.Sustained).ToArray();
+        // With no selection this is the default Hold value for the next pedal
+        // or buzz roll. A selected single-hit note must remain unaffected.
+        if(notes.Length==0&&Selection.Count>0)return false;
+        DefaultDuration=beats;if(notes.Length==0)return true;
+        Snapshot();foreach(var n in notes)n.Source["durationBeats"]=Math.Min(beats,Project.Length-n.Beat);Commit();return true;
+    }
     public static double WheelBeat(double current,float delta,double grid,double length)=>Math.Max(0,Math.Min(length,current+delta*grid));
     public Rect Bounds(){var rects=Project.Notes.Where(n=>Selection.Contains(n.Index)).Select(NoteRect).ToArray();return rects.Length==0?default:Rect.MinMaxRect(rects.Min(r=>r.xMin),rects.Min(r=>r.yMin),rects.Max(r=>r.xMax),rects.Max(r=>r.yMax));}
     public static double CellStart(ChartProject p,double beat){
@@ -65,7 +73,7 @@ public sealed class EditorInteraction {
     public static double CellEnd(ChartProject p,double beat){double start=CellStart(p,beat);if(start>=p.Length)return p.Length;int m=p.BarAt(start);return Math.Min(p.Starts[m]+p.Measures[m],start+p.Grid);}
     public static double Follow(double view,double span,double beat,double length){if(beat>view+span*.82||beat<view)view=beat-span*.25;return Math.Max(0,Math.Min(Math.Max(0,length-span),view));}
     public static double EdgeSpeed(float x,float width){const float edge=44;return x<edge?-12*(.18+.82*Math.Min(1,(edge-x)/edge)):x>width-edge?12*(.18+.82*Math.Min(1,(x-width+edge)/edge)):0;}
-    double Length(ChartNote n)=>n.Pedal||n.Instrument=="SN"?n.Duration:n.Step;
+    double Length(ChartNote n)=>n.DisplaySpan;
     void Commit(){Project.Dirty=true;Project.Rebuild();Changed?.Invoke();}
     void Snapshot(){BeforeEdit?.Invoke();}
     void Only(ChartNote n){Clear();if(n!=null){Selection.Add(n.Index);Anchor=Active=n.Index;}}
@@ -88,7 +96,7 @@ public sealed class EditorInteraction {
         if(hit!=null&&control){if(!Selection.Add(hit.Index))Selection.Remove(hit.Index);if(Anchor<0||!Selection.Contains(Anchor))RefreshAnchor();Active=hit.Index;Batch=Selection.Count>1;return;}
         if(shift||control)return;
         if(clicks>=2&&hit!=null){Cancel();Delete(hit.Index);return;}
-        if(hit!=null&&(hit.Pedal||hit.Instrument=="SN")&&(hit.Pedal||Selection.Count<=1||!Selection.Contains(hit.Index))){
+        if(hit!=null&&hit.Sustained&&(hit.Pedal||Selection.Count<=1||!Selection.Contains(hit.Index))){
             Rect r=NoteRect(hit);float edge=hit.Pedal?Math.Min(10,Math.Max(5,r.width*.24f)):Math.Min(9,Math.Max(2,r.width*.22f));
             if(point.x<r.xMin+edge||point.x>r.xMax-edge){Only(hit);target=hit.Index;originalStart=hit.Beat;originalEnd=Math.Min(Project.Length,hit.Beat+hit.Duration);gesture=point.x<r.center.x?Gesture.ResizeLeft:Gesture.ResizeRight;return;}
         }
@@ -100,9 +108,8 @@ public sealed class EditorInteraction {
         if(Batch||Selection.Count>1){Clear();return;}
         Clear();int row=(int)(point.y/RowHeight);double beat=PlacementBeat(Project,point.x/PPB);if(row<0||row>=Lanes.Length||beat<0||beat>=Project.Length)return;
         var duplicate=Project.Notes.FirstOrDefault(n=>n.Instrument==Lanes[row]&&Math.Abs(n.Beat-beat)<1e-6);if(duplicate!=null){Only(duplicate);return;}
-        Snapshot();int bar=Project.BarAt(beat);string inst=Lanes[row];var e=new JObject{{"id","u-"+Guid.NewGuid().ToString("N")},{"measure",bar},{"beat",beat-Project.Starts[bar]},{"instrument",inst},{"velocity",DefaultVelocity},{"gridStepBeats",Project.Grid},{"confidence",1},{"source","manual"}};
-        if(inst=="SN"||inst=="HHSTATE")e["durationBeats"]=Math.Min(inst=="HHSTATE"?Math.Max(Project.Grid,DefaultDuration):Project.Grid,Project.Length-beat);
-        e["articulation"]=EditorNoteTypes.Get(Project,row);
+        Snapshot();int bar=Project.BarAt(beat);string inst=Lanes[row],articulation=EditorNoteTypes.Get(Project,row);var e=new JObject{{"id","u-"+Guid.NewGuid().ToString("N")},{"measure",bar},{"beat",beat-Project.Starts[bar]},{"instrument",inst},{"velocity",DefaultVelocity},{"gridStepBeats",Project.Grid},{"confidence",1},{"source","manual"},{"articulation",articulation}};
+        if(ChartProject.UsesDuration(inst,articulation))e["durationBeats"]=Math.Min(inst=="HHSTATE"?Math.Max(Project.Grid,DefaultDuration):DefaultDuration,Project.Length-beat);
         target=Project.Events.Count;Project.Events.Add(e);Commit();Only(Note(target));Preview?.Invoke(Note(target));
         if(inst=="HHSTATE"){gesture=Gesture.Pedal;originalStart=beat;pushed=true;}
     }
@@ -146,7 +153,7 @@ public sealed class EditorInteraction {
     public void Copy(){if(Selection.Count==0)return;var notes=Project.Notes.Where(n=>Selection.Contains(n.Index)).ToArray();clipboard=new JArray(notes.Select(n=>n.Source.DeepClone()));copiedBeats=notes.Select(n=>n.Beat).ToArray();Clear();Message="Copied";}
     public void Paste(double requested){
         if(!HasClipboard)return;double first=copiedBeats.Min(),span=0;
-        for(int i=0;i<clipboard.Count;i++){var e=(JObject)clipboard[i];double length=(string)e["instrument"]=="SN"||(string)e["instrument"]=="HHSTATE"?(double?)e["durationBeats"]??ChartProject.EventStep(e):ChartProject.EventStep(e);span=Math.Max(span,copiedBeats[i]-first+length);}
+        for(int i=0;i<clipboard.Count;i++){var e=(JObject)clipboard[i];double step=ChartProject.EventStep(e),length=ChartProject.UsesDuration(e)?((double?)e["durationBeats"]??step):Math.Min(.25,step);span=Math.Max(span,copiedBeats[i]-first+length);}
         if(span>Project.Length+1e-9){Message="The copied range is longer than this chart";return;}
         double anchor=PlacementBeat(Project,Math.Max(0,Math.Min(Project.Length-span,requested)));Snapshot();Clear();
         for(int i=0;i<clipboard.Count;i++){var e=(JObject)clipboard[i].DeepClone();double b=anchor+copiedBeats[i]-first;int m=Project.BarAt(b);e["measure"]=m;e["beat"]=b-Project.Starts[m];e["id"]="u-"+Guid.NewGuid().ToString("N");Selection.Add(Project.Events.Count);Project.Events.Add(e);}Commit();Dedupe();RefreshAnchor();Batch=Selection.Count>1;Cursor=anchor;Seek?.Invoke(Cursor);

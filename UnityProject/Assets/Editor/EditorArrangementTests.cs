@@ -45,8 +45,13 @@ public static class EditorArrangementTests {
         int restoreAt=startupSource.IndexOf("RestoreEditorNative();",StringComparison.Ordinal);
         int requestedAt=startupSource.IndexOf("ImportNative(args[at+1]);",StringComparison.Ordinal);
         int waitAt=startupSource.IndexOf(startupWait,StringComparison.Ordinal);
-        return source.Contains("new Mutex(true,MutexName,out first)")
+        return source.Contains("PackageKey(AppDomain.CurrentDomain.BaseDirectory)")
+            &&source.Contains("new Mutex(true,mutexName,out first)")
             &&source.Contains("FormBorderStyle=FormBorderStyle.None")
+            &&source.Contains("visiblePaints>0")
+            &&source.Contains("FindPlayer(path)")
+            &&!source.Contains("TryActivatePlayer")
+            &&!source.Contains("AutoEllipsis=true")
             &&source.Contains("--startup-ready-event")
             &&startupSource.Contains("EventWaitHandle.OpenExisting(nativeStartupReadyEvent)")
             &&startupSource.Contains("if(nativeStartupExternalOverlay)")

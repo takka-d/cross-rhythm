@@ -13,10 +13,10 @@ public partial class CrossRhythmApp {
     enum ControlKind { Action, Menu, Dialog, Toggle, Tab, Choice }
     static Rect ScreenRect(Rect r){Vector2 a=GUIUtility.GUIToScreenPoint(r.min),b=GUIUtility.GUIToScreenPoint(r.max);return Rect.MinMaxRect(Mathf.Min(a.x,b.x),Mathf.Min(a.y,b.y),Mathf.Max(a.x,b.x),Mathf.Max(a.y,b.y));}
     bool Button(Rect r,string text,bool primary=false,bool enabled=true,int fontSize=18,string focusKey=null,ControlKind kind=ControlKind.Action){
-        bool active=GUI.enabled&&enabled,hover=active&&(r.Contains(Event.current.mousePosition)||ControllerContains(r));
+        bool active=GUI.enabled&&enabled,hover=active&&ControllerNavigationMath.ControllerHover(controllerPointerVisible,r.Contains(Event.current.mousePosition),ControllerContains(r));
         string id=focusKey??(Current+":"+text+":"+r.x+":"+r.y);RegisterMenu(id,r,active);bool focused=keyboardMenu&&menuFocus==id;
         if(Event.current.type==EventType.Repaint&&hover){Vector2 point=controllerPointerVisible?ControllerGuiPointer():Event.current.mousePosition;uiFeedback.Hover(id,ScreenRect(r),GUIUtility.GUIToScreenPoint(point));}
-        bool pressed=hover&&((UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.leftButton.isPressed)||(controllerPointerVisible&&controllerPrimaryHeld));
+        bool pressed=hover&&(controllerPointerVisible?controllerPrimaryHeld:UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.leftButton.isPressed);
         Color fill=primary?mint:panel;if(!active)fill=Color.Lerp(bg,fill,.45f);else if(pressed)fill=Color.Lerp(fill,Color.white,.25f);else if(hover)fill=Color.Lerp(fill,mint,primary?.14f:.24f);
         if(flashButton==id&&Time.unscaledTimeAsDouble<buttonFlashUntil)fill=Color.Lerp(fill,Color.white,.22f);
         bool stateControl=kind==ControlKind.Toggle||kind==ControlKind.Tab||kind==ControlKind.Choice;
@@ -109,7 +109,7 @@ public partial class CrossRhythmApp {
         if(Button(SongsPreviewRect(x),"Preview "+(songPreviewEnabled?"ON":"OFF"),songPreviewEnabled,true,14,"song-preview",ControlKind.Toggle))SetSongPreview(!songPreviewEnabled);
         var view=new Rect(x,254,660,H-344);songScroll=ControllerScrollView(view,songScroll,640,Library.Count*138);songScroll=GUI.BeginScrollView(view,songScroll,new Rect(0,0,640,Library.Count*138));
         for(int i=0;i<Library.Count;i++){
-            var p=Library[i];var r=new Rect(0,i*138,630,126);bool choose=Button(r,"",false,true,18,"song:"+i);bool mouseMoved=UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.delta.ReadValue().sqrMagnitude>0;bool hoverFocus=GUI.enabled&&Event.current.type==EventType.Repaint&&r.Contains(Event.current.mousePosition)&&mouseMoved||GUI.enabled&&Event.current.type==EventType.Repaint&&ControllerPointerMoved&&ControllerContains(r);if(i==selected){RectFill(r,new Color(.09f,.19f,.18f));Border(r,mint,2);}
+            var p=Library[i];var r=new Rect(0,i*138,630,126);bool choose=Button(r,"",false,true,18,"song:"+i);bool mouseMoved=UnityEngine.InputSystem.Mouse.current!=null&&UnityEngine.InputSystem.Mouse.current.delta.ReadValue().sqrMagnitude>0;bool hoverFocus=GUI.enabled&&Event.current.type==EventType.Repaint&&ControllerNavigationMath.ControllerHover(controllerPointerVisible,r.Contains(Event.current.mousePosition)&&mouseMoved,ControllerPointerMoved&&ControllerContains(r));if(i==selected){RectFill(r,new Color(.09f,.19f,.18f));Border(r,mint,2);}
             FittedText(new Rect(20,r.y+10,500,32),p.Title+(p.Dirty?" *":""),23,Color.white,true);
             FittedText(new Rect(20,r.y+46,490,25),ArtistDisplay(p),15,muted);
             FittedText(new Rect(20,r.y+70,510,21),p.FileName,12,muted);

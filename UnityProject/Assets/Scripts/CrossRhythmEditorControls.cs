@@ -59,9 +59,12 @@ public partial class CrossRhythmApp {
             var types=Types[instrument];for(int i=0;i<types.Length;i++){int ix=i;if(Button(new Rect(x+i%2*(cw/2),y+32+i/2*35,cw/2-8,29),EditorNoteTypes.Label(Instruments[instrument],types[i]),kind==i,true,13,kind:ControlKind.Choice)){kind=ix;ChangeSelected(e=>{if((string)e["instrument"]==Instruments[instrument])e["articulation"]=types[ix];});}}
             x+=cw+12;Text(new Rect(x,y,cw,24),T("強弱","Velocity"),14,muted);
             for(int i=0;i<6;i++){int v=i;if(Button(new Rect(x+i*43,y+32,37,30),i.ToString(),selection.Count==0?velocity==i:Project.Notes.Where(n=>selection.Contains(n.Index)).All(n=>n.Velocity==i),true,14)){velocity=v;ChangeSelected(e=>e["velocity"]=v);}}
-            Text(new Rect(x,y+78,130,22),T("長さ(拍)","Length (beats)"),13,muted);
+            bool canSetDuration=selection.Count>0?Project.Notes.Any(n=>selection.Contains(n.Index)&&n.Sustained):ChartProject.UsesDuration(Instruments[instrument],EditorNoteTypes.Get(Project,instrument));
+            Text(new Rect(x,y+78,130,22),T("持続(ペダル/Buzz)","Hold (Pedal/Buzz)"),13,canSetDuration?muted:C("#586675"));
+            bool durationEnabled=GUI.enabled;GUI.enabled=durationEnabled&&canSetDuration;
             durationField=EditField("duration",new Rect(x+132,y+72,96,30),durationField);
-            if(Button(new Rect(x+238,y+72,58,30),"Set",false,true,14)&&double.TryParse(durationField,System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out var d)&&d>0&&d<=256){duration=d;Editor.SetDuration(d);SyncEditorNote();status=T("長さを変更しました","Length updated");}
+            if(Button(new Rect(x+238,y+72,58,30),"Set",false,true,14)&&double.TryParse(durationField,System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out var d)&&d>0&&d<=256){duration=d;if(Editor.SetDuration(d)){SyncEditorNote();status=T("持続時間を変更しました","Hold updated");}}
+            GUI.enabled=durationEnabled;
             x+=cw+12;Text(new Rect(x,y,cw,24),selection.Count+" "+T("ノーツを選択","notes selected"),14,muted);
             if(Button(new Rect(x,y+32,92,32),"Copy",false,selection.Count>0,14))Copy();if(Button(new Rect(x+104,y+32,92,32),"Paste",false,Editor.HasClipboard,14))Paste();
             if(Button(new Rect(x+208,y+32,92,32),"Delete",false,selection.Count>0,14))DeleteSelected();

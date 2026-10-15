@@ -14,7 +14,7 @@ public sealed partial class ChartProject {
         for(int bar=0;bar<Measures.Length;bar++){
             barNoteStarts[bar]=cursor;double step=.25;
             while(cursor<Notes.Count&&Notes[cursor].Measure==bar){
-                var n=Notes[cursor];step=Math.Min(step,n.Step);end=Math.Max(end,n.Beat+Math.Max(n.Duration,.25));noteEndPrefix[cursor]=end;
+                var n=Notes[cursor];step=Math.Min(step,n.Step);end=Math.Max(end,n.Beat+Math.Max(n.DisplaySpan,.25));noteEndPrefix[cursor]=end;
                 noteByIndex[n.Index]=n;instrumentCounts.TryGetValue(n.Instrument,out int count);instrumentCounts[n.Instrument]=count+1;cursor++;
             }
             barDisplaySteps[bar]=step;
@@ -29,7 +29,7 @@ public sealed partial class ChartProject {
     public IEnumerable<ChartNote> NotesInBar(int bar){if(bar<0||bar>=Measures.Length)yield break;for(int i=barNoteStarts[bar];i<barNoteStarts[bar+1];i++)yield return Notes[i];}
     public IEnumerable<ChartNote> NotesOverlapping(double from,double to){
         int lo=0,hi=noteEndPrefix.Length;while(lo<hi){int mid=lo+(hi-lo)/2;if(noteEndPrefix[mid]<from)lo=mid+1;else hi=mid;}
-        for(int i=lo;i<Notes.Count&&Notes[i].Beat<=to;i++)if(Notes[i].Beat+Math.Max(Notes[i].Duration,.25)>=from)yield return Notes[i];
+        for(int i=lo;i<Notes.Count&&Notes[i].Beat<=to;i++)if(Notes[i].Beat+Math.Max(Notes[i].DisplaySpan,.25)>=from)yield return Notes[i];
     }
     public IEnumerable<PedalRange> PedalsOverlapping(double from,double to){
         int lo=PedalLowerBound(from);

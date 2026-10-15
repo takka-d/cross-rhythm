@@ -46,8 +46,8 @@ public partial class CrossRhythmApp {
         bool oldFeet=feetAbove,oldEnglish=english;try{
             float songsX=(W-1160)/2;var laneOrderRect=SongsLaneOrderRect(songsX);var previewRect=SongsPreviewRect(songsX);
             check(Math.Abs(laneOrderRect.y-previewRect.y)<.001&&laneOrderRect.xMax<previewRect.x,"Songs note layout is on the Preview row instead of the song-detail panel");
-            english=false;check(LaneOrderOption(false)=="手で叩くノーツが上"&&LaneOrderOption(true)=="足で踏むノーツが上","Japanese lane choices explain which playable notes move above");
-            english=true;check(LaneOrderOption(false)=="Hand Notes on Top"&&LaneOrderOption(true)=="Foot Notes on Top","English lane choices explain which playable notes move above");
+            english=false;check(LaneOrderOption(false)=="スティック側が上"&&LaneOrderOption(true)=="ペダル側が上","Japanese lane choices identify controls without body-part wording");
+            english=true;check(LaneOrderOption(false)=="Sticks on Top"&&LaneOrderOption(true)=="Pedals on Top","English lane choices identify controls without body-part wording");
             english=oldEnglish;SetFeetAbove(!oldFeet);Begin(true);yield return WaitForOperations();check(feetAbove!=oldFeet,"Songs lane order is inherited in Practice");SetFeetAbove(oldFeet);NavigateNow(Page.Config);check(feetAbove==oldFeet,"Practice lane order is shared with Config");
         }finally{english=oldEnglish;SetFeetAbove(oldFeet);}
         NavigateNow(Page.Songs);yield return WaitForOperations();

@@ -14,6 +14,10 @@ public sealed class ChartNote {
     public double Beat, Local, Duration, Step;
     public string Instrument, Articulation, Lane, Id;
     public bool Pedal => Instrument == "HHSTATE";
+    public bool Sustained => ChartProject.UsesDuration(Instrument,Articulation);
+    // A drum hit has a visual footprint, not a musical duration. Only pedal
+    // states and buzz rolls use Duration as an audible/editable time range.
+    public double DisplaySpan => Sustained ? Duration : Math.Min(.25,Step);
 }
 public sealed class PedalRange { public double Start, End; public bool HasKick; }
 public sealed partial class ChartProject {
@@ -39,13 +43,12 @@ public sealed partial class ChartProject {
     public JArray Events => (JArray)Chart["events"];
     public bool SnapToGrid => (bool?)Chart["editorSnapToGrid"] ?? true;
     public double Grid => 4.0 / Math.Max(1, Math.Min(1024, (double?)Chart["quantize"] ?? 16));
-    // Freeze legacy implicit lengths before changing the placement grid.
-    // Their old effective duration remains part of the chart, including pedal holds.
     public bool SetGrid(int quantize){
         if(quantize<1||quantize>1024||(int?)Chart["quantize"]==quantize)return false;
-        foreach(var note in Notes)if(!((double?)note.Source["durationBeats"]>0))note.Source["durationBeats"]=note.Duration;
         Chart["quantize"]=quantize;Dirty=true;Rebuild();return true;
     }
+    public static bool UsesDuration(string instrument,string articulation)=>instrument=="HHSTATE"||(instrument=="SN"&&articulation=="buzz");
+    public static bool UsesDuration(JObject e)=>e!=null&&UsesDuration((string)e["instrument"]??"SN",(string)e["articulation"]??"");
     public static string Hash(byte[] bytes) { using (var sha = SHA256.Create()) return BitConverter.ToString(sha.ComputeHash(bytes)); }
     public static int Strength(JToken v) { double n; return v == null || v.Type == JTokenType.Null || !double.TryParse(v.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n) ? 4 : (int)Math.Max(0, Math.Min(5, Math.Floor(n + .5))); }
     public static readonly float[] Gains = { 0, .25f, .5f, .75f, 1, 1.27f };
@@ -91,8 +94,9 @@ public sealed partial class ChartProject {
             if(m<0||m>=Measures.Length||b<0||b>=Measures[m]){ix++;continue;}
             string inst=(string)e["instrument"]??"SN";
             if(inst=="PEDAL"){ix++;continue;} if(inst=="LBD")inst="BD"; if(inst=="OHH")inst="HH";
-            var n=new ChartNote{Source=e,Index=ix++,Measure=m,Local=b,Beat=Starts[m]+b,Instrument=inst,Articulation=(string)e["articulation"]??"",Velocity=Strength(e["velocity"]),Id=(string)e["id"]??("n"+ix),Duration=(double?)e["durationBeats"]??Grid,Step=EventStep(e)};
-            if(n.Duration<=0)n.Duration=Grid;
+            var n=new ChartNote{Source=e,Index=ix++,Measure=m,Local=b,Beat=Starts[m]+b,Instrument=inst,Articulation=(string)e["articulation"]??"",Velocity=Strength(e["velocity"]),Id=(string)e["id"]??("n"+ix),Step=EventStep(e)};
+            double explicitDuration=(double?)e["durationBeats"]??0;
+            n.Duration=n.Sustained&&explicitDuration>0?explicitDuration:n.Sustained?n.Step:.25;
             Notes.Add(n);
             if(n.Pedal)Pedals.Add(new PedalRange{Start=n.Beat,End=Math.Min(Length,n.Beat+n.Duration)});
         }
@@ -143,7 +147,7 @@ public sealed partial class ChartProject {
         if(!ValidMeter(m,numerator,denominator))return false;
         foreach(var note in Notes)note.Source["gridStepBeats"]=note.Step;
         var positions=Events.OfType<JObject>().Concat(TempoChanges).Select(e=>new {Event=e,Bar=(int?)e["measure"]??0,Local=(double?)e["beat"]??0}).Where(e=>e.Bar>=0&&e.Bar<Measures.Length).Select(e=>new {e.Event,Beat=Starts[e.Bar]+e.Local}).ToArray();
-        double required=Math.Max(Length,positions.Select(e=>e.Beat+Math.Max(Grid,(double?)e.Event["durationBeats"]??0)).DefaultIfEmpty(0).Max());
+        double required=Math.Max(Length,positions.Select(e=>e.Beat+(UsesDuration(e.Event)?Math.Max(EventStep(e.Event),(double?)e.Event["durationBeats"] ?? 0):0)).DefaultIfEmpty(0).Max());
         var meters=MeterArray();meters[m]=new JObject{{"numerator",numerator},{"denominator",denominator}};
         var bars=(JArray)Chart["measures"];bars[m]=numerator*4.0/denominator;
         double end=bars.Sum(b=>(double)b);double last=(double)bars.Last;
@@ -199,3 +203,4 @@ public sealed partial class ChartProject {
     }
 }
 }
+

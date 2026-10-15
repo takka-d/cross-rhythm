@@ -15,9 +15,17 @@ public static class ControllerNavigationMath {
         if(value.sqrMagnitude<.25f)return KeyCode.None;
         return Math.Abs(value.x)>Math.Abs(value.y)?(value.x>0?KeyCode.RightArrow:KeyCode.LeftArrow):(value.y>0?KeyCode.UpArrow:KeyCode.DownArrow);
     }
+    public static KeyCode Direction(string path){switch(path){case "dpad/up":return KeyCode.UpArrow;case "dpad/down":return KeyCode.DownArrow;case "dpad/left":return KeyCode.LeftArrow;case "dpad/right":return KeyCode.RightArrow;default:return KeyCode.None;}}
     public static bool ActivatesPointer(Vector2 pointer,Vector2 scroll,bool secondaryPressed)=>pointer!=Vector2.zero||scroll!=Vector2.zero||secondaryPressed;
     public static bool MouseReclaimsPointer(bool virtualPointerVisible,Vector2 mouseDelta)=>virtualPointerVisible&&mouseDelta.sqrMagnitude>.04f;
     public static bool SystemPointerVisible(bool virtualPointerVisible)=>!virtualPointerVisible;
+    public static bool ControllerHover(bool virtualPointerVisible,bool mouseContains,bool controllerContains)=>virtualPointerVisible?controllerContains:mouseContains;
+    public static bool HomePath(string path)=>path=="home"||path=="homeButton"||path=="systemButton";
+    public static Vector2 Scroll(Vector2 value,Vector2 wheel,float distance,float maximumX,float maximumY,bool horizontal,bool vertical){
+        if(horizontal)value.x=Mathf.Clamp(value.x+wheel.x*distance,0,Math.Max(0,maximumX));
+        if(vertical)value.y=Mathf.Clamp(value.y+wheel.y*distance,0,Math.Max(0,maximumY));
+        return value;
+    }
 }
 
 public partial class CrossRhythmApp {
@@ -28,6 +36,8 @@ public partial class CrossRhythmApp {
     bool controllerPointerVisible {get=>controllerPointerVisibleState;set{if(controllerPointerVisibleState==value){Cursor.visible=ControllerNavigationMath.SystemPointerVisible(value);return;}controllerPointerVisibleState=value;SetSystemPointerVisible(ControllerNavigationMath.SystemPointerVisible(value));}}
     bool controllerPrimaryPressed,controllerPrimaryHeld,controllerPrimaryReleased,controllerSecondaryPressed;
     bool controllerPrimaryConsumed,controllerSecondaryConsumed;
+    readonly System.Collections.Generic.HashSet<(int device,string path)> controllerPressedEvents=new System.Collections.Generic.HashSet<(int,string)>();
+    readonly System.Collections.Generic.HashSet<(int device,string path)> controllerReleasedEvents=new System.Collections.Generic.HashSet<(int,string)>();
     bool controllerEditorPrimaryCapture;
     string controllerDrag="";
     int controllerPadId;
@@ -50,10 +60,21 @@ public partial class CrossRhythmApp {
     }
     ButtonControl ControllerConfirm(Gamepad pad)=>nintendo?pad.buttonEast:pad.buttonSouth;
     ButtonControl ControllerBack(Gamepad pad)=>nintendo?pad.buttonSouth:pad.buttonEast;
-    bool ControllerHasActivity(Gamepad pad)=>pad!=null&&(ControllerNavigationMath.Deadzone(pad.leftStick.ReadValue(),ControllerNavigationMath.PointerDeadzone)!=Vector2.zero||ControllerNavigationMath.Deadzone(pad.rightStick.ReadValue(),ControllerNavigationMath.ScrollDeadzone)!=Vector2.zero||pad.startButton.wasPressedThisFrame||pad.selectButton.wasPressedThisFrame||pad.leftStickButton.wasPressedThisFrame||pad.rightStickButton.wasPressedThisFrame||ControllerConfirm(pad).wasPressedThisFrame||ControllerBack(pad).wasPressedThisFrame||pad.dpad.ReadValue()!=Vector2.zero);
+    ButtonControl ControllerHome(Gamepad pad)=>pad?.TryGetChildControl<ButtonControl>("home")??pad?.TryGetChildControl<ButtonControl>("homeButton")??pad?.TryGetChildControl<ButtonControl>("systemButton");
+    static string ControllerEventPath(ButtonControl control)=>control==null?"":PadPath(control);
+    bool ControllerPressed(Gamepad pad,ButtonControl control)=>pad!=null&&control!=null&&(control.wasPressedThisFrame||controllerPressedEvents.Contains((pad.deviceId,ControllerEventPath(control))));
+    bool ControllerReleased(Gamepad pad,ButtonControl control)=>pad!=null&&control!=null&&(control.wasReleasedThisFrame||controllerReleasedEvents.Contains((pad.deviceId,ControllerEventPath(control))));
+    void CaptureControllerButtonEvent(Gamepad pad,string path,bool down){if(pad==null||string.IsNullOrEmpty(path))return;(down?controllerPressedEvents:controllerReleasedEvents).Add((pad.deviceId,path));}
+    bool ControllerHomePressed(Gamepad pad)=>pad!=null&&(ControllerPressed(pad,ControllerHome(pad))||controllerPressedEvents.Any(e=>e.device==pad.deviceId&&ControllerNavigationMath.HomePath(e.path)));
+    KeyCode ControllerDirection(Gamepad pad){
+        var current=ControllerNavigationMath.Direction(pad.dpad.ReadValue());if(current!=KeyCode.None)return current;
+        foreach(var input in controllerPressedEvents)if(input.device==pad.deviceId){var latched=ControllerNavigationMath.Direction(input.path);if(latched!=KeyCode.None)return latched;}
+        return KeyCode.None;
+    }
+    bool ControllerHasActivity(Gamepad pad)=>pad!=null&&(ControllerNavigationMath.Deadzone(pad.leftStick.ReadValue(),ControllerNavigationMath.PointerDeadzone)!=Vector2.zero||ControllerNavigationMath.Deadzone(pad.rightStick.ReadValue(),ControllerNavigationMath.ScrollDeadzone)!=Vector2.zero||controllerPressedEvents.Any(e=>e.device==pad.deviceId)||ControllerPressed(pad,pad.startButton)||ControllerPressed(pad,pad.selectButton)||ControllerPressed(pad,pad.leftStickButton)||ControllerPressed(pad,pad.rightStickButton)||ControllerPressed(pad,ControllerConfirm(pad))||ControllerPressed(pad,ControllerBack(pad))||ControllerHomePressed(pad)||pad.dpad.ReadValue()!=Vector2.zero);
     bool ControllerStage=>Current==Page.Play||Current==Page.Practice;
     bool ControllerOwnsPerformance(Gamepad pad)=>pad!=null&&pad.deviceId==controllerPadId&&ControllerStage&&(controllerStageUiMode||stageExitPrompt);
-    bool ControllerReservedPath(string path)=>path=="start"||path=="select"||path=="leftStickPress"||path=="rightStickPress";
+    bool ControllerReservedPath(string path)=>path=="start"||path=="select"||path=="leftStickPress"||path=="rightStickPress"||ControllerNavigationMath.HomePath(path);
     Vector2 ControllerGuiPointer()=>GUIUtility.ScreenToGUIPoint(controllerPointerScreen);
     bool ControllerContains(Rect rect)=>controllerPointerVisible&&rect.Contains(ControllerGuiPointer());
     bool ControllerPointerMoved=>controllerPointerDelta.sqrMagnitude>.01f;
@@ -92,26 +113,34 @@ public partial class CrossRhythmApp {
         if(ControllerStage){RequestStageExit();return;}
         Navigate(Page.Title);
     }
+    void ControllerHomeAction(){
+        if(InputBlocked)return;
+        controllerDrag="";controllerPrimaryHeld=false;controllerStageUiMode=false;controllerPointerVisible=false;
+        bindingsOpen=false;bindingRow=-1;editorFileOpen=false;showMeterPanel=false;gridMenuOpen=false;laneTypeRow=-1;
+        if(MidiPromptOpen)CancelMidi();
+        if(discardPrompt)CancelLeaving();
+        if(stageExitPrompt)stageExitPrompt=false;
+        Navigate(Page.Title);
+    }
     void UpdateControllerNavigation(){
         if(controllerPage!=Current)ResetControllerNavigationForPage();
         controllerPrimaryPressed=controllerPrimaryReleased=controllerSecondaryPressed=false;
         controllerPrimaryConsumed=controllerSecondaryConsumed=false;controllerPointerDelta=Vector2.zero;controllerWheel=Vector2.zero;
-        if(Mouse.current!=null&&ControllerNavigationMath.MouseReclaimsPointer(controllerPointerVisible,Mouse.current.delta.ReadValue()))controllerPointerVisible=false;
-        Gamepad pad=Gamepad.all.FirstOrDefault(ControllerHasActivity)??ControllerPad();if(pad==null){controllerPadId=0;controllerStageUiMode=false;controllerPointerVisible=false;controllerDrag="";return;}
+        Vector2 mouseDelta=Mouse.current?.delta.ReadValue()??Vector2.zero;
+        bool mouseAction=Mouse.current!=null&&(Mouse.current.leftButton.wasPressedThisFrame||Mouse.current.rightButton.wasPressedThisFrame||Mouse.current.middleButton.wasPressedThisFrame||Mouse.current.scroll.ReadValue().sqrMagnitude>.01f);
+        Gamepad pad=Gamepad.all.FirstOrDefault(ControllerHasActivity)??ControllerPad();if(pad==null){controllerPadId=0;controllerStageUiMode=false;controllerPointerVisible=false;controllerDrag="";controllerPressedEvents.Clear();controllerReleasedEvents.Clear();return;}
         Vector2 pointer=ControllerNavigationMath.Deadzone(pad.leftStick.ReadValue(),ControllerNavigationMath.PointerDeadzone);
         Vector2 scroll=ControllerNavigationMath.Deadzone(pad.rightStick.ReadValue(),ControllerNavigationMath.ScrollDeadzone);
-        bool secondary=pad.rightStickButton.wasPressedThisFrame;
+        bool secondary=ControllerPressed(pad,pad.rightStickButton),pointerAction=ControllerNavigationMath.ActivatesPointer(pointer,scroll,secondary);
         bool padActivity=ControllerHasActivity(pad);if(padActivity)controllerPadId=pad.deviceId;
-        if(ControllerStage&&pad.startButton.wasPressedThisFrame&&!stageExitPrompt){
+        if(pointerAction)ActivateControllerPointer(pad);
+        else if((mouseAction||ControllerNavigationMath.MouseReclaimsPointer(controllerPointerVisible,mouseDelta))&&controllerPointerVisible)controllerPointerVisible=false;
+        if(ControllerHomePressed(pad)){ControllerHomeAction();controllerPressedEvents.Clear();controllerReleasedEvents.Clear();return;}
+        if(ControllerStage&&ControllerPressed(pad,pad.startButton)&&!stageExitPrompt){
             controllerStageUiMode=!controllerStageUiMode;controllerPointerVisible=controllerStageUiMode;ReleaseInputs();
             if(controllerStageUiMode&&controllerPointerScreen==Vector2.zero)controllerPointerScreen=new Vector2(Screen.width*.5f,Screen.height*.5f);
         }
-        if(ControllerStage&&pad.selectButton.wasPressedThisFrame&&!stageExitPrompt){controllerStageUiMode=true;controllerPointerVisible=true;RequestStageExit();}
-        // Right-stick scrolling and its press must work before the player has
-        // moved the pointer. Previously both inputs were discarded while the
-        // virtual pointer was hidden, which made wheel and right-click appear
-        // completely unresponsive after keyboard or mouse navigation.
-        if(ControllerNavigationMath.ActivatesPointer(pointer,scroll,secondary))ActivateControllerPointer(pad);
+        if(ControllerStage&&ControllerPressed(pad,pad.selectButton)&&!stageExitPrompt){controllerStageUiMode=true;controllerPointerVisible=true;RequestStageExit();}
         if(pointer!=Vector2.zero){
             float speed=720f*(.45f+.55f*pointer.magnitude)*Time.unscaledDeltaTime;
             controllerPointerDelta=new Vector2(pointer.x,-pointer.y)*speed;controllerPointerScreen+=controllerPointerDelta;
@@ -119,17 +148,18 @@ public partial class CrossRhythmApp {
         }
         if(controllerPointerVisible&&(controllerStageUiMode||!ControllerStage))controllerWheel=new Vector2(scroll.x,-scroll.y);
         bool uiAllowed=!ControllerStage||controllerStageUiMode||stageExitPrompt;
-        if(bindingRow>=0&&(pad.startButton.wasPressedThisFrame||pad.selectButton.wasPressedThisFrame)){
+        if(bindingRow>=0&&(ControllerPressed(pad,pad.startButton)||ControllerPressed(pad,pad.selectButton))){
             bindingRow=-1;captureCancelFrame=Time.frameCount;bindingNotice=T("割り当てをキャンセルしました","Binding cancelled");
         }
         if(uiAllowed&&bindingRow<0){
-            var confirm=ControllerConfirm(pad);controllerPrimaryPressed=confirm.wasPressedThisFrame;controllerPrimaryHeld=confirm.isPressed;controllerPrimaryReleased=confirm.wasReleasedThisFrame;controllerSecondaryPressed=secondary;
-            if(ControllerBack(pad).wasPressedThisFrame)ControllerBackAction();
-            if(Current!=Page.Edit||stageExitPrompt)UpdateControllerRepeat(ControllerNavigationMath.Direction(pad.dpad.ReadValue()));else UpdateControllerRepeat(KeyCode.None);
+            var confirm=ControllerConfirm(pad);controllerPrimaryPressed=ControllerPressed(pad,confirm);controllerPrimaryHeld=confirm.isPressed;controllerPrimaryReleased=ControllerReleased(pad,confirm);controllerSecondaryPressed=secondary;
+            if(ControllerPressed(pad,ControllerBack(pad)))ControllerBackAction();
+            if(Current!=Page.Edit||stageExitPrompt)UpdateControllerRepeat(ControllerDirection(pad));else UpdateControllerRepeat(KeyCode.None);
             if(!controllerPointerVisible&&controllerPrimaryPressed){QueueControllerKey(KeyCode.Return);controllerPrimaryPressed=false;}
         }else UpdateControllerRepeat(KeyCode.None);
         if(controllerPrimaryReleased)controllerDrag="";
         Cursor.visible=ControllerNavigationMath.SystemPointerVisible(controllerPointerVisible);
+        controllerPressedEvents.Clear();controllerReleasedEvents.Clear();
     }
     bool ControllerButtonHit(Rect rect,bool active){
         if(!active||controllerPrimaryConsumed||!controllerPrimaryPressed||!ControllerContains(rect))return false;
@@ -155,9 +185,7 @@ public partial class CrossRhythmApp {
     }
     Vector2 ControllerScrollView(Rect view,Vector2 value,float contentWidth,float contentHeight,bool horizontal=false,bool vertical=true){
         if(Event.current.type!=EventType.Repaint||!ControllerScrollActive(view))return value;float distance=620f*Time.unscaledDeltaTime;
-        if(horizontal)value.x=Mathf.Clamp(value.x+controllerWheel.x*distance,0,Math.Max(0,contentWidth-view.width));
-        if(vertical)value.y=Mathf.Clamp(value.y+controllerWheel.y*distance,0,Math.Max(0,contentHeight-view.height));
-        return value;
+        return ControllerNavigationMath.Scroll(value,controllerWheel,distance,contentWidth-view.width,contentHeight-view.height,horizontal,vertical);
     }
     void DrawControllerPointer(){
         if(!controllerPointerVisible||Event.current.type!=EventType.Repaint)return;Vector2 p=ControllerGuiPointer();

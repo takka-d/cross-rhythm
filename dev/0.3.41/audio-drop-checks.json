@@ -1,0 +1,5 @@
+{
+  "checks": 25,
+  "status": "passed",
+  "scope": "Web drop event handlers, generated files, no real OS drag gesture"
+}

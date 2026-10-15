@@ -9,11 +9,12 @@ public partial class CrossRhythmApp {
     IEnumerator GridMeterRuntimeCheck(Action<bool,string> check){
         var p=EmptyEditorProject();p.SetSongInfo("Grid and Meter QA","Synthetic fixture");
         p.Chart["measures"]=new JArray(3,3.5,4);p.Chart["timeSignatures"]=new JArray(new JObject{{"numerator",6},{"denominator",8}},new JObject{{"numerator",7},{"denominator",8}},new JObject{{"numerator",4},{"denominator",4}});
-        p.Chart["quantize"]=16;
+        p.Chart["quantize"]=1;
         p.Chart["events"]=new JArray(
             new JObject{{"id","legacy-sn"},{"measure",0},{"beat",1},{"instrument","SN"}},
             new JObject{{"id","legacy-pedal"},{"measure",0},{"beat",2},{"instrument","HHSTATE"}},
             new JObject{{"id","long-sn"},{"measure",1},{"beat",1.0/3},{"instrument","SN"},{"durationBeats",1.25},{"gridStepBeats",1.0/3}},
+            new JObject{{"id","buzz-sn"},{"measure",1},{"beat",1.5},{"instrument","SN"},{"articulation","buzz"},{"durationBeats",1.25},{"gridStepBeats",.25}},
             new JObject{{"id","late-hh"},{"measure",1},{"beat",3},{"instrument","HH"},{"velocity",2}});
         p.Chart["tempoChanges"]=new JArray(new JObject{{"measure",1},{"beat",2},{"bpm",144}});p.Rebuild();
         p.SaveNative(Path.Combine(workspaceCheckRoot,"grid-meter.crproj"),false);
@@ -22,12 +23,15 @@ public partial class CrossRhythmApp {
         var timing=p.Notes.Select(n=>(n.Beat,n.Duration,n.Step)).ToArray();
         var widths=p.Notes.Select(n=>ChartVisuals.EditRect(p,n,0,56,32).width).ToArray();
         var pedal=p.Pedals.Select(n=>(n.Start,n.End)).ToArray();
+        var legacySn=p.Notes.Single(n=>n.Id=="legacy-sn");var staleSn=p.Notes.Single(n=>n.Id=="long-sn");var buzz=p.Notes.Single(n=>n.Id=="buzz-sn");
+        check(!legacySn.Sustained&&legacySn.Source["durationBeats"]==null&&Math.Abs(legacySn.Duration-.25)<1e-9&&Math.Abs(ChartVisuals.EditRect(p,legacySn,0,56,32).width-.25*.7*56)<.001,"whole-note Grid does not give a legacy hit a whole-note body");
+        check(!staleSn.Sustained&&Math.Abs(staleSn.Duration-.25)<1e-9&&buzz.Sustained&&Math.Abs(buzz.Duration-1.25)<1e-9,"only Pedal and Buzz use saved duration metadata");
         foreach(int q in new[]{4,6,8,12,24,10,20,14,28,1024,16}){
             SetEditorGrid(q);
             check(p.Notes.Select(n=>(n.Beat,n.Duration,n.Step)).SequenceEqual(timing),"grid "+q+" preserves legacy and explicit note onset, duration and step");
             check(p.Notes.Select(n=>ChartVisuals.EditRect(p,n,0,56,32).width).SequenceEqual(widths)&&p.Pedals.Select(n=>(n.Start,n.End)).SequenceEqual(pedal),"grid "+q+" preserves drawn widths and pedal release times");
         }
-        for(int i=0;i<11;i++)Restore(false);check(p.Chart.ToString()==before,"grid Undo restores exact legacy chart without injected duration metadata");
+        for(int i=0;i<11;i++)Restore(false);check(p.Chart.ToString()==before,"grid Undo restores exact chart without injecting hit durations");
         for(int i=0;i<11;i++)Restore(true);check(p.Notes.Select(n=>(n.Beat,n.Duration,n.Step)).SequenceEqual(timing),"grid Redo retains original note timing");
         bool oldEnglish=english;english=false;check(GridLabel(12)=="8分3連"&&GridLabel(24)=="16分3連"&&GridLabel(20)=="16分5連"&&GridLabel(28)=="16分7連","Japanese grid names identify note value and tuplet count");
         english=true;check(GridLabel(12)=="1/8 triplet"&&GridLabel(24)=="1/16 triplet"&&GridLabel(20)=="1/16 · 5-tuplet"&&GridLabel(28)=="1/16 · 7-tuplet","English grid names identify note value and tuplet count");english=oldEnglish;

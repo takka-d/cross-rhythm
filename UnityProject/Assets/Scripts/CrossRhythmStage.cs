@@ -30,7 +30,7 @@ public partial class CrossRhythmApp {
         GUI.DrawTexture(new Rect(x-40*sizeScale,y-40*sizeScale*sy,80*sizeScale,80*sizeScale*sy),texture);GUI.color=old;
     }
     bool feetAbove;
-    string LaneOrderOption(bool feetOnTop)=>feetOnTop?T("足で踏むノーツが上","Foot Notes on Top"):T("手で叩くノーツが上","Hand Notes on Top");
+    string LaneOrderOption(bool feetOnTop)=>feetOnTop?T("ペダル側が上","Pedals on Top"):T("スティック側が上","Sticks on Top");
     void LaneOrderControls(Rect r,int size=16){
         float width=(r.width-10)/2;
         if(Button(new Rect(r.x,r.y,width,r.height),LaneOrderOption(false),!feetAbove,true,size,kind:ControlKind.Choice))SetFeetAbove(false);

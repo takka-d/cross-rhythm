@@ -21,7 +21,7 @@ public partial class CrossRhythmApp {
         }
     }
     void EditorSeek(double beat){Audio.Seek(beat);ResetScheduled();lastClick=Math.Floor(beat)-1;pasteBeat=beat;SelectMeasure(Project.BarAt(beat));if(editorViewport.width>16)editScroll.x=(float)(EditorInteraction.Follow(editScroll.x/(EditorPPB*zoom),(editorViewport.width-16)/(EditorPPB*zoom),beat,Project.Length)*EditorPPB*zoom);}
-    void SyncEditorNote(){var n=Project.Notes.FirstOrDefault(v=>v.Index==Editor.Active);if(n==null)return;instrument=Array.IndexOf(Instruments,n.Instrument);kind=Math.Max(0,Array.IndexOf(Types[instrument],n.Articulation));duration=n.Duration;durationField=duration.ToString("0.########",System.Globalization.CultureInfo.InvariantCulture);}
+    void SyncEditorNote(){var n=Project.Notes.FirstOrDefault(v=>v.Index==Editor.Active);if(n==null)return;instrument=Array.IndexOf(Instruments,n.Instrument);kind=Math.Max(0,Array.IndexOf(Types[instrument],n.Articulation));if(n.Sustained){duration=n.Duration;durationField=duration.ToString("0.########",System.Globalization.CultureInfo.InvariantCulture);}}
     void EditorPlayback(){if(Audio.Running)Audio.Pause();else if(loaded&&!busy){ResetScheduled();lastClick=Math.Floor(Audio.Beat)-1;Audio.Play(Audio.Beat);}}
     public void OnEditorShortcut(string command){
         if(InputBlocked)return;
@@ -57,7 +57,12 @@ public partial class CrossRhythmApp {
         }
         if(controllerInside&&ControllerButtonHit(viewport,true)){
             var pad=ControllerPad();bool shift=pad!=null&&pad.leftShoulder.isPressed,control=pad!=null&&pad.rightShoulder.isPressed;
-            GUI.FocusControl(null);editorPointer=controllerScreen;Editor.Down(Local(controllerScreen),0,1,shift,control);controllerEditorPrimaryCapture=Editor.Capturing;SyncEditorNote();
+            GUI.FocusControl(null);editorPointer=controllerScreen;Editor.Down(Local(controllerScreen),0,1,shift,control);controllerEditorPrimaryCapture=Editor.Capturing;
+            // A controller can report press and release between two rendered
+            // frames. Complete that as one click now instead of leaving the
+            // editor gesture captured until a later button release.
+            if(controllerEditorPrimaryCapture&&controllerPrimaryReleased){Editor.Up(Local(controllerScreen));controllerEditorPrimaryCapture=false;}
+            SyncEditorNote();
         }
         if(!Editor.ContextOpen&&WavePointerInput(viewport,notesTop,Local(screen)))return;
         if(Editor.Capturing&&(ev.type==EventType.MouseDrag||ev.type==EventType.MouseUp)){
@@ -85,7 +90,7 @@ public partial class CrossRhythmApp {
     void OnApplicationFocus(bool focused){ReleaseOnFocusLoss(focused);if(!focused){interaction?.Cancel();CancelWaveMove();EndSongInfoEdit();}}
     void DrawEditorSelection(float notesTop){
         if(selection.Count>1){var r=Editor.Bounds();r.y+=notesTop;r.xMin-=5;r.xMax+=5;r.yMin-=5;r.yMax+=5;Border(r,Color.white,1);}
-        if(selection.Count==1){var n=Project.Notes.FirstOrDefault(v=>selection.Contains(v.Index));if(n!=null&&(n.Pedal||n.Instrument=="SN")){Rect r=Editor.NoteRect(n);r.y+=notesTop;float w=Math.Min(8,Math.Max(2,r.width*.18f));RectFill(new Rect(r.x,r.y,w,r.height),Color.white);RectFill(new Rect(r.xMax-w,r.y,w,r.height),Color.white);}}
+        if(selection.Count==1){var n=Project.Notes.FirstOrDefault(v=>selection.Contains(v.Index));if(n!=null&&n.Sustained){Rect r=Editor.NoteRect(n);r.y+=notesTop;float w=Math.Min(8,Math.Max(2,r.width*.18f));RectFill(new Rect(r.x,r.y,w,r.height),Color.white);RectFill(new Rect(r.xMax-w,r.y,w,r.height),Color.white);}}
         if(Editor.Selecting){var r=Editor.SelectionBox;r.y+=notesTop;RectFill(r,new Color(.37f,.64f,1,.12f));Border(r,C("#73b2ff"),1.5f);}
     }
     void EditorContextMenu(){
@@ -103,3 +108,4 @@ public partial class CrossRhythmApp {
     }
 }
 }
+

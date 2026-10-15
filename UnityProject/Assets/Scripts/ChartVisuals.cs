@@ -20,10 +20,9 @@ public static class ChartVisuals {
         switch(a){case "crash":return "CR";case "splash":return "SP";case "china":return "CH";case "ride":return "RD";case "cup":return "BL";case "center":return "N";case "rim_open":return "OR";case "rim_closed":return "CS";case "rimshot":return "RM";case "high":return "HI";case "buzz":return "BZ";case "tambourine":return "TB";default:return "";}
     }
     public static Rect EditRect(ChartProject p,ChartNote n,int row,float ppb,float rh){
-        float span=(float)Math.Min(Math.Min(.25,n.Step),p.Measures[n.Measure]-n.Local)*ppb;
-        bool duration=n.Pedal||(n.Instrument=="SN"&&(n.Articulation=="buzz"||n.Duration>Math.Max(.25,n.Step)+1e-8));
+        float span=(float)Math.Min(n.DisplaySpan,p.Measures[n.Measure]-n.Local)*ppb;
         float x=(float)n.Beat*ppb,w;
-        if(duration){span=(float)Math.Min(n.Duration,p.Length-n.Beat)*ppb;float inset=Math.Min(2,span*.15f);x+=inset;w=Math.Max(2,span-2*inset);}
+        if(n.Sustained){span=(float)Math.Min(n.Duration,p.Length-n.Beat)*ppb;float inset=Math.Min(2,span*.15f);x+=inset;w=Math.Max(2,span-2*inset);}
         else{x+=span*.15f;w=Math.Max(3,span*.7f);}
         float rawH=rh*ChartProject.Heights[n.Velocity],h=Math.Max(10,Mathf.Round(rawH)-1);
         return new Rect(x,Mathf.Round(row*rh+rh/2-rawH/2)+.5f,w,h);

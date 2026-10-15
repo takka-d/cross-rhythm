@@ -25,7 +25,7 @@ public partial class CrossRhythmApp {
             steps&=p.DisplayStep(bar)==expected.Select(n=>n.Step).Append(.25).Min();
             double from=bar*4+.3,to=from+1.1;
             ranges&=p.NotesBetween(from,to).SequenceEqual(p.Notes.Where(n=>n.Beat>=from&&n.Beat<=to));
-            overlaps&=p.NotesOverlapping(from,to).SequenceEqual(p.Notes.Where(n=>n.Beat<=to&&n.Beat+Math.Max(n.Duration,.25)>=from));
+            overlaps&=p.NotesOverlapping(from,to).SequenceEqual(p.Notes.Where(n=>n.Beat<=to&&n.Beat+Math.Max(n.DisplaySpan,.25)>=from));
             pedalMatch&=p.PedalsOverlapping(from,to).SequenceEqual(p.Pedals.Where(n=>n.End>from&&n.Start<to));
         }
         foreach(var pedal in p.Pedals)foreach(double beat in new[]{pedal.Start-2e-8,pedal.Start-1e-8,pedal.Start,pedal.End-2e-8,pedal.End-1e-8,pedal.End,pedal.End+1})

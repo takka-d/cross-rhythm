@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-10-15T15:20:59.1187002Z",
+  "result": "PASS",
+  "url": "http://127.0.0.1:41741/?v=0.3.41",
+  "versionVisible": "0.3.41",
+  "checks": {
+    "titleRendered": true,
+    "songsRendered": true,
+    "laneOrderOnPreviewRow": true,
+    "laneOrderUsesStickPedalTerms": true,
+    "editSelectedProjectOpened": true,
+    "ordinaryNotesShort": true,
+    "gridPlacementOnlyCopy": true,
+    "gridChangePreservedOrdinaryNoteLength": true,
+    "normalSnareDurationDisabled": true,
+    "consoleErrorCount": 0,
+    "consoleWarningCount": 0
+  },
+  "scope": "Local final Web build in Codex in-app browser. Title, Songs, selected-project Edit transition, lane-order row, and Grid 16th-to-quarter behavior were visually checked. Physical controller behavior and native file dialogs were not exercised.",
+  "status": "passed",
+  "loadingHidden": true,
+  "console": {
+    "total": 0,
+    "errors": 0,
+    "warnings": 0,
+    "unhandledRejections": 0,
+    "nonFatalAudioLengthMessages": "not_counted"
+  },
+  "interactionScope": [
+    "Title rendered and showed Unity Preview 0.3.41",
+    "Songs opened from Title",
+    "Lane-order controls were on the Preview row",
+    "Lane-order labels used Sticks/Pedals, not hands/feet",
+    "Songs Edit opened the selected Rhythm Check project",
+    "Edit showed ordinary notes as short fixed hits",
+    "Grid menu stated it changes placement only",
+    "Changing Grid from 16th to quarter did not lengthen ordinary notes",
+    "Normal SN duration field remained disabled",
+    "No page console errors or warnings were recorded"
+  ]
+}

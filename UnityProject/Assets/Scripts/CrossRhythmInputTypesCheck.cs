@@ -45,6 +45,11 @@ public partial class CrossRhythmApp {
             controllerPointerVisible=false;InputSystem.QueueStateEvent(device,new GamepadState(GamepadButton.RightStick));yield return null;
             check(controllerPointerVisible&&controllerSecondaryPressed,"right-stick press activates the shared pointer and reaches the right-click route");
             InputSystem.QueueStateEvent(device,new GamepadState());yield return null;
+            controllerPointerVisible=true;controllerPointerScreen=new Vector2(Screen.width*.5f,Screen.height*.5f);var tap=ControllerConfirm(device);CaptureControllerButtonEvent(device,PadPath(tap),true);CaptureControllerButtonEvent(device,PadPath(tap),false);UpdateControllerNavigation();
+            check(controllerPrimaryPressed&&controllerPrimaryReleased,"a press and release received between rendered frames remains one controller click");
+            Current=Page.Songs;ResetControllerNavigationForPage();CaptureControllerButtonEvent(device,"home",true);UpdateControllerNavigation();
+            deadline=Time.unscaledTimeAsDouble+2;while(Current!=Page.Title&&Time.unscaledTimeAsDouble<deadline)yield return null;
+            check(Current==Page.Title,"controller Home returns to Title");
             Current=Page.Play;ResetControllerNavigationForPage();InputSystem.QueueStateEvent(device,new GamepadState{leftStick=new Vector2(.8f,0)});yield return null;
             check(controllerStageUiMode&&controllerPointerVisible&&ControllerOwnsPerformance(device),"left stick enters isolated UI mode during performance");
             var confirm=nintendo?GamepadButton.East:GamepadButton.South;InputSystem.QueueStateEvent(device,new GamepadState(confirm));yield return null;
